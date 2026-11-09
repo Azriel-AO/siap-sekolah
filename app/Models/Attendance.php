@@ -24,7 +24,10 @@ class Attendance extends Model
     protected function casts(): array
     {
         return [
-            'date' => 'date',
+            // Cast 'date:Y-m-d' agar tanggal tersimpan persis 'YYYY-MM-DD'.
+            // Cast 'date' biasa menyimpan 'YYYY-MM-DD 00:00:00' di SQLite,
+            // sehingga pencarian kehadiran per hari selalu gagal dicocokkan.
+            'date' => 'date:Y-m-d',
             'last_tap_at' => 'datetime',
         ];
     }

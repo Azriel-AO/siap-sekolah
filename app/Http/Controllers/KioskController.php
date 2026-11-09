@@ -72,8 +72,9 @@ class KioskController extends Controller
             ->where('date', $today)
             ->first();
 
-        // 5. Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan
-        if ($attendance && $attendance->last_tap_at && $now->diffInSeconds($attendance->last_tap_at) < 60) {
+        // 5. Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan.
+        // abs() dipakai karena diffInSeconds di Carbon 3 bersifat bertanda (bisa negatif).
+        if ($attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
             return response()->json([
                 'success' => false,
                 'type' => 'cooldown',
