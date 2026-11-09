@@ -16,7 +16,7 @@
 
 **Purpose**: Persiapan infrastruktur database dan dependensi bersama.
 
-- [ ] T001 Verify database configuration and prepare demo namespace in `config/database.php`
+- [x] T001 Verify database configuration and prepare demo namespace in `config/database.php`
 
 ---
 
@@ -26,10 +26,10 @@
 
 **⚠️ CRITICAL**: Seluruh User Story bergantung pada selesainya tabel dan data seed pada fase ini.
 
-- [ ] T002 Create migrations for `school_classes`, `students`, `rfid_cards`, and `attendances` in `database/migrations/`
-- [ ] T003 [P] Create Eloquent models `SchoolClass`, `Student`, `RfidCard`, and `Attendance` with relationships in `app/Models/`
-- [ ] T004 Create comprehensive demo seeder in `database/seeders/DemoAttendanceSeeder.php` with 1 class (X TKJ 1), 10 students, 10 RFID cards, and partial attendances for today
-- [ ] T005 Register `DemoAttendanceSeeder` in `database/seeders/DatabaseSeeder.php` and run migration & seed via `php artisan migrate:fresh --seed`
+- [x] T002 Create migrations for `school_classes`, `students`, `rfid_cards`, and `attendances` in `database/migrations/`
+- [x] T003 [P] Create Eloquent models `SchoolClass`, `Student`, `RfidCard`, and `Attendance` with relationships in `app/Models/`
+- [x] T004 Create comprehensive demo seeder in `database/seeders/DemoAttendanceSeeder.php` with 1 class (X TKJ 1), 10 students, 10 RFID cards, and partial attendances for today
+- [x] T005 Register `DemoAttendanceSeeder` in `database/seeders/DatabaseSeeder.php` and run migration & seed via `php artisan migrate:fresh --seed`
 
 **Checkpoint**: Database siap dan 10 data siswa kelas X TKJ 1 terisi — pengerjaan User Story dapat dimulai.
 
@@ -41,9 +41,9 @@
 
 **Independent Test**: Buka `/kiosk/X-TKJ-1`, ketik UID kartu siswa ke-9 (`CARD-TKJ-009`) lalu Enter. Layar menampilkan pop-up hijau/kuning berisi nama, jam, dan status kehadiran.
 
-- [ ] T006 [US1] Implement Kiosk controller with tap logic, server timestamp, and status determination in `app/Http/Controllers/KioskController.php`
-- [ ] T007 [P] [US1] Create full-screen kiosk interface with autofocus input and large status popup in `resources/views/kiosk/show.blade.php`
-- [ ] T008 [US1] Register Kiosk routes (`GET /kiosk/{slug}` and `POST /kiosk/{slug}/tap`) in `routes/web.php`
+- [x] T006 [US1] Implement Kiosk controller with tap logic, server timestamp, and status determination in `app/Http/Controllers/KioskController.php`
+- [x] T007 [P] [US1] Create full-screen kiosk interface with autofocus input and large status popup in `resources/views/kiosk/show.blade.php`
+- [x] T008 [US1] Register Kiosk routes (`GET /kiosk/{slug}` and `POST /kiosk/{slug}/tap`) in `routes/web.php`
 
 **Checkpoint**: Alur tap Kiosk berfungsi mandiri (MVP Demo tercapai).
 
@@ -55,9 +55,9 @@
 
 **Independent Test**: Login sebagai guru di `/guru/rekap-harian`. Lakukan tap pada Kiosk di tab terpisah. Tabel rekap otomatis terbarui dalam $\le$ 4 detik.
 
-- [ ] T009 [US2] Implement teacher attendance controller and polling data endpoint in `app/Http/Controllers/TeacherAttendanceController.php`
-- [ ] T010 [P] [US2] Create teacher daily attendance board with automated JavaScript polling in `resources/views/teacher/attendance-today.blade.php`
-- [ ] T011 [US2] Register teacher attendance routes (`GET /guru/rekap-harian` and `GET /guru/rekap-harian/data`) in `routes/web.php`
+- [x] T009 [US2] Implement teacher attendance controller and polling data endpoint in `app/Http/Controllers/TeacherAttendanceController.php`
+- [x] T010 [P] [US2] Create teacher daily attendance board with automated JavaScript polling in `resources/views/teacher/attendance-today.blade.php`
+- [x] T011 [US2] Register teacher attendance routes (`GET /guru/rekap-harian` and `GET /guru/rekap-harian/data`) in `routes/web.php`
 
 **Checkpoint**: Dashboard pemantauan guru sinkron dengan aktivitas Kiosk.
 
@@ -69,9 +69,9 @@
 
 **Independent Test**: Login sebagai siswa (`siswa@knbi.sch.id`), buka `/siswa/riwayat-absensi`, pastikan hanya riwayat kehadiran milik siswa tersebut yang tampil.
 
-- [ ] T012 [US3] Implement student attendance controller in `app/Http/Controllers/StudentAttendanceController.php`
-- [ ] T013 [P] [US3] Create student personal attendance history view in `resources/views/student/attendance-history.blade.php`
-- [ ] T014 [US3] Register student attendance route (`GET /siswa/riwayat-absensi`) in `routes/web.php`
+- [x] T012 [US3] Implement student attendance controller in `app/Http/Controllers/StudentAttendanceController.php`
+- [x] T013 [P] [US3] Create student personal attendance history view in `resources/views/student/attendance-history.blade.php`
+- [x] T014 [US3] Register student attendance route (`GET /siswa/riwayat-absensi`) in `routes/web.php`
 
 **Checkpoint**: Transparansi data absensi ke siswa aktif.
 
@@ -83,7 +83,7 @@
 
 **Independent Test**: Tap kartu yang sama dua kali dalam 10 detik di Kiosk; tap kedua ditolak dengan notifikasi *"Kartu baru saja di-tap"*.
 
-- [ ] T015 [US4] Add 60-second cooldown check and class-device matching validation in `app/Http/Controllers/KioskController.php`
+- [x] T015 [US4] Add 60-second cooldown check and class-device matching validation in `app/Http/Controllers/KioskController.php`
 
 ---
 
@@ -91,9 +91,9 @@
 
 **Purpose**: Integrasi menu navigasi, panduan pengujian di README, dan verifikasi akhir.
 
-- [ ] T016 Link new menus from dashboard navigation in `resources/views/layouts/navigation.blade.php` and `resources/views/dashboard.blade.php`
-- [ ] T017 Update `README.md` with step-by-step instructions for demonstrating Kiosk tap, teacher live rekap, and student history
-- [ ] T018 Execute validation test cases per `specs/002-demo-absensi-kiosk/quickstart.md` and automated tests in `tests/Feature/KioskAttendanceTest.php`
+- [x] T016 Link new menus from dashboard navigation in `resources/views/layouts/navigation.blade.php` and `resources/views/dashboard.blade.php`
+- [x] T017 Update `README.md` with step-by-step instructions for demonstrating Kiosk tap, teacher live rekap, and student history
+- [x] T018 Execute validation test cases per `specs/002-demo-absensi-kiosk/quickstart.md` and automated tests in `tests/Feature/KioskAttendanceTest.php`
 
 ---
 
