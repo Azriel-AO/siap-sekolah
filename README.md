@@ -1,20 +1,23 @@
 # SIAP KNBI — Sistem Informasi Absensi Pelajar
 
 > **Aplikasi Web Absensi Siswa SMK Karya Nugraha (KNBI)**
-> Status Saat Ini: **Milestone 0 — Fondasi Login & Dashboard**
+> Status Saat Ini: **Milestone DEMO — Absensi Kiosk RFID & Monitoring** (di atas Fondasi Login & Dashboard)
 
 Dokumen ini ditulis secara bertahap dan ramah pemula, khusus agar siapa pun — termasuk yang belum pernah menulis kode pemrograman — dapat menginstal, menjalankan, dan menguji aplikasi ini dari awal sampai selesai.
 
 ---
 
-## 📌 Apa Itu Milestone 0?
+## 📌 Apa Itu Milestone DEMO?
 
-Milestone 0 adalah **fondasi awal** aplikasi. Pada tahap ini, pintu masuk sistem (halaman masuk/login) dan beranda utama (dashboard) untuk 3 peran pengguna telah selesai dibangun:
-1. **Administrator**: Pengelola sistem sekolah
-2. **Guru**: Wali kelas / guru pengajar
-3. **Siswa**: Pelajar yang diabsen
+Milestone DEMO membangun **alur absensi utuh pertama** di atas fondasi login (Milestone 0):
 
-> ⚠️ **Catatan Penting**: Fitur tap kartu RFID, scan wajah (Face ID), rekap jam masuk/pulang, dan kamera absensi sengaja **belum dibuka** pada Milestone 0 sesuai prinsip pengembangan bertahap (Konstitusi Proyek Bagian X: *Sederhana Dulu, Kompleks Belakangan*).
+1. **Kiosk Absensi Kelas** — layar layar penuh untuk kelas **X TKJ 1**. Karena belum ada alat pembaca kartu RFID sungguhan, "tap" disimulasikan dengan **mengetik UID kartu** lalu menekan **Enter**. Sistem mencatat jam **dari server** (bukan jam komputer/browser), lalu menentukan status **Hadir** (masuk ≤ 07.00 WIB) atau **Terlambat** (> 07.00 WIB). Tap kedua dalam satu hari tercatat sebagai **absen pulang**.
+2. **Rekap Harian Guru** — halaman `/guru/rekap-harian` menampilkan tabel 10 siswa kelas X TKJ 1 yang **diperbarui otomatis tiap 4 detik** tanpa menekan tombol refresh.
+3. **Riwayat Absensi Siswa** — halaman `/siswa/riwayat-absensi` menampilkan catatan kehadiran milik siswa yang sedang login saja (privasi terjaga).
+
+Aturan keamanan yang sudah berlaku: **anti-tap-ganda** (kartu yang sama diabaikan selama 60 detik) dan **kiosk terikat kelas** (kartu siswa kelas lain ditolak di kiosk X TKJ 1).
+
+> ⚠️ **Catatan Penting**: Fitur QR darurat, pengesahan guru, Face ID, notifikasi WhatsApp, dan kamera absensi sengaja **belum dibangun** sesuai prinsip pengembangan bertahap (Konstitusi Proyek Bagian X: *Sederhana Dulu, Kompleks Belakangan*).
 
 ---
 
@@ -96,8 +99,10 @@ Gunakan salah satu dari 3 akun berikut untuk menguji masuk ke aplikasi:
 | Peran | Alamat Email | Kata Sandi | Apa yang Ditampilkan di Dashboard? |
 |---|---|---|---|
 | **Administrator** | `admin@knbi.sch.id` | `password` | Header nama **Admin KNBI**, lencana biru **Administrator**, akses fitur master |
-| **Guru** | `guru@knbi.sch.id` | `password` | Header nama **Bu Sari**, lencana hijau **Guru / Wali Kelas**, ringkasan pantau kelas |
-| **Siswa** | `siswa@knbi.sch.id` | `password` | Header nama **Raka Siswa**, lencana kuning **Siswa**, riwayat absensi pribadi |
+| **Guru** | `guru@knbi.sch.id` | `password` | Lencana hijau **Guru**, menu **Rekap Harian** untuk memantau kelas X TKJ 1 |
+| **Siswa** | `siswa@knbi.sch.id` | `password` | Lencana kuning **Siswa**, menu **Riwayat Absensi** (akun siswa ini tertaut ke Raka Pratama) |
+
+Kartu RFID siswa demo menggunakan UID berpola `CARD-TKJ-001` s.d. `CARD-TKJ-010` (siswa nomor urut 1–10). Saat seed, 8 siswa pertama sudah ada catatan absensinya; siswa ke-9 (`CARD-TKJ-009`, Hendra Wijaya) dan ke-10 (`CARD-TKJ-010`, Intan Permata) sengaja dibiarkan **Belum Absen** agar demo tap terasa "langsung".
 
 > 🔒 *Catatan Keamanan*: Kata sandi di database disimpan dalam format acak terenkripsi (bcrypt hashing). Kata sandi `password` hanya diperuntukkan bagi tahap pengujian lokal dan wajib diganti sebelum aplikasi dipakai resmi di sekolah.
 
@@ -153,8 +158,63 @@ Lakukan 10 pengujian berikut di browser untuk memverifikasi aplikasi berfungsi 1
 
 ### Skenario 10: Menu Navigasi Layanan Sekolah
 1. Masuk ke dashboard.
-2. Klik salah satu menu: **Data Siswa**, **Jadwal Kelas**, **Kiosk Absen**, atau **Laporan**.
+2. Klik salah satu menu: **Data Siswa** atau **Jadwal Kelas**.
 3. **Hasil**: Tidak terjadi error teknis/halaman rusak; muncul pemberitahuan ramah bahwa fitur tersebut segera hadir pada tahap berikutnya.
+4. Menu **Kiosk Absen** kini aktif — klik untuk membuka layar Kiosk kelas X TKJ 1 di tab baru (lihat Skenario 11). Menu **Rekap Harian** (akun guru) dan **Riwayat Absensi** (akun siswa) juga sudah aktif (Skenario 12–13).
+
+---
+
+## 🎯 Panduan Demo Milestone DEMO (Kiosk, Rekap Guru, Riwayat Siswa)
+
+Bagian ini adalah cara menguji fitur baru — cukup dengan 2 tab browser. Ikuti berurutan.
+
+### Skenario 11: Simulasi Tap Kartu di Kiosk
+1. Pastikan server berjalan (`php artisan serve`) dan data demo sudah di-seed.
+2. Buka tab baru di browser, ketik alamat: `http://localhost:8000/kiosk/X-TKJ-1`.
+3. **Hasil**: Tampil layar penuh Kiosk kelas **X TKJ 1** dengan kotak input yang langsung aktif (kursor berkedip).
+4. Ketik UID kartu: `CARD-TKJ-009` lalu tekan **Enter**.
+5. **Hasil**: Muncul kartu pop-up besar berisi nama **Hendra Wijaya**, jam menunjukkan **waktu komputer server saat itu**, dan status **Hadir** (jika jam WIB sekarang ≤ 07.00) atau **Terlambat** (jika lewat dari 07.00).
+6. Ketik lagi UID yang sama: `CARD-TKJ-009` lalu **Enter**.
+7. **Hasil**: Pop-up berubah menjadi **Absen Pulang Berhasil** (tap kedua di hari yang sama otomatis dicatat sebagai jam pulang).
+8. Ketik sekali lagi UID yang sama lalu **Enter**.
+9. **Hasil**: Muncul pesan bahwa siswa sudah menyelesaikan absen masuk dan pulang hari ini.
+10. Ketik UID yang tidak dikenal: `CARD-SALAH-XXX` lalu **Enter**.
+11. **Hasil**: Muncul pesan *"Kartu tidak dikenali..."* — tidak ada data yang tercatat.
+
+### Skenario 12: Anti Tap Ganda (Cooldown 60 Detik)
+1. Reset data demo terlebih dahulu agar siswa ke-9 kembali "Belum Absen":
+   ```powershell
+   php artisan migrate:fresh --seed
+   ```
+2. Buka `http://localhost:8000/kiosk/X-TKJ-1`, tap `CARD-TKJ-010` lalu **Enter** (absen masuk tercatat).
+3. Dalam waktu kurang dari 1 menit, tap lagi `CARD-TKJ-010` lalu **Enter**.
+4. **Hasil**: Muncul pesan *"Kartu baru saja dicatat. Silakan tunggu sebentar."* — tap kedua **tidak** dihitung sebagai absen pulang. Tunggu 1 menit barulah tap berikutnya tercatat sebagai pulang.
+
+### Skenario 13: Kiosk Terikat Kelas (Kartu Kelas Lain Ditolak)
+1. Di layar Kiosk `X-TKJ-1`, tidak ada kartu kelas lain pada data demo — untuk mengetes ini, diperlukan data siswa kelas lain (fitur kelola data siswa hadir di tahap berikutnya). Kondisi terpasang di kode: kartu milik siswa kelas lain akan ditolak dengan pesan bahwa kiosk ini khusus kelas tertentu.
+
+### Skenario 14: Rekap Harian Guru Terbarui Otomatis (Live)
+1. Buka browser, masuk sebagai guru (`guru@knbi.sch.id` / `password`).
+2. Klik menu **Rekap Harian** (di bar navigasi atas) atau kartu **Rekap Harian** di dashboard.
+3. **Hasil**: Tabel 10 siswa X TKJ 1 dengan 4 kartu ringkasan (Total, Hadir, Terlambat, Belum Absen). Ada indikator *"Auto-refresh aktif (tiap 4 detik)"*.
+4. Perhatikan siswa ke-9 dan ke-10 berstatus **Belum Absen**.
+5. Buka tab baru: `http://localhost:8000/kiosk/X-TKJ-1` dan tap `CARD-TKJ-009` lalu **Enter**.
+6. Kembali ke tab guru **tanpa menekan tombol refresh** dan tunggu maksimal 4 detik.
+7. **Hasil**: Baris Hendra Wijaya berubah sendiri menjadi **Hadir** atau **Terlambat** lengkap dengan jam masuk, dan kartu ringkasan **Belum Absen** berkurang satu.
+8. **Jam yang tampil selalu jam server** — jika jam komputer Anda diubah, status kehadiran tidak ikut berubah (anti-kecurangan).
+
+### Skenario 15: Riwayat Absensi Milik Siswa Sendiri
+1. Buka jendela Incognito/Private, masuk sebagai siswa (`siswa@knbi.sch.id` / `password`).
+2. Klik menu **Riwayat Absensi** atau kartu **Riwayat Absensi** di dashboard.
+3. **Hasil**: Tampil profil **Raka Pratama** (NIS 10240101) beserta tabel catatan absensi hari ini: tanggal, jam masuk, jam pulang, dan status.
+4. **Hasil penting**: Nama siswa lain (misalnya Adinda Rahma atau Hendra Wijaya) **tidak muncul** — siswa hanya bisa melihat riwayatnya sendiri.
+
+### Skenario 16: Uji Otomatis (Opsional, untuk yang ingin belajar)
+Aplikasi dilengkapi 11 pengujian otomatis yang meniru skenario di atas. Jalankan di terminal:
+```powershell
+php artisan test tests/Feature/KioskAttendanceTest.php
+```
+**Hasil**: Semua tes berwarna hijau dengan ringkasan `OK (11 tests, ...)` — artinya seluruh aturan (jam server, cooldown, kelas terikat, privasi) terjaga.
 
 ---
 
@@ -177,9 +237,10 @@ Lakukan 10 pengujian berikut di browser untuk memverifikasi aplikasi berfungsi 1
 
 ## 📁 Struktur Dokumen Spesifikasi
 Dokumentasi teknis proyek dikelola menggunakan standar **Spec Kit**:
-- `specs/001-fondasi-login-dashboard/spec.md` — Spesifikasi kebutuhan fitur
-- `specs/001-fondasi-login-dashboard/plan.md` — Rencana implementasi teknis
-- `specs/001-fondasi-login-dashboard/data-model.md` — Desain tabel dan model data
-- `specs/001-fondasi-login-dashboard/quickstart.md` — Skenario pengujian lengkap
-- `specs/001-fondasi-login-dashboard/tasks.md` — Daftar rincian tugas pengerjaan
+- `specs/001-fondasi-login-dashboard/` — Spec Milestone 0 (login & dashboard)
+- `specs/002-demo-absensi-kiosk/spec.md` — Spesifikasi Milestone DEMO (kiosk & monitoring)
+- `specs/002-demo-absensi-kiosk/plan.md` — Rencana implementasi teknis
+- `specs/002-demo-absensi-kiosk/data-model.md` — Desain tabel (kelas, siswa, kartu RFID, kehadiran)
+- `specs/002-demo-absensi-kiosk/quickstart.md` — Skenario pengujian singkat
+- `specs/002-demo-absensi-kiosk/tasks.md` — Daftar rincian tugas pengerjaan
 - `.specify/memory/constitution.md` — Konstitusi tata kelola proyek (Prinsip Non-Negotiable)
