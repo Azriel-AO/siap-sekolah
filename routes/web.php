@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KioskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -18,5 +19,9 @@ Route::get('/', function () {
 Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'prevent-back-history'])
     ->name('dashboard');
+
+// Rute Kiosk Absensi Terikat Kelas (US-14, R2, R7)
+Route::get('/kiosk/{slug}', [KioskController::class, 'show'])->name('kiosk.show');
+Route::post('/kiosk/{slug}/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
 
 require __DIR__.'/auth.php';
