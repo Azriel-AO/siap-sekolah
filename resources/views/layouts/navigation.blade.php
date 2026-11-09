@@ -28,13 +28,23 @@
                         Jadwal Kelas
                     </button>
 
-                    <button type="button" @click="placeholderNotice = 'Fitur Kiosk Absen segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                    <a href="{{ route('kiosk.show', 'X-TKJ-1') }}" target="_blank" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                         Kiosk Absen
-                    </button>
+                    </a>
 
-                    <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
-                        Laporan
-                    </button>
+                    @if(Auth::user()->role === 'guru')
+                        <a href="{{ route('guru.rekap') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                            Rekap Harian
+                        </a>
+                    @elseif(Auth::user()->role === 'siswa')
+                        <a href="{{ route('siswa.riwayat') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                            Riwayat Absensi
+                        </a>
+                    @else
+                        <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                            Laporan
+                        </button>
+                    @endif
                 </div>
             </div>
 
@@ -122,12 +132,22 @@
             <button type="button" @click="placeholderNotice = 'Fitur Jadwal Kelas segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                 Jadwal Kelas
             </button>
-            <button type="button" @click="placeholderNotice = 'Fitur Kiosk Absen segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+            <a href="{{ route('kiosk.show', 'X-TKJ-1') }}" target="_blank" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                 Kiosk Absen
-            </button>
-            <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
-                Laporan
-            </button>
+            </a>
+            @if(Auth::user()->role === 'guru')
+                <a href="{{ route('guru.rekap') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Rekap Harian
+                </a>
+            @elseif(Auth::user()->role === 'siswa')
+                <a href="{{ route('siswa.riwayat') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Riwayat Absensi
+                </a>
+            @else
+                <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Laporan
+                </button>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->
