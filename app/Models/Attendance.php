@@ -19,6 +19,8 @@ class Attendance extends Model
         'status',
         'last_tap_at',
         'kiosk_device',
+        'photo_in_path',
+        'photo_out_path',
     ];
 
     protected function casts(): array

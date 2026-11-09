@@ -230,11 +230,28 @@
                     this.submitTap();
                 },
 
+                // Ambil 1 frame dari kamera sebagai foto bukti absen (PRD F1).
+                // Tanpa kamera / kamera belum siap → kembalikan null; tap tetap jalan.
+                ambilFotoBukti() {
+                    const video = this.$refs.cameraPreview;
+                    if (!this.cameraStream || !video || !video.videoWidth) return null;
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        return canvas.toDataURL('image/jpeg', 0.7);
+                    } catch (e) {
+                        return null;
+                    }
+                },
+
                 async submitTap() {
                     const uid = this.cardUid.trim();
                     if (!uid) return;
 
                     this.cardUid = '';
+                    const foto = this.ambilFotoBukti();
 
                     try {
                         const res = await fetch("{{ route('kiosk.tap', $schoolClass->slug) }}", {
@@ -242,9 +259,9 @@
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content'
                             },
-                            body: JSON.stringify({ card_uid: uid })
+                            body: JSON.stringify({ card_uid: uid, photo: foto })
                         });
 
                         const data = await res.json();

@@ -9,6 +9,7 @@ use App\Models\Student;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class KioskAttendanceTest extends TestCase
@@ -235,5 +236,55 @@ class KioskAttendanceTest extends TestCase
 
         $this->get('/guru/rekap-harian')->assertRedirect('/login');
         $this->get('/siswa/riwayat-absensi')->assertRedirect('/login');
+    }
+
+    public function test_tap_dengan_foto_menyimpan_bukti_foto_masuk_dan_pulang(): void
+    {
+        Storage::fake('local');
+        $this->seedDemo();
+
+        // JPEG minimal tiruan (header + isi + footer) sebagai foto bukti
+        $fotoPalsu = 'data:image/jpeg;base64,'.base64_encode(
+            chr(0xFF).chr(0xD8).chr(0xFF).chr(0xE0).str_repeat('x', 300).chr(0xFF).chr(0xD9)
+        );
+
+        // Tap masuk dengan foto
+        $this->postJson('/kiosk/X-TKJ-1/tap', [
+            'card_uid' => 'CARD-TKJ-009',
+            'photo' => $fotoPalsu,
+        ])->assertStatus(200);
+
+        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
+        $this->assertNotNull($attendance->photo_in_path, 'Foto bukti masuk harus tersimpan.');
+        Storage::disk('local')->assertExists($attendance->photo_in_path);
+
+        // Lewati cooldown lalu tap pulang dengan foto
+        $attendance->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
+
+        $this->postJson('/kiosk/X-TKJ-1/tap', [
+            'card_uid' => 'CARD-TKJ-009',
+            'photo' => $fotoPalsu,
+        ])->assertStatus(200);
+
+        $attendance->refresh();
+        $this->assertNotNull($attendance->photo_out_path, 'Foto bukti pulang harus tersimpan.');
+        Storage::disk('local')->assertExists($attendance->photo_out_path);
+    }
+
+    public function test_tap_dengan_foto_rusak_tetap_berhasil_tanpa_foto(): void
+    {
+        $this->seedDemo();
+
+        // Foto bukan data URL JPEG yang sah → tap tetap berhasil, tanpa foto
+        $response = $this->postJson('/kiosk/X-TKJ-1/tap', [
+            'card_uid' => 'CARD-TKJ-009',
+            'photo' => 'bukan-gambar-valid',
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertTrue($response->json('success'));
+
+        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
+        $this->assertNull($attendance->photo_in_path, 'Foto tidak valid tidak boleh tersimpan.');
     }
 }
