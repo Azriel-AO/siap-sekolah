@@ -1,0 +1,156 @@
+<x-app-layout>
+    <x-slot name="header">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
+                    Rekap Kehadiran Harian — {{ $schoolClass->name }}
+                </h1>
+                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                    Jurusan {{ $schoolClass->department }} • Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} • Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
+                </p>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="{{ route('kiosk.show', $schoolClass->slug) }}" target="_blank" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition">
+                    <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Buka Kiosk Layar Kelas
+                </a>
+            </div>
+        </div>
+    </x-slot>
+
+    <div class="py-8" x-data="teacherMonitorApp()" x-init="startPolling()">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
+                    <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Siswa</div>
+                    <div class="text-3xl font-black text-gray-900 mt-2" x-text="summary.total">{{ $summary['total'] }}</div>
+                    <div class="text-xs text-gray-400 mt-1">Kelas {{ $schoolClass->name }}</div>
+                </div>
+
+                <div class="bg-emerald-50/60 p-5 rounded-xl border border-emerald-200 shadow-sm">
+                    <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Hadir Tepat Waktu</div>
+                    <div class="text-3xl font-black text-emerald-700 mt-2" x-text="summary.hadir">{{ $summary['hadir'] }}</div>
+                    <div class="text-xs text-emerald-600 mt-1">Masuk &le; 07.00 WIB</div>
+                </div>
+
+                <div class="bg-amber-50/60 p-5 rounded-xl border border-amber-200 shadow-sm">
+                    <div class="text-xs font-semibold text-amber-700 uppercase tracking-wider">Terlambat</div>
+                    <div class="text-3xl font-black text-amber-700 mt-2" x-text="summary.terlambat">{{ $summary['terlambat'] }}</div>
+                    <div class="text-xs text-amber-600 mt-1">Masuk &gt; 07.00 WIB</div>
+                </div>
+
+                <div class="bg-rose-50/60 p-5 rounded-xl border border-rose-200 shadow-sm">
+                    <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Belum Absen</div>
+                    <div class="text-3xl font-black text-rose-700 mt-2" x-text="summary.belum_absen">{{ $summary['belum_absen'] }}</div>
+                    <div class="text-xs text-rose-600 mt-1">Menunggu tap Kiosk</div>
+                </div>
+            </div>
+
+            <!-- Table Container -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Daftar Kehadiran Siswa Hari Ini</h2>
+                        <p class="text-xs text-gray-500" x-text="dateFormatted ? dateFormatted + ' • Server: ' + serverTime + ' WIB' : 'Memuat data...'">
+                            {{ \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y') }}
+                        </p>
+                    </div>
+
+                    <!-- Live Sync Indicator -->
+                    <div class="flex items-center space-x-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-200">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Auto-refresh aktif (tiap 4 detik)</span>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                <th class="py-3.5 px-4 text-center w-12">No</th>
+                                <th class="py-3.5 px-4">NIS</th>
+                                <th class="py-3.5 px-4">Nama Siswa</th>
+                                <th class="py-3.5 px-4">UID Kartu</th>
+                                <th class="py-3.5 px-4 text-center">Jam Masuk</th>
+                                <th class="py-3.5 px-4 text-center">Jam Pulang</th>
+                                <th class="py-3.5 px-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 text-sm">
+                            <template x-for="(s, index) in students" :key="s.id">
+                                <tr class="hover:bg-slate-50 transition"
+                                    :class="{'bg-emerald-50/20': s.status === 'HADIR', 'bg-amber-50/20': s.status === 'TERLAMBAT'}">
+                                    <td class="py-3 px-4 text-center text-xs text-gray-400 font-mono" x-text="index + 1"></td>
+                                    <td class="py-3 px-4 font-mono font-medium text-gray-700" x-text="s.nis"></td>
+                                    <td class="py-3 px-4 font-semibold text-gray-900" x-text="s.name"></td>
+                                    <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="s.card_uid"></td>
+                                    <td class="py-3 px-4 text-center font-mono font-medium"
+                                        :class="s.check_in !== '-' ? 'text-gray-900 font-bold' : 'text-gray-300'"
+                                        x-text="s.check_in"></td>
+                                    <td class="py-3 px-4 text-center font-mono font-medium"
+                                        :class="s.check_out !== '-' ? 'text-gray-900 font-bold' : 'text-gray-300'"
+                                        x-text="s.check_out"></td>
+                                    <td class="py-3 px-4 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+                                              :class="{
+                                                  'bg-emerald-100 text-emerald-800': s.status === 'HADIR',
+                                                  'bg-amber-100 text-amber-800': s.status === 'TERLAMBAT',
+                                                  'bg-red-100 text-red-800': s.status === 'ALPA',
+                                                  'bg-gray-100 text-gray-600': s.status === 'BELUM_ABSEN'
+                                              }"
+                                              x-text="s.status_label">
+                                        </span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
+                    <span>Menampilkan 10 siswa aktif kelas {{ $schoolClass->name }}</span>
+                    <span>SMK Karya Nugraha (KNBI) • SIAP Sekolah</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function teacherMonitorApp() {
+            return {
+                summary: @json($summary),
+                students: @json($students),
+                dateFormatted: '',
+                serverTime: '',
+                pollingTimer: null,
+
+                startPolling() {
+                    this.fetchData();
+                    this.pollingTimer = setInterval(() => {
+                        this.fetchData();
+                    }, 4000);
+                },
+
+                async fetchData() {
+                    try {
+                        const res = await fetch("{{ route('guru.rekap.data') }}");
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.summary = data.summary;
+                            this.students = data.students;
+                            this.dateFormatted = data.date_formatted;
+                            this.serverTime = data.server_time;
+                        }
+                    } catch (e) {
+                        // Silent retry on temporary connection lag
+                    }
+                }
+            }
+        }
+    </script>
+</x-app-layout>
