@@ -3,10 +3,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
-                    Rekap Kehadiran Harian — {{ $schoolClass->name }}
+                    Rekap Kehadiran Harian - {{ $schoolClass->name }}
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    Jurusan {{ $schoolClass->department }} • Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} • Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
+                    Jurusan {{ $schoolClass->department }} - Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} - Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -55,7 +55,7 @@
                 <div class="p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                         <h2 class="text-lg font-bold text-gray-900">Daftar Kehadiran Siswa Hari Ini</h2>
-                        <p class="text-xs text-gray-500" x-text="dateFormatted ? dateFormatted + ' • Server: ' + serverTime + ' WIB' : 'Memuat data...'">
+                        <p class="text-xs text-gray-500" x-text="dateFormatted ? dateFormatted + ' - Server: ' + serverTime + ' WIB' : 'Memuat data...'">
                             {{ \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y') }}
                         </p>
                     </div>
@@ -75,6 +75,7 @@
                                 <th class="py-3.5 px-4">NIS</th>
                                 <th class="py-3.5 px-4">Nama Siswa</th>
                                 <th class="py-3.5 px-4">UID Kartu</th>
+                                <th class="py-3.5 px-4 text-center">Foto Bukti</th>
                                 <th class="py-3.5 px-4 text-center">Jam Masuk</th>
                                 <th class="py-3.5 px-4 text-center">Jam Pulang</th>
                                 <th class="py-3.5 px-4 text-center">Status</th>
@@ -88,6 +89,20 @@
                                     <td class="py-3 px-4 font-mono font-medium text-gray-700" x-text="s.nis"></td>
                                     <td class="py-3 px-4 font-semibold text-gray-900" x-text="s.name"></td>
                                     <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="s.card_uid"></td>
+                                    <td class="py-3 px-4">
+                                        <div class="flex items-center justify-center gap-1.5">
+                                            <img x-show="s.photo_in" :src="s.photo_in" @click="lightbox = s.photo_in"
+                                                 class="w-14 h-9 object-cover rounded-md border border-emerald-400 cursor-zoom-in hover:scale-110 transition"
+                                                 alt="Foto masuk" title="Klik untuk perbesar (foto masuk)" />
+                                            <span x-show="!s.photo_in"
+                                                  class="inline-flex items-center justify-center w-14 h-9 rounded-md border border-dashed border-gray-300 text-[9px] font-bold text-gray-400">M: -</span>
+                                            <img x-show="s.photo_out" :src="s.photo_out" @click="lightbox = s.photo_out"
+                                                 class="w-14 h-9 object-cover rounded-md border border-blue-400 cursor-zoom-in hover:scale-110 transition"
+                                                 alt="Foto pulang" title="Klik untuk perbesar (foto pulang)" />
+                                            <span x-show="!s.photo_out"
+                                                  class="inline-flex items-center justify-center w-14 h-9 rounded-md border border-dashed border-gray-300 text-[9px] font-bold text-gray-400">P: -</span>
+                                        </div>
+                                    </td>
                                     <td class="py-3 px-4 text-center font-mono font-medium"
                                         :class="s.check_in !== '-' ? 'text-gray-900 font-bold' : 'text-gray-300'"
                                         x-text="s.check_in"></td>
@@ -113,7 +128,16 @@
 
                 <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
                     <span>Menampilkan 10 siswa aktif kelas {{ $schoolClass->name }}</span>
-                    <span>SMK Karya Nugraha (KNBI) • SIAP Sekolah</span>
+                    <span>SMK Karya Nugraha (KNBI) - SIAP Sekolah</span>
+                </div>
+            </div>
+
+            <!-- Lightbox: klik thumbnail untuk memperbesar (hanya di halaman guru) -->
+            <div x-show="lightbox" x-cloak @click="lightbox = ''"
+                 class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6 cursor-zoom-out">
+                <img :src="lightbox" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl border-4 border-white/10" alt="Foto bukti absen diperbesar" />
+                <div class="absolute top-5 right-6 px-3 py-1.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold">
+                    Klik di mana saja untuk menutup
                 </div>
             </div>
 
@@ -127,6 +151,7 @@
                 students: @json($students),
                 dateFormatted: '',
                 serverTime: '',
+                lightbox: '',
                 pollingTimer: null,
 
                 startPolling() {

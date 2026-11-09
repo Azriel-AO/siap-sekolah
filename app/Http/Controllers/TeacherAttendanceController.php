@@ -7,6 +7,7 @@ use App\Models\SchoolClass;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class TeacherAttendanceController extends Controller
@@ -87,6 +88,8 @@ class TeacherAttendanceController extends Controller
                 },
                 'check_in' => $checkIn,
                 'check_out' => $checkOut,
+                'photo_in' => $this->fotoDataUrl($att?->photo_in_path),
+                'photo_out' => $this->fotoDataUrl($att?->photo_out_path),
             ];
         });
 
@@ -105,5 +108,30 @@ class TeacherAttendanceController extends Controller
             ],
             'students' => $formatted,
         ];
+    }
+
+    /**
+     * Foto bukti absen (PRD F1) disimpan di disk 'local' (storage privat,
+     * tidak bisa diakses publik). Foto dikirim sebagai data URL base64 dan
+     * hanya menempel pada halaman rekap yang wajib login. Gagal membaca
+     * file atau foto tidak ada -> null (kolom foto tampil kosong).
+     */
+    private function fotoDataUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        try {
+            if (! Storage::disk('local')->exists($path)) {
+                return null;
+            }
+
+            $binary = Storage::disk('local')->get($path);
+
+            return $binary ? 'data:image/jpeg;base64,' . base64_encode($binary) : null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
