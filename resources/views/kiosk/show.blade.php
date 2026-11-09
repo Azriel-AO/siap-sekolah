@@ -127,6 +127,17 @@
 
     </main>
 
+    <!-- Pratinjau Kamera (pojok kanan bawah) — disembunyikan otomatis jika kamera tidak tersedia -->
+    <div x-ref="cameraBox" x-cloak class="hidden fixed bottom-24 right-6 z-40 select-none">
+        <div class="rounded-2xl overflow-hidden border-2 border-slate-700 shadow-2xl bg-slate-800 relative">
+            <video x-ref="cameraPreview" autoplay muted playsinline class="w-44 sm:w-56 aspect-video object-cover block"></video>
+            <div class="absolute top-1.5 left-2 px-2 py-0.5 rounded-md bg-black/60 text-[10px] font-bold text-slate-200 tracking-wide">
+                Kamera Bukti Absen
+            </div>
+            <div class="absolute bottom-1.5 right-2 w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></div>
+        </div>
+    </div>
+
     <!-- Footer Kiosk & Simulator Chips untuk Penguji -->
     <footer class="p-6 border-t border-slate-800 bg-slate-900/90 text-center">
         <p class="text-xs text-slate-400 font-medium mb-3">
@@ -159,11 +170,47 @@
                 currentTime: '',
                 currentDate: '',
                 resetTimer: null,
+                cameraStream: null,
 
                 initKiosk() {
                     this.updateClock();
                     setInterval(() => this.updateClock(), 1000);
                     this.$nextTick(() => this.focusInput());
+                    this.startCamera();
+                    window.addEventListener('beforeunload', () => this.stopCamera());
+                },
+
+                // Matikan kamera saat halaman ditutup agar lampu indikator kamera tidak menyala terus
+                stopCamera() {
+                    if (this.cameraStream) {
+                        this.cameraStream.getTracks().forEach(track => track.stop());
+                        this.cameraStream = null;
+                    }
+                },
+
+                // Nyalakan pratinjau kamera (pojok). Kegagalan APA PUN (kamera tidak ada,
+                // izin ditolak, browser tanpa dukungan) hanya menyembunyikan pratinjau —
+                // alur tap kiosk tetap berjalan normal tanpa kamera.
+                async startCamera() {
+                    try {
+                        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                            this.$refs.cameraBox?.classList.add('hidden');
+                            return;
+                        }
+
+                        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                            video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: 'user' },
+                            audio: false
+                        });
+
+                        const preview = this.$refs.cameraPreview;
+                        preview.srcObject = this.cameraStream;
+                        this.$refs.cameraBox.classList.remove('hidden');
+                    } catch (e) {
+                        // Kamera tidak ada / izin ditolak → kiosk tetap berfungsi normal
+                        this.cameraStream = null;
+                        this.$refs.cameraBox?.classList.add('hidden');
+                    }
                 },
 
                 updateClock() {
