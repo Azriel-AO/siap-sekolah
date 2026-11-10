@@ -16,7 +16,6 @@ class AdminClassController extends Controller
      */
     public function index(Request $request): View
     {
-        $this->pastikanAdmin($request);
 
         $classes = SchoolClass::withCount('students')->orderBy('name')->get();
 
@@ -30,7 +29,6 @@ class AdminClassController extends Controller
      */
     public function create(Request $request): View
     {
-        $this->pastikanAdmin($request);
 
         return view('admin.classes.create');
     }
@@ -40,7 +38,6 @@ class AdminClassController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $this->pastikanAdmin($request);
 
         $validated = $this->validasi($request);
         $validated['slug'] = $this->selesaikanSlug($validated['slug'] ?: $validated['name']);
@@ -57,7 +54,6 @@ class AdminClassController extends Controller
      */
     public function edit(Request $request, SchoolClass $class): View
     {
-        $this->pastikanAdmin($request);
 
         return view('admin.classes.edit', [
             'class' => $class,
@@ -69,7 +65,6 @@ class AdminClassController extends Controller
      */
     public function update(Request $request, SchoolClass $class): RedirectResponse
     {
-        $this->pastikanAdmin($request);
 
         $validated = $this->validasi($request, $class);
         $validated['slug'] = $this->selesaikanSlug($validated['slug'] ?: $validated['name'], $class->id);
@@ -87,7 +82,6 @@ class AdminClassController extends Controller
      */
     public function destroy(Request $request, SchoolClass $class): RedirectResponse
     {
-        $this->pastikanAdmin($request);
 
         $jumlahSiswa = $class->students()->count();
         $jumlahAbsensi = Attendance::where('school_class_id', $class->id)->count();
@@ -103,13 +97,6 @@ class AdminClassController extends Controller
         return redirect()
             ->route('admin.kelas.index')
             ->with('status', 'Kelas "' . $class->name . '" berhasil dihapus.');
-    }
-
-    private function pastikanAdmin(Request $request): void
-    {
-        if ($request->user()->role !== 'admin') {
-            abort(403, 'Halaman ini hanya untuk admin.');
-        }
     }
 
     /**
@@ -153,3 +140,4 @@ class AdminClassController extends Controller
         return $slug;
     }
 }
+

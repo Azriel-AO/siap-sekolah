@@ -21,7 +21,6 @@ class AdminStudentController extends Controller
      */
     public function index(Request $request): View
     {
-        $this->pastikanAdmin($request);
 
         $classes = SchoolClass::orderBy('name')->get();
 
@@ -49,7 +48,6 @@ class AdminStudentController extends Controller
      */
     public function create(Request $request): View
     {
-        $this->pastikanAdmin($request);
 
         return view('admin.students.create', [
             'classes' => SchoolClass::orderBy('name')->get(),
@@ -62,7 +60,6 @@ class AdminStudentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $this->pastikanAdmin($request);
 
         $validated = $this->validasi($request);
 
@@ -91,7 +88,6 @@ class AdminStudentController extends Controller
      */
     public function edit(Request $request, Student $student): View
     {
-        $this->pastikanAdmin($request);
 
         $student->load(['rfidCard', 'user']);
 
@@ -106,7 +102,6 @@ class AdminStudentController extends Controller
      */
     public function update(Request $request, Student $student): RedirectResponse
     {
-        $this->pastikanAdmin($request);
 
         $validated = $this->validasi($request, $student);
 
@@ -128,13 +123,6 @@ class AdminStudentController extends Controller
         return redirect()
             ->route('admin.siswa.index', ['kelas' => SchoolClass::find($validated['school_class_id'])?->slug])
             ->with('status', 'Data siswa "' . $validated['name'] . '" berhasil diperbarui.');
-    }
-
-    private function pastikanAdmin(Request $request): void
-    {
-        if ($request->user()->role !== 'admin') {
-            abort(403, 'Halaman ini hanya untuk admin.');
-        }
     }
 
     /**
@@ -203,3 +191,4 @@ class AdminStudentController extends Controller
         $student->update(['user_id' => $user->id]);
     }
 }
+
