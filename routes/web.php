@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\TeacherAttendanceController;
@@ -34,6 +35,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Riwayat Absensi Siswa (US-31)
     Route::get('/siswa/riwayat-absensi', [StudentAttendanceController::class, 'index'])->name('siswa.riwayat');
+
+    // Pendaftaran Wajah Mandiri Siswa (US-10 tahap 1, PRD F3) — tanpa pengenalan wajah
+    Route::get('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'show'])->name('siswa.wajah');
+    Route::get('/siswa/pendaftaran-wajah/status', [FaceEnrollmentController::class, 'status'])->name('siswa.wajah.status');
+    Route::post('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'store'])->name('siswa.wajah.simpan');
 });
 
 require __DIR__.'/auth.php';
