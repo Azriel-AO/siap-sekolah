@@ -254,6 +254,69 @@ Kiosk kini punya **kamera bukti absen**: saat siswa tap kartu, kiosk mengambil 1
 
 ---
 
+## 🙂 Panduan Uji Pendaftaran Wajah (Milestone Face Enrollment)
+
+Menu baru **"Pendaftaran Wajah"** (khusus siswa): siswa login, mengizinkan kamera, lalu mengambil **3 foto wajah** sebagai data referensi absensi. **Ini BUKAN pengenalan wajah** — sistem tidak mengenali atau mencocokkan siapa pun, hanya menyimpan foto referensi. Foto tersimpan di folder privat server (`storage/app/private/face-photos/`), tidak bisa diakses dari URL publik, dan hanya tampil di halaman status milik siswa itu sendiri serta rekap guru/admin.
+
+### Skenario 20: Siswa Mendaftar Wajah Pertama Kali
+1. Pastikan server berjalan (`php artisan serve`) dan data demo sudah di-seed.
+2. Login sebagai siswa: `siswa@knbi.sch.id` / `password`.
+3. Klik menu **Pendaftaran Wajah** (bar navigasi atas) atau kartu **Pendaftaran Wajah** di dashboard.
+4. **Seharusnya**: muncul **pernyataan izin orang tua/wali** dengan kotak centang — kamera belum menyala.
+5. Centang kotak pernyataan → browser menanyakan izin kamera → klik **Izinkan**.
+6. **Seharusnya**: pratinjau kamera tampil (wajah Anda terlihat).
+7. Klik **"Ambil Foto"** → muncul hitungan mundur **3… 2… 1…** → foto pertama terisi di slot 1. Ulangi sampai slot 1, 2, 3 terisi (tiap pengambilan diawali countdown 3 detik).
+8. Klik **"Simpan Pendaftaran"**.
+9. **Seharusnya**: pesan sukses muncul, halaman berubah jadi status **"Terdaftar"** beserta **tanggal pendaftaran** (waktu server) dan pratinjau 3 foto Anda.
+
+### Skenario 21: Ulang Pengambilan Foto Sebelum Simpan
+1. Ulangi Skenario 20 sampai langkah 7 (jangan klik simpan dulu).
+2. Klik tombol **"Ulangi"** pada slot foto yang kurang bagus.
+3. **Seharusnya**: slot itu kembali kosong; klik **"Ambil Foto"** lagi untuk mengisinya (countdown 3 detik lagi).
+
+### Skenario 22: Simpan Ditolak Bila Foto Belum Lengkap
+1. Ambil hanya 1–2 foto, lalu klik **"Simpan Pendaftaran"**.
+2. **Seharusnya**: muncul pesan bahwa foto wajib lengkap 3 foto (contoh: *"Foto wajah wajib lengkap 3 foto. Saat ini baru 2 foto sah."*) dan **tidak ada** yang tersimpan.
+
+### Skenario 23: Daftar Ulang (Ganti Foto Lama)
+1. Masih sebagai siswa yang sudah terdaftar, buka menu **Pendaftaran Wajah**.
+2. **Seharusnya**: status **"Terdaftar"** + tanggal pendaftaran + pratinjau 3 foto lama.
+3. Klik **"Daftar Ulang"** → dialog konfirmasi muncul → klik **Batal** dulu.
+   - **Seharusnya**: tidak ada yang berubah; foto lama aman.
+4. Klik **"Daftar Ulang"** lagi → klik **"Ya, Daftar Ulang"**.
+5. **Seharusnya**: kembali ke alur 3 foto (pernyataan persetujuan tampil lagi). Ambil 3 foto baru → **Simpan Pendaftaran**.
+6. **Seharusnya**: status tetap "Terdaftar", muncul **tanggal daftar ulang terakhir** terbaru, dan pratinjau kini menampilkan foto baru (foto lama terhapus dari server).
+
+### Skenario 24: Badge "Wajah" di Rekap Guru
+1. Buka jendela Incognito, login guru: `guru@knbi.sch.id` / `password` → menu **Rekap Harian**.
+2. **Seharusnya**: tabel punya kolom baru **"Wajah"** — siswa yang sudah mendaftar (Raka Pratama) tampil badge hijau **"Terdaftar"**; siswa lain badge abu-abu **"Belum"**.
+3. Badge ikut terbarui otomatis bersama polling 4 detik — tanpa perlu reload halaman.
+
+### Skenario 25: Kamera Tidak Ada / Izin Ditolak — Halaman Tetap Normal
+1. Saat browser menanyakan izin kamera, klik **Tolak / Block** (atau uji di PC tanpa webcam).
+2. **Seharusnya**: pratinjau kamera **tidak muncul**, tampil pesan berbahasa Indonesia berisi cara mengizinkan kamera; **tidak ada** layar error/rusak; sesi login tetap aman; tombol ambil foto nonaktif.
+3. Absen kartu RFID di kiosk tetap berjalan seperti biasa.
+
+### Skenario 26: Privasi Foto & Akses Dibatasi
+1. Sebagai siswa, buka `http://localhost:8000/siswa/pendaftaran-wajah` → hanya bisa melihat foto **miliknya sendiri**. Ketik nama file fotonya di bilah alamat (mis. `/storage/face-photos/...`) → **seharusnya 404/403** — tidak ada endpoint foto publik.
+2. Tanpa login (Incognito), buka `http://localhost:8000/siswa/pendaftaran-wajah` → **seharusnya** dialihkan ke `/login`.
+3. Sebagai guru, buka `http://localhost:8000/siswa/pendaftaran-wajah` → **seharusnya 403** "Halaman ini hanya untuk siswa."
+4. **Seharusnya** foto tidak pernah tampil ke siswa lain maupun pengunjung.
+
+> 💡 **Catatan privasi**: foto wajah adalah data anak di bawah umur (Konstitusi VIII). Foto tersimpan di folder privat server (`storage/app/private/face-photos/`), hanya disajikan di halaman yang wajib login, dan fitur ini **tidak melakukan pengenalan/pencocokan wajah** (PRD F3 tahap 1).
+
+### Skenario 27: Kiosk Tidak Terpengaruh (Regresi)
+1. Buka `http://localhost:8000/kiosk/X-TKJ-1`, ketik `CARD-TKJ-009` lalu Enter.
+2. **Seharusnya**: alur tap berjalan persis seperti sebelum fitur ini — status, jam server, cooldown tidak berubah sama sekali.
+3. Uji otomatis semua tes:
+   ```powershell
+   php artisan test tests/Feature/KioskAttendanceTest.php
+   php artisan test tests/Feature/FaceEnrollmentTest.php
+   ```
+   **Hasil**: semua hijau (14 + 11 tes).
+
+---
+
 ## 🛠️ Mengatasi Masalah Umum (Troubleshooting)
 
 - **Port 8000 sudah dipakai aplikasi lain?**
@@ -279,4 +342,9 @@ Dokumentasi teknis proyek dikelola menggunakan standar **Spec Kit**:
 - `specs/002-demo-absensi-kiosk/data-model.md` — Desain tabel (kelas, siswa, kartu RFID, kehadiran)
 - `specs/002-demo-absensi-kiosk/quickstart.md` — Skenario pengujian singkat
 - `specs/002-demo-absensi-kiosk/tasks.md` — Daftar rincian tugas pengerjaan
+- `specs/003-face-enrollment/spec.md` — Spesifikasi Face Enrollment (tahap 1 PRD F3/US-10)
+- `specs/003-face-enrollment/plan.md` — Rencana implementasi teknis
+- `specs/003-face-enrollment/data-model.md` — Desain tabel `face_enrollments`
+- `specs/003-face-enrollment/quickstart.md` — Skenario pengujian singkat
+- `specs/003-face-enrollment/tasks.md` — Daftar rincian tugas pengerjaan
 - `.specify/memory/constitution.md` — Konstitusi tata kelola proyek (Prinsip Non-Negotiable)
