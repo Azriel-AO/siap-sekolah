@@ -8,6 +8,7 @@ use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PendaftaranController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\TeacherAttendanceController;
+use App\Http\Controllers\AdminRekapitulasiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,6 +50,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Admin: semua route /admin/* khusus peran admin (middleware 'admin'). Guru & siswa → 403.
     Route::middleware(['admin'])->group(function () {
+        // Admin: Rekapitulasi grafis per kelas
+        Route::get('/admin/rekapitulasi', [AdminRekapitulasiController::class, 'index'])->name('admin.rekapitulasi');
+        Route::get('/admin/rekap-grafik', [AdminRekapitulasiController::class, 'grafik'])->name('admin.rekap.grafik');
+
         // Admin: export rekap (Excel & PDF)
         Route::get('/admin/rekap-export/excel', [\App\Http\Controllers\AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
         Route::get('/admin/rekap-export/pdf', [\App\Http\Controllers\AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
