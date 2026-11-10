@@ -317,6 +317,117 @@ Menu baru **"Pendaftaran Wajah"** (khusus siswa): siswa login, mengizinkan kamer
 
 ---
 
+## 🌐 Deployment untuk Guru (Memasang SIAP di Komputer Sekolah)
+
+Panduan memasang SIAP KNBI di komputer/server sekolah agar bisa dipakai harian — ditulis untuk guru/TU, bukan ahli IT. Langkah dijalankan **sekali** saat pemasangan. Bagian yang belum sempat diuji disebutkan dengan jelas; jangan dianggap pasti.
+
+### 1. Prasyarat komputer
+- **PHP 8.3 atau lebih baru** + **Composer** (untuk paket PHP)
+- **Node.js LTS** + **npm** (untuk membangun tampilan)
+- **SQLite** (sudah bawaan PHP di Windows/XAMPP/Laragon — tidak perlu instal server database)
+- Opsional: **MySQL/MariaDB** bila sekolah sudah punya server database (lihat langkah 4)
+
+### 2. Siapkan file .env
+Di folder aplikasi, salin contoh konfigurasi:
+```powershell
+copy .env.example .env
+```
+(di Linux: `cp .env.example .env`)
+
+Buka `.env` di Notepad, ubah 3 baris ini:
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=http://localhost:8000
+```
+- `APP_ENV=production` & `APP_DEBUG=false` — mode produksi; pesan error teknis tidak ditampilkan ke pengguna, hanya "Terjadi kesalahan".
+- `APP_URL` — sesuaikan: `http://localhost:8000` bila jalan di komputer itu sendiri, atau `http://192.168.1.x:8000` / domain sekolah bila diakses dari komputer lain.
+- `APP_TIMEZONE=Asia/Jakarta` sudah terisi bawaan — **jangan diubah** (jam server menentukan status Hadir/Terlambat).
+
+### 3. Buat APP_KEY (kunci enkripsi sesi)
+```powershell
+php artisan key:generate
+```
+Perintah ini mengisi `APP_KEY=...` di `.env` secara otomatis. Diverifikasi lewat `php artisan key:generate --show` (perintah isinya memang terdaftar & berjalan; belum dijalankan untuk menimpa `.env` agar konfigurasi pengembangan tidak berubah). Tanpa kunci ini, sesi login tidak aman dan aplikasi menolak jalan.
+
+### 4. Database
+**Bawaan (SQLite, paling mudah — sudah diuji):**
+- Pastikan file database ada: `database/database.sqlite` (sudah tersedia di proyek ini).
+- `.env` cukup berisi `DB_CONNECTION=sqlite` — tidak perlu `DB_HOST`, `DB_DATABASE`, dll.
+- **Pindah ke MySQL**: cukup ubah bagian `DB_` di `.env`:
+  ```env
+  DB_CONNECTION=mysql
+  DB_HOST=127.0.0.1
+  DB_PORT=3306
+  DB_DATABASE=siap_knbi
+  DB_USERNAME=root
+  DB_PASSWORD=...
+  ```
+  Kode aplikasi **tidak perlu diubah** — semua query lewat migrasi Laravel & Eloquent. **Catatan jujur:** perpindahan ke MySQL ini adalah desain yang dijamin oleh arsitektur (migrasi & Eloquent), tetapi **belum pernah dicoba pada instalasi nyata** di proyek ini; SQLite yang teruji. Sebelum hari demo, coba dulu migrasi + seluruh tes di lingkungan MySQL bila sekolah memilih opsi ini.
+
+### 5. Buat tabel-tabel database
+```powershell
+php artisan migrate --force
+```
+`--force` berarti "lanjut tanpa ditanya" (wajib di mode production). Diuji pada basis data SQLite baru yang bersih: semua migrasi termasuk `face_enrollments` berjalan sukses.
+- **JANGAN PERNAH** menjalankan `php artisan migrate:fresh` di komputer sekolah yang sudah berisi data — semua data siswa & absensi akan terhapus permanen.
+
+### 6. Buat akun admin awal
+```powershell
+php artisan db:seed --class=UserSeeder --force
+```
+Diuji pada basis data SQLite baru: perintah ini membuat akun-akun awal: `admin@knbi.sch.id` (admin), `guru@knbi.sch.id` (guru), `siswa@knbi.sch.id` dan `intan@knbi.sch.id` (siswa). **Semua kata sandi awal: `password`.** Seeder ini aman dijalankan berulang kali (idempoten): akun yang sudah ada cukup diperbarui, **tidak** membuat ganda. Untuk sekolah nyata, akun siswa demo tidak perlu dipakai — gunakan menu **Data Siswa** di dashboard admin untuk membuat akun siswa sungguhan.
+
+**Ganti kata sandi admin** (aplikasi belum punya halaman ganti kata sandi): buka PowerShell di folder aplikasi, jalankan contoh berikut sampai `saved` (teruji jalan di PowerShell Windows; tanda `` ` `` sebelum `$` adalah cara PowerShell meloloskan tanda dolar ke PHP):
+```powershell
+php artisan tinker --execute="`$u = App\Models\User::find(1); `$u->password = bcrypt('rahasia-baru-123'); `$u->save(); echo 'saved';"
+```
+Ganti `rahasia-baru-123` dengan kata sandi pilihan Anda. `User::find(1)` = akun dengan id 1, yaitu `admin@knbi.sch.id` yang dibuat seeder pada database baru. Untuk mengganti akun selain admin (mis. guru), gunakan pencarian email berikut — juga teruji:
+```powershell
+php artisan tinker --execute="`$u = App\Models\User::where('email','guru@knbi.sch.id')->first(); `$u->password = bcrypt('rahasia-guru-123'); `$u->save(); echo 'saved';"
+```
+
+### 7. Bangun tampilan (sekali, dan setiap ada update aplikasi)
+```powershell
+npm ci
+npm run build
+```
+`npm ci` memasang paket persis sesuai `package-lock.json` (bila gagal — mis. komputer offline atau npm tidak diizinkan — gunakan `npm install`). `npm run build` **diuji sukses** di instalasi ini (Vite: menghasilkan `public/build/`, sekitar 2 detik). Tanpa langkah ini halaman tampak tanpa gaya/CSS.
+
+### 8. Izin folder (hanya Linux/Mac)
+Bila dipasang di Linux, web server harus bisa menulis ke 2 folder:
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+(Di Windows tidak perlu langkah ini. **Catatan:** perintah ini standar untuk aplikasi Laravel, tetapi belum diuji langsung di instalasi ini karena lingkungan pengembangan adalah Windows.)
+
+### 9. Dokumen akar web (web root)
+Di web server (Apache/Nginx), arahkan **document root ke folder `public/`** aplikasi — bukan ke folder utama proyek — karena `public/index.php` adalah satu-satunya pintu masuk. Contoh Nginx: `root /var/www/siap-sekolah/public;`.
+
+### 10. PENTING — kamera kiosk & HTTPS
+Kamera browser hanya boleh menyala pada **konteks aman**, yaitu:
+- `https://...` (dengan sertifikat), atau
+- `http://localhost` / `http://127.0.0.1` (komputer kiosk itu sendiri).
+
+Artinya: bila kiosk diakses lewat `http://192.168.1.x` (bukan localhost, bukan HTTPS), **pratinjau kamera TIDAK akan menyala**. Solusi: pasang HTTPS (mis. reverse proxy Let's Encrypt, atau sertifikat internal untuk intranet sekolah), atau jalankan kiosk dari komputer yang membuka `http://localhost:8000`. Absensi tap kartu **tetap berfungsi normal tanpa kamera** — kamera hanya untuk foto bukti.
+
+### 11. Uji coba setelah pemasangan
+1. Buka `APP_URL` di browser → harus dialihkan ke halaman **/login**.
+2. Login `admin@knbi.sch.id` / kata sandi yang sudah Anda ganti → dashboard muncul, menu **Data Siswa** & **Data Kelas** terlihat.
+3. Login `guru@knbi.sch.id` → buka **Rekap Harian** → siswa tampil beserta badge "Wajah".
+4. Login sebagai salah satu akun siswa → menu **Pendaftaran Wajah** tampil.
+5. Isi data master: `admin@knbi.sch.id` → menu **Data Kelas** → buat kelas (mis. "X TKJ 1") → menu **Data Siswa** → tambah siswa satu per satu (nama, NIS, UID kartu, opsi buat akun login). Sebelum ada siswa + kartu, kiosk belum bisa mencatat apa pun.
+6. Buka `http://localhost:<port>/kiosk/<slug-kelas>` di komputer kiosk → tap kartu percobaan → tercatat di rekap guru.
+7. Backup berkala: salin file `database/database.sqlite` dan folder `storage/app/` ke tempat aman (mis. flashdisk sekolah).
+
+### 12. Troubleshooting pemasangan
+- **500 Internal Server Error** → hapus cache konfigurasi: `php artisan config:clear`; pastikan `storage/` bisa ditulis (langkah 8) dan `.env` valid (langkah 2–3).
+- **"No application encryption key has been specified"** → kunci belum dibuat, ulangi langkah 3.
+- **Halaman tampil tanpa CSS** → langkah 7 belum dijalankan.
+- **Kamera kiosk tidak menyala** → lihat langkah 10 (HTTPS/localhost).
+
+---
+
 ## 🛠️ Mengatasi Masalah Umum (Troubleshooting)
 
 - **Port 8000 sudah dipakai aplikasi lain?**
