@@ -30,6 +30,7 @@ class DemoAttendanceSeeder extends Seeder
 
         // Ambil akun user siswa demo
         $userSiswa = User::where('email', 'siswa@knbi.sch.id')->first();
+        $userIntan = User::where('email', 'intan@knbi.sch.id')->first();
 
         // 2. Daftar 10 Siswa
         $studentsData = [
@@ -42,7 +43,7 @@ class DemoAttendanceSeeder extends Seeder
             ['nis' => '10240107', 'name' => 'Farhan Maulana', 'gender' => 'L', 'card' => 'CARD-TKJ-007', 'user_id' => null],
             ['nis' => '10240108', 'name' => 'Gita Maharani', 'gender' => 'P', 'card' => 'CARD-TKJ-008', 'user_id' => null],
             ['nis' => '10240109', 'name' => 'Hendra Wijaya', 'gender' => 'L', 'card' => 'CARD-TKJ-009', 'user_id' => null], // Belum absen
-            ['nis' => '10240110', 'name' => 'Intan Permata', 'gender' => 'P', 'card' => 'CARD-TKJ-010', 'user_id' => null], // Belum absen
+            ['nis' => '10240110', 'name' => 'Intan Permata', 'gender' => 'P', 'card' => 'CARD-TKJ-010', 'user_id' => $userIntan?->id], // Belum absen
         ];
 
         $today = Carbon::now('Asia/Jakarta')->toDateString();

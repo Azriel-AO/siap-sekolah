@@ -39,5 +39,16 @@ class UserSeeder extends Seeder
                 'role' => 'siswa',
             ]
         );
+
+        // Akun siswa demo kedua: terhubung ke Intan Permata (NIS 10240110)
+        // untuk menguji alur pendaftaran wajah (banner di dashboard).
+        User::updateOrCreate(
+            ['email' => 'intan@knbi.sch.id'],
+            [
+                'name' => 'Intan Permata',
+                'password' => Hash::make('password'),
+                'role' => 'siswa',
+            ]
+        );
     }
 }
