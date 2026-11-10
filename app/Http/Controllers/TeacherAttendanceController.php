@@ -62,7 +62,7 @@ class TeacherAttendanceController extends Controller
         $students = $schoolClass->students()
             ->with(['attendances' => function ($query) use ($today) {
                 $query->where('date', $today);
-            }, 'rfidCard'])
+            }, 'rfidCard', 'faceEnrollment'])
             ->orderBy('name')
             ->get();
 
@@ -94,6 +94,7 @@ class TeacherAttendanceController extends Controller
                 'check_out' => $checkOut,
                 'photo_in' => $this->fotoDataUrl($att?->photo_in_path),
                 'photo_out' => $this->fotoDataUrl($att?->photo_out_path),
+                'face' => $this->wajahStatus($student->faceEnrollment),
             ];
         });
 
@@ -123,6 +124,28 @@ class TeacherAttendanceController extends Controller
         if (! in_array($request->user()->role, ['guru', 'admin'])) {
             abort(403, 'Halaman ini hanya untuk guru dan admin.');
         }
+    }
+
+    /**
+     * Status badge wajah (R3 research.md): "TERDAFTAR" bila baris pendaftaran
+     * ada DAN ketiga path terisi DAN ketiga file ada di disk privat; selain itu
+     * "BELUM". Status dihitung, bukan kolom — data wajar bisa hilang/korup.
+     */
+    private function wajahStatus($enrollment): string
+    {
+        if (! $enrollment || ! $enrollment->photo_1_path || ! $enrollment->photo_2_path || ! $enrollment->photo_3_path) {
+            return 'BELUM';
+        }
+
+        try {
+            $lengkap = Storage::disk('local')->exists($enrollment->photo_1_path)
+                && Storage::disk('local')->exists($enrollment->photo_2_path)
+                && Storage::disk('local')->exists($enrollment->photo_3_path);
+        } catch (\Throwable) {
+            return 'BELUM';
+        }
+
+        return $lengkap ? 'TERDAFTAR' : 'BELUM';
     }
 
     /**
