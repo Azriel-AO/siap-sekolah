@@ -19,13 +19,15 @@ class TeacherAttendanceController extends Controller
     {
         $this->pastikanGuruAtauAdmin($request);
 
-        $schoolClass = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $schoolClass = $this->kelasDipilih($request);
+        $classes = SchoolClass::orderBy('name')->get();
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
         $studentsData = $this->getAttendanceData($schoolClass, $today);
 
         return view('teacher.attendance-today', [
             'schoolClass' => $schoolClass,
+            'classes' => $classes,
             'today' => $today,
             'summary' => $studentsData['summary'],
             'students' => $studentsData['students'],
@@ -39,7 +41,7 @@ class TeacherAttendanceController extends Controller
     {
         $this->pastikanGuruAtauAdmin($request);
 
-        $schoolClass = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $schoolClass = $this->kelasDipilih($request);
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
         $data = $this->getAttendanceData($schoolClass, $today);
@@ -113,6 +115,21 @@ class TeacherAttendanceController extends Controller
             ],
             'students' => $formatted,
         ];
+    }
+
+    /**
+     * Kelas yang ditampilkan di rekap dipilih lewat query param "?kelas=slug".
+     * Tanpa param → kelas pertama (urut nama). Slug tidak dikenal → 404.
+     */
+    private function kelasDipilih(Request $request): SchoolClass
+    {
+        $slug = $request->query('kelas');
+
+        if ($slug !== null && $slug !== '') {
+            return SchoolClass::where('slug', $slug)->firstOrFail();
+        }
+
+        return SchoolClass::orderBy('name')->firstOrFail();
     }
 
     /**

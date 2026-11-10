@@ -10,6 +10,14 @@
                 </p>
             </div>
             <div class="flex items-center space-x-3">
+                {{-- Pemilih kelas: reload halaman dengan ?kelas=slug --}}
+                <select onchange="window.location.href='{{ route('guru.rekap') }}?kelas=' + encodeURIComponent(this.value)"
+                        class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                        aria-label="Pilih kelas">
+                    @foreach($classes as $kelas)
+                        <option value="{{ $kelas->slug }}" @selected($kelas->slug === $schoolClass->slug)>{{ $kelas->name }}</option>
+                    @endforeach
+                </select>
                 <a href="{{ route('kiosk.show', $schoolClass->slug) }}" target="_blank" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition">
                     <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -134,7 +142,7 @@
                 </div>
 
                 <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex justify-between items-center">
-                    <span>Menampilkan 10 siswa aktif kelas {{ $schoolClass->name }}</span>
+                    <span>Menampilkan {{ $students->count() }} siswa aktif kelas {{ $schoolClass->name }}</span>
                     <span>SMK Karya Nugraha (KNBI) - SIAP Sekolah</span>
                 </div>
             </div>
@@ -170,7 +178,7 @@
 
                 async fetchData() {
                     try {
-                        const res = await fetch("{{ route('guru.rekap.data') }}");
+                        const res = await fetch("{{ route('guru.rekap.data') }}?kelas={{ $schoolClass->slug }}");
                         if (res.ok) {
                             const data = await res.json();
                             this.summary = data.summary;
