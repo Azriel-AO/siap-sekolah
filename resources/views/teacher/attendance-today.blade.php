@@ -79,6 +79,7 @@
                                 <th class="py-3.5 px-4 text-center">Jam Masuk</th>
                                 <th class="py-3.5 px-4 text-center">Jam Pulang</th>
                                 <th class="py-3.5 px-4 text-center">Status</th>
+                                <th class="py-3.5 px-4 text-center">Wajah</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 text-sm">
@@ -118,6 +119,12 @@
                                                   'bg-gray-100 text-gray-600': s.status === 'BELUM_ABSEN'
                                               }"
                                               x-text="s.status_label">
+                                        </span>
+                                    </td>
+                                    <td class="py-3 px-4 text-center">
+                                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
+                                              :class="s.face === 'TERDAFTAR' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'"
+                                              x-text="s.face === 'TERDAFTAR' ? 'Terdaftar' : 'Belum'">
                                         </span>
                                     </td>
                                 </tr>
