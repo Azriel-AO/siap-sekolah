@@ -22,11 +22,15 @@ class FaceEnrollmentController extends Controller
 
         $student = $this->siswaMilikAkun($request);
         $enrollment = $student?->faceEnrollment;
+        $wajahTervalidasi = $this->pendaftaranValid($enrollment);
 
         return view('face-enrollment.show', [
             'student' => $student,
             'enrollment' => $enrollment,
-            'wajahTervalidasi' => $this->pendaftaranValid($enrollment),
+            'wajahTervalidasi' => $wajahTervalidasi,
+            'photosEmbedded' => $wajahTervalidasi ? $this->fotoEmbedded($enrollment) : [],
+            'tanggalDaftar' => $wajahTervalidasi ? $enrollment->created_at->translatedFormat('l, d F Y H.i') : null,
+            'tanggalDaftarUlang' => $wajahTervalidasi ? $enrollment->last_reenrolled_at?->translatedFormat('l, d F Y H.i') : null,
         ]);
     }
 

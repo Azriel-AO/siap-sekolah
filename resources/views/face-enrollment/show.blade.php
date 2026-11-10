@@ -26,17 +26,70 @@
                 <button @click="message = ''" class="text-xs font-bold px-2 py-1 rounded hover:bg-black/5">Tutup</button>
             </div>
 
-            <template x-if="sudahTerdaftar && mode === 'status'">
-                <div class="bg-white rounded-xl border border-emerald-200 shadow-sm p-6 sm:p-8 text-center space-y-3">
-                    <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
-                        <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                        </svg>
+            <template x-if="mode === 'status' && sudahTerdaftar">
+                <div class="bg-white rounded-xl border border-emerald-200 shadow-sm p-6 sm:p-8 space-y-6">
+                    <div class="text-center space-y-3">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h2 class="text-xl font-extrabold text-emerald-700">Wajah Anda Sudah Terdaftar</h2>
+                        <div class="text-sm text-gray-600 space-y-1">
+                            <p>Terdaftar sejak: <strong x-text="tanggalDaftar"></strong></p>
+                            <p x-show="tanggalDaftarUlang">Daftar ulang terakhir: <strong x-text="tanggalDaftarUlang"></strong></p>
+                        </div>
                     </div>
-                    <h2 class="text-xl font-extrabold text-emerald-700">Wajah Anda Sudah Terdaftar</h2>
-                    <p class="text-sm text-gray-600" x-text="statusText"></p>
+
+                    {{-- Pratinjau 3 foto milik siswa sendiri (embedded base64, hanya halaman ber-login ini) --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <template x-for="(foto, index) in photosEmbedded" :key="index">
+                            <div class="rounded-xl border border-gray-200 overflow-hidden">
+                                <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                                    <img x-show="foto" :src="foto" class="w-full h-full object-cover" :alt="'Foto wajah terdaftar ke-' + (index + 1)">
+                                    <span x-show="!foto" class="text-xs text-gray-400 font-semibold">Foto tidak tersedia</span>
+                                </div>
+                                <div class="p-2 bg-white border-t border-gray-100 text-center text-xs font-bold text-gray-600" x-text="'Foto ' + (index + 1)"></div>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="text-center">
+                        <button type="button" @click="showConfirmDaftarUlang = true"
+                                class="inline-flex items-center px-5 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm shadow-sm transition">
+                            <svg class="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.6 9a8 8 0 0113.9-2M18.4 15a8 8 0 01-13.9 2" />
+                            </svg>
+                            Daftar Ulang
+                        </button>
+                        <p class="text-xs text-gray-400 mt-2">Foto lama akan dihapus dan diganti dengan 3 foto baru.</p>
+                    </div>
                 </div>
             </template>
+
+            {{-- Dialog konfirmasi Daftar Ulang --}}
+            <div x-show="showConfirmDaftarUlang" x-cloak
+                 class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+                 @keydown.escape.window="showConfirmDaftarUlang = false">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" @click.outside="showConfirmDaftarUlang = false">
+                    <h3 class="text-lg font-extrabold text-gray-900">Daftar Ulang Wajah?</h3>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        Seluruh foto wajah lama Anda akan <strong>dihapus permanen</strong> dan diganti dengan
+                        3 foto baru. Tindakan ini tidak bisa dibatalkan setelah disimpan.
+                    </p>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" @click="showConfirmDaftarUlang = false"
+                                class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm transition">
+                            Batal
+                        </button>
+                        <button type="button" @click="yaDaftarUlang()"
+                                class="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition">
+                            Ya, Daftar Ulang
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             <template x-if="mode === 'form'">
                 <div class="space-y-6">
@@ -155,8 +208,11 @@
                 message: '',
                 messageOk: true,
                 sudahTerdaftar: {{ $wajahTervalidasi ? 'true' : 'false' }},
-                mode: '{{ $wajahTervalidasi ? "status" : "form" }}',
-                statusText: '{{ $enrollment?->created_at?->translatedFormat('l, d F Y H.i') ?? '' }}',
+                mode: '{{ $wajahTervalidasi ? 'status' : 'form' }}',
+                tanggalDaftar: @js($tanggalDaftar),
+                tanggalDaftarUlang: @js($tanggalDaftarUlang),
+                photosEmbedded: @js($photosEmbedded),
+                showConfirmDaftarUlang: false,
 
                 init() {
                     window.addEventListener('beforeunload', () => this.stopCamera());
@@ -245,6 +301,16 @@
                     }
                 },
 
+                // Dialog "Ya": pendaftaran lama belum dihapus; alur 3 foto baru dimulai
+                // (penghapusan terjadi saat simpan baru, dalam satu transaksi).
+                yaDaftarUlang() {
+                    this.showConfirmDaftarUlang = false;
+                    this.mode = 'form';
+                    this.consent = false;
+                    this.photos = [null, null, null];
+                    this.kameraGagal = false;
+                },
+
                 ulangFoto(index) {
                     this.photos[index] = null;
                     // Kamera dinyalakan lagi bila sebelumnya dimatikan karena 3 slot penuh
@@ -283,7 +349,9 @@
                             this.stopCamera();
                             this.sudahTerdaftar = true;
                             this.mode = 'status';
-                            this.statusText = data.tanggal_daftar ?? '';
+                            this.tanggalDaftar = data.tanggal_daftar ?? this.tanggalDaftar;
+                            this.tanggalDaftarUlang = data.tanggal_daftar_ulang ?? this.tanggalDaftarUlang;
+                            this.photosEmbedded = [...this.photos];
                         }
                     } catch (e) {
                         this.tampilkanPesan('Gagal menghubungi server. Periksa koneksi Anda.', false);
