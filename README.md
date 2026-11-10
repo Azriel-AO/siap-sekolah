@@ -210,11 +210,47 @@ Bagian ini adalah cara menguji fitur baru — cukup dengan 2 tab browser. Ikuti 
 4. **Hasil penting**: Nama siswa lain (misalnya Adinda Rahma atau Hendra Wijaya) **tidak muncul** — siswa hanya bisa melihat riwayatnya sendiri.
 
 ### Skenario 16: Uji Otomatis (Opsional, untuk yang ingin belajar)
-Aplikasi dilengkapi 11 pengujian otomatis yang meniru skenario di atas. Jalankan di terminal:
+Aplikasi dilengkapi pengujian otomatis yang meniru skenario di atas. Jalankan di terminal:
 ```powershell
 php artisan test tests/Feature/KioskAttendanceTest.php
 ```
-**Hasil**: Semua tes berwarna hijau dengan ringkasan `OK (11 tests, ...)` — artinya seluruh aturan (jam server, cooldown, kelas terikat, privasi) terjaga.
+**Hasil**: Semua tes berwarna hijau dengan ringkasan `OK (14 tests, ...)` — artinya seluruh aturan (jam server, cooldown, kelas terikat, privasi, foto bukti) terjaga.
+
+---
+
+## 📷 Panduan Uji Kamera Bukti Absen (Milestone Kamera)
+
+Kiosk kini punya **kamera bukti absen**: saat siswa tap kartu, kiosk mengambil 1 foto dari kamera sebagai bukti (aturan **F1** di PRD). Foto tersimpan di folder privat server — **hanya guru/admin** yang bisa melihatnya di rekap harian. Fitur ini **bukan pengenalan wajah** — kamera hanya merekam bukti, sistem tidak mengenali siapa pun.
+
+### Skenario 17: Kamera Aktif + Foto Tersimpan di Rekap Guru
+1. Siapkan komputer/laptop yang punya **webcam** (atau colok webcam USB).
+2. Pastikan server berjalan (`php artisan serve`) lalu reset data demo:
+   ```powershell
+   php artisan migrate:fresh --seed
+   ```
+3. **Tab 1 (Kiosk)**: buka `http://localhost:8000/kiosk/X-TKJ-1`.
+4. Browser akan menampilkan jendela kecil bertuliskan *"... ingin menggunakan kamera Anda"*. Klik tombol **Izinkan / Allow**.
+   - **Google Chrome / Edge**: klik **Izinkan** di jendela pop-up.
+   - **Mozilla Firefox**: klik **Izinkan**, lalu centang *"Ingat keputusan ini"* jika ingin permanen.
+5. **Hasil di pojok kanan bawah**: muncul kotak kecil **pratinjau kamera** (anda terlihat di dalamnya, dengan titik merah berkedip).
+6. Ketik `CARD-TKJ-009` lalu **Enter**.
+7. **Hasil**: tap tercatat seperti biasa, dan di belakang layar 1 foto dari kamera tersimpan sebagai bukti.
+8. **Tab 2 (Guru)**: buka jendela Incognito, masuk sebagai `guru@knbi.sch.id` / `password`, klik menu **Rekap Harian**.
+9. **Hasil**: di baris **Hendra Wijaya**, kolom foto kini berisi **thumbnail foto** yang tadi diambil kiosk. Klik thumbnail untuk **memperbesar**, klik lagi (atau tombol ✕) untuk menutup.
+10. Tap lagi di kiosk (`CARD-TKJ-009` setelah 1 menit, atau kartu lain), lalu lihat rekap guru: foto terbaru muncul di kolom foto yang sesuai (masuk/pulang).
+
+### Skenario 18: Kamera Tidak Ada / Izin Ditolak — Kiosk Tetap Normal
+1. Buka kiosk di browser tanpa webcam (misalnya komputer PC biasa), atau saat jendela izin muncul klik **Tolak / Block**.
+2. **Hasil**: kotak pratinjau kamera **tidak muncul** (disembunyikan rapi), **tidak ada pesan error**, dan seluruh alur tap kartu berjalan normal seperti biasa.
+3. Tap `CARD-TKJ-010` lalu **Enter** — absen tetap tercatat. Di rekap guru, kolom foto baris Intan tampil **kosong** dengan ikon tanda "-" — itu wajar karena tidak ada kamera.
+
+### Skenario 19: Foto Tidak Boleh Dilihat Siswa / Publik
+1. Masuk sebagai siswa (`siswa@knbi.sch.id` / `password`), lalu ketik alamat `http://localhost:8000/guru/rekap-harian` langsung di bilah alamat.
+2. **Hasil**: muncul halaman **403 — Akses Ditolak** ("Halaman ini hanya untuk guru dan admin").
+3. Buka `http://localhost:8000/guru/rekap-harian` **tanpa login** (jendela Incognito).
+4. **Hasil**: dialihkan ke halaman `/login`. Foto bukti absen tidak pernah bisa diakses tanpa akun guru/admin.
+
+> 💡 **Catatan privasi**: foto bukti absen disimpan di folder privat server (`storage/app/private/attendance-photos/`) dan tidak pernah diumumkan ke internet. Hanya halaman rekap yang wajib login sebagai guru/admin yang menampilkannya (Konstitusi VIII).
 
 ---
 
