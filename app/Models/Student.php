@@ -39,4 +39,9 @@ class Student extends Model
     {
         return $this->hasMany(Attendance::class);
     }
+
+    public function faceEnrollment(): HasOne
+    {
+        return $this->hasOne(FaceEnrollment::class);
+    }
 }
