@@ -213,6 +213,21 @@ class KioskAttendanceTest extends TestCase
         $this->assertSame(2, $response->json('summary.belum_absen'));
     }
 
+    public function test_siswa_dan_admin_akses_rekap_sesuai_aturan(): void
+    {
+        $this->seedDemo();
+
+        // Siswa TIDAK boleh melihat rekap (di dalamnya ada foto bukti absen)
+        $siswa = User::where('email', 'siswa@knbi.sch.id')->first();
+        $this->actingAs($siswa)->get('/guru/rekap-harian')->assertStatus(403);
+        $this->actingAs($siswa)->getJson('/guru/rekap-harian/data')->assertStatus(403);
+
+        // Admin BOLEH melihat rekap
+        $admin = User::where('email', 'admin@knbi.sch.id')->first();
+        $this->actingAs($admin)->get('/guru/rekap-harian')->assertStatus(200);
+        $this->actingAs($admin)->getJson('/guru/rekap-harian/data')->assertStatus(200);
+    }
+
     public function test_siswa_hanya_melihat_riwayat_miliknya(): void
     {
         $this->seedDemo();

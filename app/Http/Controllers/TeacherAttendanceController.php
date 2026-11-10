@@ -17,6 +17,8 @@ class TeacherAttendanceController extends Controller
      */
     public function index(Request $request): View
     {
+        $this->pastikanGuruAtauAdmin($request);
+
         $schoolClass = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
@@ -35,6 +37,8 @@ class TeacherAttendanceController extends Controller
      */
     public function data(Request $request): JsonResponse
     {
+        $this->pastikanGuruAtauAdmin($request);
+
         $schoolClass = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
         $today = Carbon::now('Asia/Jakarta')->toDateString();
 
@@ -108,6 +112,17 @@ class TeacherAttendanceController extends Controller
             ],
             'students' => $formatted,
         ];
+    }
+
+    /**
+     * Rekap harian (termasuk foto bukti absen, PRD F1) hanya boleh dilihat
+     * guru dan admin — bukan siswa, bukan pengunjung publik.
+     */
+    private function pastikanGuruAtauAdmin(Request $request): void
+    {
+        if (! in_array($request->user()->role, ['guru', 'admin'])) {
+            abort(403, 'Halaman ini hanya untuk guru dan admin.');
+        }
     }
 
     /**
