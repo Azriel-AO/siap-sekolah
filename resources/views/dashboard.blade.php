@@ -31,6 +31,23 @@
     <div class="py-8" x-data="{ alertMsg: '' }">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            {{-- Banner pengingat pendaftaran wajah (khusus siswa yang belum terdaftar) --}}
+            @if($siswaPerluDaftarWajah ?? false)
+                <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+                    <div class="flex items-start sm:items-center space-x-3">
+                        <svg class="w-6 h-6 text-amber-500 shrink-0 mt-0.5 sm:mt-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                        </svg>
+                        <p class="text-sm sm:text-base font-semibold text-amber-800">
+                            Wajah Anda belum terdaftar untuk absensi — daftar sekarang
+                        </p>
+                    </div>
+                    <a href="{{ route('siswa.wajah') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm transition shrink-0">
+                        Daftar Sekarang
+                    </a>
+                </div>
+            @endif
+
             <!-- Toast / Modal Pemberitahuan Placeholder -->
             <div x-show="alertMsg" x-transition x-cloak class="rounded-md bg-blue-50 p-4 border border-blue-200 shadow-sm flex items-start justify-between">
                 <div class="flex items-center">
