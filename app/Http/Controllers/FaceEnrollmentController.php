@@ -7,6 +7,7 @@ use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -108,44 +109,56 @@ class FaceEnrollmentController extends Controller
             $paths[$slot] = "face-photos/{$student->id}/face-{$student->id}-{$slot}-{$stamp}.jpg";
         }
 
-        // Daftar ulang (US2): hapus 3 file lama, timpa kolom path, dalam satu operasi
+        // Daftar ulang (US2): hapus 3 file lama, timpa kolom path, satu transaksi DB
         if ($existing) {
-            foreach ([$existing->photo_1_path, $existing->photo_2_path, $existing->photo_3_path] as $oldPath) {
-                if ($oldPath) {
-                    Storage::disk('local')->delete($oldPath);
+            try {
+                $enrollment = DB::transaction(function () use ($existing, $paths, $binaries, $now) {
+                    foreach ([$existing->photo_1_path, $existing->photo_2_path, $existing->photo_3_path] as $oldPath) {
+                        if ($oldPath) {
+                            Storage::disk('local')->delete($oldPath);
+                        }
+                    }
+
+                    foreach ($paths as $slot => $path) {
+                        Storage::disk('local')->put($path, $binaries[$slot]);
+                    }
+
+                    $existing->update([
+                        'photo_1_path' => $paths[1],
+                        'photo_2_path' => $paths[2],
+                        'photo_3_path' => $paths[3],
+                        'consented_at' => $now,
+                        'last_reenrolled_at' => $now,
+                    ]);
+
+                    return $existing->fresh();
+                });
+            } catch (\Throwable $e) {
+                foreach ($paths as $path) {
+                    Storage::disk('local')->delete($path);
                 }
+
+                return $this->gagal('Gagal menyimpan pendaftaran ulang. Coba lagi.', 422);
             }
-
-            foreach ($paths as $slot => $path) {
-                Storage::disk('local')->put($path, $binaries[$slot]);
-            }
-
-            $existing->update([
-                'photo_1_path' => $paths[1],
-                'photo_2_path' => $paths[2],
-                'photo_3_path' => $paths[3],
-                'consented_at' => $now,
-                'last_reenrolled_at' => $now,
-            ]);
-
-            $enrollment = $existing->fresh();
         } else {
             // Tulis ketiga file; bila ada yang gagal di tengah, bersihkan sisanya
             $written = [];
             try {
-                foreach ($paths as $slot => $path) {
-                    Storage::disk('local')->put($path, $binaries[$slot]);
-                    $written[] = $path;
-                }
+                $enrollment = DB::transaction(function () use ($paths, $binaries, $student, $now, &$written) {
+                    foreach ($paths as $slot => $path) {
+                        Storage::disk('local')->put($path, $binaries[$slot]);
+                        $written[] = $path;
+                    }
 
-                $enrollment = FaceEnrollment::create([
-                    'student_id' => $student->id,
-                    'photo_1_path' => $paths[1],
-                    'photo_2_path' => $paths[2],
-                    'photo_3_path' => $paths[3],
-                    'consented_at' => $now,
-                    'last_reenrolled_at' => null,
-                ]);
+                    return FaceEnrollment::create([
+                        'student_id' => $student->id,
+                        'photo_1_path' => $paths[1],
+                        'photo_2_path' => $paths[2],
+                        'photo_3_path' => $paths[3],
+                        'consented_at' => $now,
+                        'last_reenrolled_at' => null,
+                    ]);
+                });
             } catch (\Throwable $e) {
                 foreach ($written as $path) {
                     Storage::disk('local')->delete($path);
