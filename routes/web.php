@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\KioskController;
@@ -32,6 +33,13 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Rekap Absensi Guru (US-21, US-22)
     Route::get('/guru/rekap-harian', [TeacherAttendanceController::class, 'index'])->name('guru.rekap');
     Route::get('/guru/rekap-harian/data', [TeacherAttendanceController::class, 'data'])->name('guru.rekap.data');
+
+    // Admin: Data Siswa (khusus peran admin)
+    Route::get('/admin/data-siswa', [AdminStudentController::class, 'index'])->name('admin.siswa.index');
+    Route::get('/admin/data-siswa/tambah', [AdminStudentController::class, 'create'])->name('admin.siswa.create');
+    Route::post('/admin/data-siswa', [AdminStudentController::class, 'store'])->name('admin.siswa.store');
+    Route::get('/admin/data-siswa/{student}/edit', [AdminStudentController::class, 'edit'])->name('admin.siswa.edit');
+    Route::put('/admin/data-siswa/{student}', [AdminStudentController::class, 'update'])->name('admin.siswa.update');
 
     // Riwayat Absensi Siswa (US-31)
     Route::get('/siswa/riwayat-absensi', [StudentAttendanceController::class, 'index'])->name('siswa.riwayat');
