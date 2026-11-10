@@ -24,6 +24,9 @@
                         <a href="{{ route('admin.siswa.index') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                             Data Siswa
                         </a>
+                        <a href="{{ route('admin.kelas.index') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                            Data Kelas
+                        </a>
                     @else
                         <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                             Data Siswa
@@ -138,6 +141,9 @@
             @if(Auth::user()->role === 'admin')
                 <a href="{{ route('admin.siswa.index') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                     Data Siswa
+                </a>
+                <a href="{{ route('admin.kelas.index') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Data Kelas
                 </a>
             @else
                 <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
