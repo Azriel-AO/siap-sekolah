@@ -207,6 +207,58 @@ class FaceEnrollmentTest extends TestCase
         }
     }
 
+    public function test_rekap_guru_mengembalikan_badge_wajah_per_siswa(): void
+    {
+        $this->seedDemo();
+        Storage::fake('local');
+
+        // Daftarkan wajah hanya untuk akun siswa (Raka Pratama, tertaut siswa@knbi.sch.id)
+        $this->actingAs($this->siswa())->postJson('/siswa/pendaftaran-wajah', [
+            'consent' => true,
+            'photos' => [
+                $this->fakeJpegDataUrl('a'),
+                $this->fakeJpegDataUrl('b'),
+                $this->fakeJpegDataUrl('c'),
+            ],
+        ])->assertStatus(200);
+
+        $response = $this->actingAs($this->guru())->getJson('/guru/rekap-harian/data');
+
+        $response->assertStatus(200);
+        $students = collect($response->json('students'));
+
+        $raka = $students->firstWhere('nis', '10240101');
+        $hendra = $students->firstWhere('nis', '10240109');
+
+        $this->assertSame('TERDAFTAR', $raka['face']);
+        $this->assertSame('BELUM', $hendra['face']);
+    }
+
+    public function test_pendaftaran_tanpa_file_fisik_dianggap_belum(): void
+    {
+        $this->seedDemo();
+        Storage::fake('local');
+
+        $this->actingAs($this->siswa())->postJson('/siswa/pendaftaran-wajah', [
+            'consent' => true,
+            'photos' => [
+                $this->fakeJpegDataUrl('a'),
+                $this->fakeJpegDataUrl('b'),
+                $this->fakeJpegDataUrl('c'),
+            ],
+        ])->assertStatus(200);
+
+        // Simulasikan file foto terhapus tidak sengaja dari storage
+        $enrollment = FaceEnrollment::firstOrFail();
+        Storage::disk('local')->delete($enrollment->photo_2_path);
+
+        $response = $this->actingAs($this->guru())->getJson('/guru/rekap-harian/data');
+
+        $response->assertStatus(200);
+        $raka = collect($response->json('students'))->firstWhere('nis', '10240101');
+        $this->assertSame('BELUM', $raka['face']);
+    }
+
     public function test_foto_bukan_jpeg_sah_ditolak_tanpa_file_tersimpan(): void
     {
         $this->seedDemo();
