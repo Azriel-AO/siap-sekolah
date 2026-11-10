@@ -40,6 +40,9 @@
                         <a href="{{ route('siswa.riwayat') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                             Riwayat Absensi
                         </a>
+                        <a href="{{ route('siswa.wajah') }}" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                            Pendaftaran Wajah
+                        </a>
                     @else
                         <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                             Laporan
@@ -142,6 +145,9 @@
             @elseif(Auth::user()->role === 'siswa')
                 <a href="{{ route('siswa.riwayat') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                     Riwayat Absensi
+                </a>
+                <a href="{{ route('siswa.wajah') }}" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+                    Pendaftaran Wajah
                 </a>
             @else
                 <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">

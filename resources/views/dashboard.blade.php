@@ -175,6 +175,24 @@
                             </p>
                         </button>
                     @endif
+
+                    <!-- Kartu 5: Pendaftaran Wajah (khusus siswa) -->
+                    @if($user->role === 'siswa')
+                        <a href="{{ route('siswa.wajah') }}" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-cyan-400 hover:shadow-md transition group">
+                            <div class="w-12 h-12 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0M3 9.75V7.5A1.5 1.5 0 014.5 6h2M21 9.75V7.5A1.5 1.5 0 0019.5 6h-2M3 14.25V16.5A1.5 1.5 0 004.5 18h2M21 14.25V16.5a1.5 1.5 0 01-1.5 1.5h-2" />
+                                </svg>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <h4 class="font-bold text-gray-900 group-hover:text-cyan-600 transition">Pendaftaran Wajah</h4>
+                                <span class="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded">Aktif</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-2 leading-relaxed">
+                                Daftarkan 3 foto wajah Anda sebagai data referensi absensi. Hanya untuk siswa yang login.
+                            </p>
+                        </a>
+                    @endif
                 </div>
             </div>
 
