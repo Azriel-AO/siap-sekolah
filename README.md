@@ -170,7 +170,7 @@ Bagian ini adalah cara menguji fitur baru — cukup dengan 2 tab browser. Ikuti 
 
 ### Skenario 11: Simulasi Tap Kartu di Kiosk
 1. Pastikan server berjalan (`php artisan serve`) dan data demo sudah di-seed.
-2. Buka tab baru di browser, ketik alamat: `http://localhost:8000/kiosk/X-TKJ-1`.
+2. Buka tab baru di browser, ketik alamat: `http://localhost:8000/kiosk`.
 3. **Hasil**: Tampil layar penuh Kiosk kelas **X TKJ 1** dengan kotak input yang langsung aktif (kursor berkedip).
 4. Ketik UID kartu: `CARD-TKJ-009` lalu tekan **Enter**.
 5. **Hasil**: Muncul kartu pop-up besar berisi nama **Hendra Wijaya**, jam menunjukkan **waktu komputer server saat itu**, dan status **Hadir** (jika jam WIB sekarang ≤ 07.00) atau **Terlambat** (jika lewat dari 07.00).
@@ -186,7 +186,7 @@ Bagian ini adalah cara menguji fitur baru — cukup dengan 2 tab browser. Ikuti 
    ```powershell
    php artisan migrate:fresh --seed
    ```
-2. Buka `http://localhost:8000/kiosk/X-TKJ-1`, tap `CARD-TKJ-010` lalu **Enter** (absen masuk tercatat).
+2. Buka `http://localhost:8000/kiosk`, tap `CARD-TKJ-010` lalu **Enter** (absen masuk tercatat).
 3. Dalam waktu kurang dari 1 menit, tap lagi `CARD-TKJ-010` lalu **Enter**.
 4. **Hasil**: Muncul pesan *"Kartu baru saja dicatat. Silakan tunggu sebentar."* — tap kedua **tidak** dihitung sebagai absen pulang. Tunggu 1 menit barulah tap berikutnya tercatat sebagai pulang.
 
@@ -198,7 +198,7 @@ Bagian ini adalah cara menguji fitur baru — cukup dengan 2 tab browser. Ikuti 
 2. Klik menu **Rekap Harian** (di bar navigasi atas) atau kartu **Rekap Harian** di dashboard.
 3. **Hasil**: Tabel 10 siswa X TKJ 1 dengan 4 kartu ringkasan (Total, Hadir, Terlambat, Belum Absen). Ada indikator *"Auto-refresh aktif (tiap 4 detik)"*.
 4. Perhatikan siswa ke-9 dan ke-10 berstatus **Belum Absen**.
-5. Buka tab baru: `http://localhost:8000/kiosk/X-TKJ-1` dan tap `CARD-TKJ-009` lalu **Enter**.
+5. Buka tab baru: `http://localhost:8000/kiosk` dan tap `CARD-TKJ-009` lalu **Enter**.
 6. Kembali ke tab guru **tanpa menekan tombol refresh** dan tunggu maksimal 4 detik.
 7. **Hasil**: Baris Hendra Wijaya berubah sendiri menjadi **Hadir** atau **Terlambat** lengkap dengan jam masuk, dan kartu ringkasan **Belum Absen** berkurang satu.
 8. **Jam yang tampil selalu jam server** — jika jam komputer Anda diubah, status kehadiran tidak ikut berubah (anti-kecurangan).
@@ -228,7 +228,7 @@ Kiosk kini punya **kamera bukti absen**: saat siswa tap kartu, kiosk mengambil 1
    ```powershell
    php artisan migrate:fresh --seed
    ```
-3. **Tab 1 (Kiosk)**: buka `http://localhost:8000/kiosk/X-TKJ-1`.
+3. **Tab 1 (Kiosk)**: buka `http://localhost:8000/kiosk`.
 4. Browser akan menampilkan jendela kecil bertuliskan *"... ingin menggunakan kamera Anda"*. Klik tombol **Izinkan / Allow**.
    - **Google Chrome / Edge**: klik **Izinkan** di jendela pop-up.
    - **Mozilla Firefox**: klik **Izinkan**, lalu centang *"Ingat keputusan ini"* jika ingin permanen.
@@ -306,7 +306,7 @@ Menu baru **"Pendaftaran Wajah"** (khusus siswa): siswa login, mengizinkan kamer
 > 💡 **Catatan privasi**: foto wajah adalah data anak di bawah umur (Konstitusi VIII). Foto tersimpan di folder privat server (`storage/app/private/face-photos/`), hanya disajikan di halaman yang wajib login, dan fitur ini **tidak melakukan pengenalan/pencocokan wajah** (PRD F3 tahap 1).
 
 ### Skenario 27: Kiosk Tidak Terpengaruh (Regresi)
-1. Buka `http://localhost:8000/kiosk/X-TKJ-1`, ketik `CARD-TKJ-009` lalu Enter.
+1. Buka `http://localhost:8000/kiosk`, ketik `CARD-TKJ-009` lalu Enter.
 2. **Seharusnya**: alur tap berjalan persis seperti sebelum fitur ini — status, jam server, cooldown tidak berubah sama sekali.
 3. Uji otomatis semua tes:
    ```powershell

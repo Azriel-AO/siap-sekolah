@@ -129,19 +129,19 @@
                         </p>
                     </button>
 
-                    <!-- Kartu 3: Kiosk Absen (aktif — layar tap kelas X TKJ 1) -->
-                    <a href="{{ route('kiosk.show', 'X-TKJ-1') }}" target="_blank" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-amber-400 hover:shadow-md transition group">
+                    <!-- Kartu 3: Absen Gerbang (aktif — layar kiosk gerbang tunggal) -->
+                    <a href="{{ route('kiosk.gerbang') }}" target="_blank" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-amber-400 hover:shadow-md transition group">
                         <div class="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                             </svg>
                         </div>
                         <div class="flex items-center justify-between">
-                            <h4 class="font-bold text-gray-900 group-hover:text-amber-600 transition">Kiosk Absen</h4>
+                            <h4 class="font-bold text-gray-900 group-hover:text-amber-600 transition">Absen Gerbang</h4>
                             <span class="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded">Buka di Tab Baru</span>
                         </div>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                            Layar tap kartu pelajar RFID kelas X TKJ 1 (simulate tap dengan ketik UID kartu).
+                            Titik absen gerbang tunggal: semua kelas, lewat kartu RFID atau sidik jari.
                         </p>
                     </a>
 

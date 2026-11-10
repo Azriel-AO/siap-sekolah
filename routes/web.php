@@ -25,9 +25,14 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', 'prevent-back-history'])
     ->name('dashboard');
 
-// Rute Kiosk Absensi Terikat Kelas (US-14, R2, R7)
-Route::get('/kiosk/{slug}', [KioskController::class, 'show'])->name('kiosk.show');
-Route::post('/kiosk/{slug}/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
+// Kiosk Gerbang Tunggal (kartu + sidik jari; tanpa scoping kelas)
+Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang');
+Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
+Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
+
+// Route lama /kiosk/{slug} tetap aman: redirect 301 ke /kiosk
+Route::redirect('/kiosk/{slug}', '/kiosk', 301)->where('slug', '[A-Za-z0-9\-]+');
+Route::redirect('/kiosk/{slug}/tap', '/kiosk/tap', 301)->where('slug', '[A-Za-z0-9\-]+');
 
 // Rute Guru & Siswa terproteksi sesi autentikasi
 Route::middleware(['auth', 'prevent-back-history'])->group(function () {

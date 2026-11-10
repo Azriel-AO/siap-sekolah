@@ -37,7 +37,7 @@
                         Jadwal Kelas
                     </button>
 
-                    <a href="{{ route('kiosk.show', 'X-TKJ-1') }}" target="_blank" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
+                    <a href="{{ route('kiosk.gerbang') }}" target="_blank" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                         Kiosk Absen
                     </a>
 
@@ -153,7 +153,7 @@
             <button type="button" @click="placeholderNotice = 'Fitur Jadwal Kelas segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                 Jadwal Kelas
             </button>
-            <a href="{{ route('kiosk.show', 'X-TKJ-1') }}" target="_blank" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
+            <a href="{{ route('kiosk.gerbang') }}" target="_blank" onclick="open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
                 Kiosk Absen
             </a>
             @if(Auth::user()->role === 'guru')
@@ -187,3 +187,4 @@
         </div>
     </div>
 </nav>
+

@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\RfidCard;
-use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Services\FingerprintService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,21 +15,18 @@ use Illuminate\View\View;
 class KioskController extends Controller
 {
     /**
-     * Tampilkan layar Kiosk kelas.
+     * Layar Kiosk Gerbang Tunggal (absen masuk/pulang lewat kartu / sidik jari).
      */
-    public function show(string $slug): View
+    public function gerbang(): View
     {
-        $schoolClass = SchoolClass::where('slug', $slug)->firstOrFail();
-
-        return view('kiosk.show', [
-            'schoolClass' => $schoolClass,
-        ]);
+        return view('kiosk.gerbang');
     }
 
     /**
-     * Proses pembacaan tap kartu RFID di Kiosk.
+     * Proses pembacaan tap kartu RFID di Kiosk Gerbang.
+     * TIDAK ada scoping kelas — kartu siswa kelas mana pun diterima.
      */
-    public function tap(Request $request, string $slug): JsonResponse
+    public function tap(Request $request): JsonResponse
     {
         $request->validate([
             'card_uid' => ['required', 'string', 'max:50'],
@@ -38,10 +35,8 @@ class KioskController extends Controller
             'photo' => ['nullable', 'string', 'max:400000'],
         ]);
 
-        $schoolClass = SchoolClass::where('slug', $slug)->firstOrFail();
         $cardUid = trim($request->input('card_uid'));
 
-        // 1. Cari kartu RFID aktif
         $card = RfidCard::with(['student.schoolClass'])
             ->where('card_uid', $cardUid)
             ->where('is_active', true)
@@ -55,30 +50,68 @@ class KioskController extends Controller
             ], 404);
         }
 
-        $student = $card->student;
+        return $this->prosesAbsensi($card->student, $request->input('photo'), 'gerbang-kartu');
+    }
 
-        // 2. Validasi Kiosk Terikat Kelas (PRD R2 & Konstitusi VII)
-        if ($student->school_class_id !== $schoolClass->id) {
+    /**
+     * Proses identifikasi sidik jari di Kiosk Gerbang.
+     *
+     * Server-side memanggil bridge sensor (atau driver mock) — browser tidak
+     * pernah memanggil bridge langsung (hindari CORS). Bila sensor tidak
+     * tersedia/ dikenali → pesan ramah, TIDAK pernah 500.
+     */
+    public function identificarSidikJari(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => ['nullable', 'string', 'max:400000'],
+        ]);
+
+        $fingerprint = FingerprintService::dariConfig();
+        $huellaId = $fingerprint->identify();
+
+        if ($huellaId === null) {
             return response()->json([
                 'success' => false,
-                'type' => 'wrong_class',
-                'student_name' => $student->name,
-                'message' => "Siswa tidak terdaftar di kelas ini (Kiosk khusus {$schoolClass->name}).",
-            ], 422);
+                'type' => 'fingerprint_unavailable',
+                'message' => 'Sensor sidik jari tidak tersedia atau sidik jari tidak dikenali. Coba lagi atau gunakan kartu.',
+            ], 503);
         }
 
-        // 3. Waktu Server Mutlak (PRD R7 & Konstitusi II)
+        $student = Student::with('schoolClass')->where('fingerprint_id', $huellaId)->first();
+
+        if (! $student) {
+            return response()->json([
+                'success' => false,
+                'type' => 'fingerprint_not_found',
+                'message' => 'Sidik jari tidak terdaftar. Hubungi guru piket untuk pendaftaran.',
+            ], 404);
+        }
+
+        return $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-fingerprint');
+    }
+
+    /**
+     * Logika absensi masuk/pulang yang sama dengan kiosk lama
+     * (masuk/pulang berdasarkan catatan hari ini, cooldown 60 detik,
+     * foto bukti opsional) — TIDAK DIUBAH.
+     *
+     * Kelas yang dipakai untuk batas Hadir/Terlambat adalah kelas SISWA,
+     * bukan kelas perangkat (tidak ada lagi kiosk per kelas).
+     */
+    private function prosesAbsensi(Student $student, ?string $photo, string $device): JsonResponse
+    {
+        $schoolClass = $student->schoolClass;
+
+        // Waktu Server Mutlak (PRD R7 & Konstitusi II)
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
         $currentTime = $now->format('H:i:s');
 
-        // 4. Periksa catatan kehadiran hari ini
         $attendance = Attendance::where('student_id', $student->id)
             ->where('date', $today)
             ->first();
 
-        // 5. Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan.
-        // abs() dipakai karena diffInSeconds di Carbon 3 bersifat bertanda (bisa negatif).
+        // Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan.
         if ($attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
             return response()->json([
                 'success' => false,
@@ -88,7 +121,7 @@ class KioskController extends Controller
             ], 429);
         }
 
-        // 6. Alur Tap Pertama = Absen Masuk
+        // Alur Tap Pertama = Absen Masuk
         if (! $attendance) {
             // Status: <= entry_time = HADIR, > entry_time = TERLAMBAT
             $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
@@ -100,8 +133,8 @@ class KioskController extends Controller
                 'check_in_at' => $currentTime,
                 'status' => $status,
                 'last_tap_at' => $now,
-                'kiosk_device' => 'kiosk-'.$schoolClass->slug,
-                'photo_in_path' => $this->simpanFotoBukti($request->input('photo'), $student, 'masuk', $now),
+                'kiosk_device' => $device,
+                'photo_in_path' => $this->simpanFotoBukti($photo, $student, 'masuk', $now),
             ]);
 
             $statusLabel = ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat';
@@ -111,6 +144,7 @@ class KioskController extends Controller
                 'type' => 'check_in',
                 'student_name' => $student->name,
                 'nis' => $student->nis,
+                'kelas' => $schoolClass->name,
                 'status' => $status,
                 'status_label' => $statusLabel,
                 'time' => $currentTime,
@@ -118,12 +152,12 @@ class KioskController extends Controller
             ]);
         }
 
-        // 7. Alur Tap Kedua = Absen Pulang
+        // Alur Tap Kedua = Absen Pulang
         if (! $attendance->check_out_at) {
             $attendance->update([
                 'check_out_at' => $currentTime,
                 'last_tap_at' => $now,
-                'photo_out_path' => $this->simpanFotoBukti($request->input('photo'), $student, 'pulang', $now) ?? $attendance->photo_out_path,
+                'photo_out_path' => $this->simpanFotoBukti($photo, $student, 'pulang', $now) ?? $attendance->photo_out_path,
             ]);
 
             return response()->json([
@@ -131,6 +165,7 @@ class KioskController extends Controller
                 'type' => 'check_out',
                 'student_name' => $student->name,
                 'nis' => $student->nis,
+                'kelas' => $schoolClass->name,
                 'status' => $attendance->status,
                 'status_label' => 'Absen Pulang Berhasil',
                 'time' => $currentTime,
@@ -138,11 +173,12 @@ class KioskController extends Controller
             ]);
         }
 
-        // 8. Sudah tap masuk & pulang
+        // Sudah tap masuk & pulang
         return response()->json([
             'success' => false,
             'type' => 'already_completed',
             'student_name' => $student->name,
+            'kelas' => $schoolClass->name,
             'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
         ], 200);
     }
@@ -163,7 +199,7 @@ class KioskController extends Controller
         try {
             $binary = base64_decode(substr($photoBase64, strpos($photoBase64, ',') + 1), true);
 
-            // Batas ukuran wajar (± 500 KB) sebagai pengaman tambahan
+            // Batas ukuran wajar (~ 500 KB) sebagai pengaman tambahan
             if ($binary === false || strlen($binary) < 100 || strlen($binary) > 500 * 1024) {
                 return null;
             }

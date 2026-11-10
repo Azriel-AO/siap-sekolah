@@ -24,28 +24,31 @@ class KioskAttendanceTest extends TestCase
         $this->seed(\Database\Seeders\DatabaseSeeder::class);
     }
 
-    public function test_halaman_kiosk_kelas_dapat_dibuka(): void
+    public function test_halaman_kiosk_gerbang_dapat_dibuka(): void
+    {
+        $this->seedDemo();
+
+        $response = $this->get('/kiosk');
+
+        $response->assertStatus(200);
+        $response->assertSee('Absen Gerbang');
+    }
+
+    public function test_route_kiosk_lama_redirect_301_ke_gerbang(): void
     {
         $this->seedDemo();
 
         $response = $this->get('/kiosk/X-TKJ-1');
 
-        $response->assertStatus(200);
-        $response->assertSee('X TKJ 1');
-    }
-
-    public function test_kiosk_slug_tidak_dikenal_mengembalikan_404(): void
-    {
-        $this->seedDemo();
-
-        $this->get('/kiosk/KELAS-PALAKU')->assertStatus(404);
+        $response->assertStatus(301);
+        $response->assertRedirect('/kiosk');
     }
 
     public function test_tap_kartu_tidak_dikenali_ditolak(): void
     {
         $this->seedDemo();
 
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $response = $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TIDAK-ADA',
         ]);
 
@@ -61,7 +64,7 @@ class KioskAttendanceTest extends TestCase
         $this->seedDemo();
 
         // Siswa ke-9 (Hendra) belum absen hari ini
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $response = $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TKJ-009',
         ]);
 
@@ -91,10 +94,10 @@ class KioskAttendanceTest extends TestCase
         $this->seedDemo();
 
         // Tap pertama diterima
-        $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-010']);
+        $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-010']);
 
         // Tap kedua langsung (kurang dari 60 detik) ditolak R3
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-010']);
+        $response = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-010']);
 
         $response->assertStatus(429);
         $response->assertJson([
@@ -107,7 +110,7 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-009']);
+        $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
         // Mundurkan waktu tap terakhir 2 menit agar lolos cooldown
         $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
@@ -115,7 +118,7 @@ class KioskAttendanceTest extends TestCase
             'last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2),
         ]);
 
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-009']);
+        $response = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
         $response->assertStatus(200);
         $response->assertJson([
@@ -131,14 +134,14 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-009']);
+        $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
         Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))
             ->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
-        $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-009']);
+        $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
         Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))
             ->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', ['card_uid' => 'CARD-TKJ-009']);
+        $response = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
         $response->assertStatus(200);
         $response->assertJson([
@@ -147,11 +150,12 @@ class KioskAttendanceTest extends TestCase
         ]);
     }
 
-    public function test_kartu_siswa_kelas_lain_ditolak_di_kiosk(): void
+    public function test_kartu_siswa_kelas_lain_diterima_di_gerbang(): void
     {
         $this->seedDemo();
 
-        // Kelas lain + siswa lain + kartu lain
+        // Kiosk Gerbang Tunggal TIDAK terikat kelas — kartu siswa kelas
+        // mana pun boleh tap (perubahan dari mode kiosk per kelas).
         $kelasLain = SchoolClass::create([
             'name' => 'X RPL 1',
             'slug' => 'X-RPL-1',
@@ -173,19 +177,17 @@ class KioskAttendanceTest extends TestCase
             'is_active' => true,
         ]);
 
-        // Tap kartu kelas RPL di kiosk kelas TKJ → anomali ditolak (R2 / Konstitusi VII)
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $response = $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-RPL-001',
         ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(200);
         $response->assertJson([
-            'success' => false,
-            'type' => 'wrong_class',
+            'success' => true,
+            'type' => 'check_in',
         ]);
 
-        // Tidak boleh ada record kehadiran yang tercipta
-        $this->assertDatabaseMissing('attendances', ['student_id' => $siswaLain->id]);
+        $this->assertDatabaseHas('attendances', ['student_id' => $siswaLain->id]);
     }
 
     public function test_guru_dapat_membuka_rekap_harian_dan_data_polling(): void
@@ -264,7 +266,7 @@ class KioskAttendanceTest extends TestCase
         );
 
         // Tap masuk dengan foto
-        $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TKJ-009',
             'photo' => $fotoPalsu,
         ])->assertStatus(200);
@@ -276,7 +278,7 @@ class KioskAttendanceTest extends TestCase
         // Lewati cooldown lalu tap pulang dengan foto
         $attendance->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
 
-        $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TKJ-009',
             'photo' => $fotoPalsu,
         ])->assertStatus(200);
@@ -291,7 +293,7 @@ class KioskAttendanceTest extends TestCase
         $this->seedDemo();
 
         // Foto bukan data URL JPEG yang sah → tap tetap berhasil, tanpa foto
-        $response = $this->postJson('/kiosk/X-TKJ-1/tap', [
+        $response = $this->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TKJ-009',
             'photo' => 'bukan-gambar-valid',
         ]);
@@ -301,5 +303,42 @@ class KioskAttendanceTest extends TestCase
 
         $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
         $this->assertNull($attendance->photo_in_path, 'Foto tidak valid tidak boleh tersimpan.');
+    }
+    public function test_fingerprint_mock_mengidentifikasi_siswa_dan_mencatat_absen(): void
+    {
+        $this->seedDemo();
+
+        // Daftarkan sidik jari mock ke Hendra (NIS 10240109)
+        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+
+        // Mock driver: identify mengembalikan fingerprint_id siswa terdaftar
+        $response = $this->postJson('/kiosk/fingerprint/identificar', []);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'type' => 'check_in',
+            'student_name' => 'Hendra Wijaya',
+        ]);
+
+        $this->assertDatabaseHas('attendances', [
+            'student_id' => Student::where('nis', '10240109')->value('id'),
+            'kiosk_device' => 'gerbang-fingerprint',
+        ]);
+    }
+
+    public function test_fingerprint_tidak_terdaftar_dijawab_ramah_tanpa_crash(): void
+    {
+        $this->seedDemo();
+
+        // Tidak ada siswa yang punya fingerprint_id -> mock tidak mengenali siapa pun
+        $response = $this->postJson('/kiosk/fingerprint/identificar', []);
+
+        $response->assertStatus(503);
+        $response->assertJson([
+            'success' => false,
+            'type' => 'fingerprint_unavailable',
+        ]);
+        $this->assertStringContainsString('Sensor sidik jari', $response->json('message'));
     }
 }
