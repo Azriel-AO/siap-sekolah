@@ -21,7 +21,7 @@ class TeacherAttendanceController extends Controller
 
         $schoolClass = $this->kelasDipilih($request);
         $classes = SchoolClass::orderBy('name')->get();
-        $today = Carbon::now('Asia/Jakarta')->toDateString();
+        $today = $this->tanggalDipilih($request);
 
         $studentsData = $this->getAttendanceData($schoolClass, $today);
 
@@ -29,6 +29,7 @@ class TeacherAttendanceController extends Controller
             'schoolClass' => $schoolClass,
             'classes' => $classes,
             'today' => $today,
+            'tanggalDisplay' => \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y'),
             'summary' => $studentsData['summary'],
             'students' => $studentsData['students'],
         ]);
@@ -42,14 +43,14 @@ class TeacherAttendanceController extends Controller
         $this->pastikanGuruAtauAdmin($request);
 
         $schoolClass = $this->kelasDipilih($request);
-        $today = Carbon::now('Asia/Jakarta')->toDateString();
+        $today = $this->tanggalDipilih($request);
 
         $data = $this->getAttendanceData($schoolClass, $today);
 
         return response()->json([
             'success' => true,
             'class_name' => $schoolClass->name,
-            'date_formatted' => Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
+            'date_formatted' => \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y'),
             'server_time' => Carbon::now('Asia/Jakarta')->format('H:i:s'),
             'summary' => $data['summary'],
             'students' => $data['students'],
@@ -115,6 +116,21 @@ class TeacherAttendanceController extends Controller
             ],
             'students' => $formatted,
         ];
+    }
+
+    /**
+     * Tanggal rekap dipilih lewat query param "?tanggal=YYYY-MM-DD".
+     * Format salah/tidak masuk akal → hari ini.
+     */
+    private function tanggalDipilih(Request $request): string
+    {
+        $t = (string) $request->query('tanggal', '');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) !== false) {
+            return $t;
+        }
+
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 
     /**

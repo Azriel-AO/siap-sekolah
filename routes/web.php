@@ -49,6 +49,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Admin: semua route /admin/* khusus peran admin (middleware 'admin'). Guru & siswa → 403.
     Route::middleware(['admin'])->group(function () {
+        // Admin: export rekap (Excel & PDF)
+        Route::get('/admin/rekap-export/excel', [\App\Http\Controllers\AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
+        Route::get('/admin/rekap-export/pdf', [\App\Http\Controllers\AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
+
         // Admin: pengaturan aplikasi
         Route::post('/admin/pengaturan/mode-pendaftaran-gerbang', [\App\Http\Controllers\DashboardController::class, 'toggleModePendaftaranGerbang'])->name('admin.toggle.pendaftaran');
 

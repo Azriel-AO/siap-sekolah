@@ -10,14 +10,35 @@
                 </p>
             </div>
             <div class="flex items-center space-x-3">
+                {{-- Filter tanggal: reload dengan ?tanggal=YYYY-MM-DD --}}
+                <form method="GET" action="{{ route('guru.rekap') }}" class="flex items-center">
+                    <input type="hidden" name="kelas" value="{{ $schoolClass->slug }}">
+                    <input type="date" name="tanggal" value="{{ $today }}" onchange="this.form.submit()"
+                           class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                           aria-label="Pilih tanggal">
+                </form>
                 {{-- Pemilih kelas: reload halaman dengan ?kelas=slug --}}
-                <select onchange="window.location.href='{{ route('guru.rekap') }}?kelas=' + encodeURIComponent(this.value)"
+                <select onchange="window.location.href='{{ route('guru.rekap') }}?kelas=' + encodeURIComponent(this.value) + '&tanggal={{ $today }}'"
                         class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
                         aria-label="Pilih kelas">
                     @foreach($classes as $kelas)
                         <option value="{{ $kelas->slug }}" @selected($kelas->slug === $schoolClass->slug)>{{ $kelas->name }}</option>
                     @endforeach
                 </select>
+                @if(Auth::user()->role === 'admin')
+                    <a href="{{ route('admin.rekap.excel', ['tanggal' => $today, 'kelas' => $schoolClass->slug]) }}" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm transition">
+                        <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z" />
+                        </svg>
+                        Export Excel
+                    </a>
+                    <a href="{{ route('admin.rekap.pdf', ['tanggal' => $today, 'kelas' => $schoolClass->slug]) }}" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow-sm transition">
+                        <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 7a4 4 0 014-4h10a4 4 0 014 4v10a4 4 0 01-4 4H7a4 4 0 01-4-4V7z" />
+                        </svg>
+                        Export PDF
+                    </a>
+                @endif
                 <a href="{{ route('kiosk.gerbang') }}" target="_blank" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs shadow-sm transition">
                     <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -62,9 +83,9 @@
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-lg font-bold text-gray-900">Daftar Kehadiran Siswa Hari Ini</h2>
+                        <h2 class="text-lg font-bold text-gray-900">Daftar Kehadiran Siswa</h2>
                         <p class="text-xs text-gray-500" x-text="dateFormatted ? dateFormatted + ' - Server: ' + serverTime + ' WIB' : 'Memuat data...'">
-                            {{ \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y') }}
+                            {{ $tanggalDisplay }}
                         </p>
                     </div>
 
@@ -178,7 +199,7 @@
 
                 async fetchData() {
                     try {
-                        const res = await fetch("{{ route('guru.rekap.data') }}?kelas={{ $schoolClass->slug }}");
+                        const res = await fetch("{{ route('guru.rekap.data') }}?kelas={{ $schoolClass->slug }}&tanggal={{ $today }}");
                         if (res.ok) {
                             const data = await res.json();
                             this.summary = data.summary;
