@@ -131,6 +131,82 @@ class FaceEnrollmentTest extends TestCase
         $this->assertDatabaseCount('face_enrollments', 0);
     }
 
+    public function test_daftar_ulang_mengganti_foto_lama_dan_tetap_satu_baris(): void
+    {
+        $this->seedDemo();
+        Storage::fake('local');
+
+        $siswa = $this->siswa();
+
+        \Carbon\Carbon::setTestNow('2026-11-10 09:00:00');
+        $this->actingAs($siswa)->postJson('/siswa/pendaftaran-wajah', [
+            'consent' => true,
+            'photos' => [
+                $this->fakeJpegDataUrl('x'),
+                $this->fakeJpegDataUrl('y'),
+                $this->fakeJpegDataUrl('z'),
+            ],
+        ])->assertStatus(200);
+
+        $sebelum = FaceEnrollment::firstOrFail();
+        $pathLama = [$sebelum->photo_1_path, $sebelum->photo_2_path, $sebelum->photo_3_path];
+        $this->assertNull($sebelum->last_reenrolled_at);
+
+        \Carbon\Carbon::setTestNow('2026-11-10 10:00:00');
+        $this->actingAs($siswa)->postJson('/siswa/pendaftaran-wajah', [
+            'consent' => true,
+            'photos' => [
+                $this->fakeJpegDataUrl('p'),
+                $this->fakeJpegDataUrl('q'),
+                $this->fakeJpegDataUrl('r'),
+            ],
+        ])->assertStatus(200)->assertJson(['success' => true]);
+        \Carbon\Carbon::setTestNow();
+
+        $this->assertDatabaseCount('face_enrollments', 1);
+
+        $sesudah = FaceEnrollment::firstOrFail();
+        $pathBaru = [$sesudah->photo_1_path, $sesudah->photo_2_path, $sesudah->photo_3_path];
+
+        foreach ($pathLama as $old) {
+            Storage::disk('local')->assertMissing($old);
+        }
+        foreach ($pathBaru as $new) {
+            Storage::disk('local')->assertExists($new);
+        }
+
+        $this->assertNotNull($sesudah->last_reenrolled_at, 'Tanggal daftar ulang terakhir harus terisi.');
+    }
+
+    public function test_status_endpoint_mengembalikan_terdaftar_beserta_foto_milik_sendiri(): void
+    {
+        $this->seedDemo();
+        Storage::fake('local');
+
+        $siswa = $this->siswa();
+
+        $this->actingAs($siswa)->postJson('/siswa/pendaftaran-wajah', [
+            'consent' => true,
+            'photos' => [
+                $this->fakeJpegDataUrl('a'),
+                $this->fakeJpegDataUrl('b'),
+                $this->fakeJpegDataUrl('c'),
+            ],
+        ])->assertStatus(200);
+
+        $response = $this->actingAs($siswa)->getJson('/siswa/pendaftaran-wajah/status');
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'terdaftar' => true,
+            'status_label' => 'Terdaftar',
+        ]);
+        $this->assertCount(3, $response->json('photos'));
+        foreach ($response->json('photos') as $photo) {
+            $this->assertStringStartsWith('data:image/jpeg;base64,', $photo);
+        }
+    }
+
     public function test_foto_bukan_jpeg_sah_ditolak_tanpa_file_tersimpan(): void
     {
         $this->seedDemo();
