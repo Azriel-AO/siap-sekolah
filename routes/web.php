@@ -5,6 +5,7 @@ use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\KioskController;
+use App\Http\Controllers\PendaftaranController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\TeacherAttendanceController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,12 @@ Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang')
 Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
 Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
 
+// Terminal Pendaftaran Mandiri (guest; aktif hanya bila toggle admin ON)
+Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaftaran.index');
+Route::post('/pendaftaran', [PendaftaranController::class, 'store'])->name('pendaftaran.simpan');
+Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])->name('pendaftaran.fingerprint.enrolar');
+Route::get('/pendaftaran/berhasil', [PendaftaranController::class, 'berhasil'])->name('pendaftaran.berhasil');
+
 // Route lama /kiosk/{slug} tetap aman: redirect 301 ke /kiosk
 Route::redirect('/kiosk/{slug}', '/kiosk', 301)->where('slug', '[A-Za-z0-9\-]+');
 Route::redirect('/kiosk/{slug}/tap', '/kiosk/tap', 301)->where('slug', '[A-Za-z0-9\-]+');
@@ -42,6 +49,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
 
     // Admin: semua route /admin/* khusus peran admin (middleware 'admin'). Guru & siswa → 403.
     Route::middleware(['admin'])->group(function () {
+        // Admin: pengaturan aplikasi
+        Route::post('/admin/pengaturan/mode-pendaftaran-gerbang', [\App\Http\Controllers\DashboardController::class, 'toggleModePendaftaranGerbang'])->name('admin.toggle.pendaftaran');
+
         // Admin: Data Kelas
         Route::get('/admin/data-kelas', [AdminClassController::class, 'index'])->name('admin.kelas.index');
         Route::get('/admin/data-kelas/tambah', [AdminClassController::class, 'create'])->name('admin.kelas.create');
