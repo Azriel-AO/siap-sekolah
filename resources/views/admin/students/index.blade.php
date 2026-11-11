@@ -145,19 +145,19 @@
                             <li>
                                 <strong x-text="targetSiswa?.attendances_count"></strong> catatan absensi
                             </li>
-                            <li x-show="targetSiswa?.has_card">
+                            <li x-show="targetSiswa?.has_card" x-cloak>
                                 <strong>1 kartu</strong> RFID (UID: <span class="font-mono" x-text="targetSiswa?.card_uid"></span>)
                             </li>
-                            <li x-show="!targetSiswa?.has_card" class="opacity-75">
+                            <li x-show="!targetSiswa?.has_card" x-cloak class="opacity-75">
                                 Tidak ada kartu RFID
                             </li>
                             <li>
                                 <strong x-text="targetSiswa?.face_photos_count"></strong> foto wajah
                             </li>
-                            <li x-show="targetSiswa?.user_email">
+                            <li x-show="targetSiswa?.user_email" x-cloak>
                                 Akun login terhubung (<span class="font-mono" x-text="targetSiswa?.user_email"></span>)
                             </li>
-                            <li x-show="!targetSiswa?.user_email" class="opacity-75">
+                            <li x-show="!targetSiswa?.user_email" x-cloak class="opacity-75">
                                 Tidak ada akun login
                             </li>
                         </ul>

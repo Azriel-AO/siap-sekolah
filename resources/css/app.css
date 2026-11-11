@@ -1,3 +1,6 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Sembunyikan elemen Alpine sebelum hydrate (hindari FOUC / flash modal). */
+[x-cloak] { display: none !important; }
