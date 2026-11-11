@@ -317,6 +317,123 @@ Menu baru **"Pendaftaran Wajah"** (khusus siswa): siswa login, mengizinkan kamer
 
 ---
 
+## 🚪 Deployment Kiosk Gerbang
+
+Panduan pemasangan PC Kiosk Gerbang Tunggal untuk mesin absensi mandiri siswa di gerbang sekolah (menggunakan kartu RFID & sensor sidik jari ZK9500).
+
+> [!CAUTION]
+> <span style="color:red; font-size:1.1em; font-weight:bold;">⛔ DILARANG KERAS menjalankan `php artisan migrate:fresh` di lingkungan produksi! Perintah tersebut akan MENGHAPUS SELURUH database, termasuk data siswa dan riwayat absensi. Gunakan hanya `php artisan migrate --force` bila ada penambahan migrasi.</span>
+
+### 1. Kebutuhan Perangkat & Perangkat Lunak
+- **PC Box / Komputer Kiosk**: Sistem operasi **Windows 10 / 11** (ditempatkan di gerbang/pos jaga).
+- **PHP 8.3+**: Wajib memastikan **`extension=zip` aktif** di file `php.ini` (kebutuhan wajib untuk fitur export laporan rekap Excel OpenSpout).
+- **Google Chrome**: Browser untuk mode Kiosk layar penuh.
+- **Hardware Sensor & Bridge**:
+  - Sensor sidik jari **ZKTeco ZK9500** + SDK resmi ZKTeco (`libzkfp.dll` 32-bit).
+  - Pustaka bridge **`FingerBridge.exe`** (zk9500-bridge, lisensi MIT, berjalan di port `8787`).
+- **Node.js LTS & Composer**: Untuk kompilasi aset frontend dan dependency backend.
+
+---
+
+### 2. Langkah Instalasi Aplikasi di PC Box Gerbang
+Buka PowerShell / Terminal di PC box gerbang, jalankan langkah berurutan:
+1. **Clone repository**:
+   ```powershell
+   git clone <url-repo> c:\siap-sekolah
+   cd c:\siap-sekolah
+   ```
+2. **Pasang dependency backend**:
+   ```powershell
+   composer install --no-dev --optimize-autoloader
+   ```
+3. **Pasang pustaka frontend & build aset**:
+   ```powershell
+   npm ci || npm install
+   npm run build
+   ```
+4. **Siapkan file environment**:
+   ```powershell
+   copy .env.example .env
+   php artisan key:generate
+   ```
+5. **Konfigurasi driver sensor sidik jari**:
+   Di file `.env`, atur:
+   ```env
+   FINGERPRINT_DRIVER=bridge
+   FINGERPRINT_BASE_URL=http://127.0.0.1:8787
+   FINGERPRINT_TIMEOUT=10
+   ```
+   *(Gunakan `FINGERPRINT_DRIVER=mock` sementara jika alat fisik ZK9500 belum terpasang).*
+6. **Migrasi database & isi data awal**:
+   ```powershell
+   php artisan migrate --force
+   php artisan db:seed --force
+   ```
+7. **Jalankan server aplikasi**:
+   ```powershell
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+   *(Menggunakan `--host=0.0.0.0` agar bisa diakses oleh PC Guru/Admin di jaringan LAN yang sama).*
+
+---
+
+### 3. Instalasi & Pengujian Bridge ZK9500
+1. Letakkan file `FingerBridge.exe` dan pustaka pendukung `libzkfp.dll` di folder PC box (misal: `C:\FingerBridge\`).
+2. Tancapkan perangkat ZK9500 ke port USB PC box.
+3. Jalankan `FingerBridge.exe`.
+4. Uji koneksi bridge di browser:
+   Buka `http://127.0.0.1:8787/estado` → respon JSON harus berupa:
+   ```json
+   {"conectado": true, "modelo": "ZK9500", ...}
+   ```
+5. *(Opsional)*: Daftarkan `FingerBridge.exe` sebagai Windows Service (misalnya via NSSM) atau masukkan ke folder Startup agar langsung aktif otomatis saat PC menyala.
+
+---
+
+### 4. Menjadikan Mesin Absen Otomatis Masuk ke `/kiosk` (Satu Pintu)
+Mesin di gerbang dirancang untuk langsung membuka layar absensi satu pintu tanpa login:
+1. Buat shortcut baru untuk Google Chrome di Windows.
+2. Klik kanan shortcut → **Properties** → ubah bagian **Target** menjadi:
+   ```text
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk --app="http://localhost:8000/kiosk"
+   ```
+   *(Sesuaikan path instalasi Chrome jika terpasang di lokasi lain)*.
+3. Tekan **Win + R**, ketik `shell:startup`, lalu tekan Enter.
+4. Salin shortcut Chrome tersebut ke dalam folder Startup Windows yang terbuka.
+5. **Hasil**: Saat PC box gerbang booting/menyala, Windows otomatis membuka Google Chrome dalam mode Kiosk layar penuh langsung ke `http://localhost:8000/kiosk` tanpa perlu login.
+
+---
+
+### 5. Akses untuk PC Admin & Guru di Jaringan LAN
+- PC Admin/Guru di ruangan lain yang terhubung ke jaringan LAN/WiFi yang sama cukup membuka browser dan mengakses:
+  ```text
+  http://<ip-box-gerbang>:8000
+  ```
+  *(Contoh: `http://192.168.1.50:8000`)*.
+- Pengguna dialihkan ke halaman login, masukkan akun Guru / Admin, lalu diarahkan ke `/dashboard`.
+
+---
+
+### 6. Catatan Kamera & Privasi Kiosk
+- Kiosk absensi diakses melalui `http://localhost:8000/kiosk` langsung di PC box gerbang. Karena dibuka dari `localhost`, API browser `navigator.mediaDevices.getUserMedia` **berjalan normal tanpa memerlukan HTTPS**.
+- Akses dari PC lain di jaringan LAN (Admin/Guru) hanya digunakan untuk dashboard dan rekap, sehingga tidak membutuhkan akses kamera.
+
+---
+
+### 7. Troubleshooting Kiosk Gerbang
+1. **Error: Class "ZipArchive" not found**:
+   - Penyebab: Ekstensi zip PHP belum diaktifkan (dibutuhkan untuk export file Excel laporan).
+   - Solusi: Cek lokasi file konfigurasi PHP dengan `php --ini` (lihat baris *Loaded Configuration File*). Buka file `php.ini` tersebut, cari baris `;extension=zip`, hapus tanda titik koma `;` di depannya menjadi `extension=zip`, simpan, lalu **RESTART** `php artisan serve`.
+2. **Fingerprint: "Sensor sidik jari tidak tersedia atau sidik jari tidak dikenali"**:
+   - Pastikan service `FingerBridge.exe` sedang berjalan.
+   - Buka `http://127.0.0.1:8787/estado` di browser untuk memastikan perangkat terdeteksi (`"conectado": true`).
+   - Periksa setting `.env` atau config: pastikan `FINGERPRINT_BASE_URL=http://127.0.0.1:8787` dan nilai `FINGERPRINT_TIMEOUT=10`.
+3. **Kamera gelap atau tidak muncul**:
+   - Pastikan layar kiosk dibuka menggunakan alamat `http://localhost:8000/kiosk` di PC box lokal gerbang, bukan diakses melalui alamat IP jaringan LAN (browser memblokir akses webcam tanpa HTTPS kecuali di `localhost`).
+   - Pastikan izin kamera pada browser Chrome diizinkan (*Allow*).
+
+---
+
 ## 🌐 Deployment untuk Guru (Memasang SIAP di Komputer Sekolah)
 
 Panduan memasang SIAP KNBI di komputer/server sekolah agar bisa dipakai harian — ditulis untuk guru/TU, bukan ahli IT. Langkah dijalankan **sekali** saat pemasangan. Bagian yang belum sempat diuji disebutkan dengan jelas; jangan dianggap pasti.

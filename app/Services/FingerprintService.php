@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
+use App\Models\Student;
 use Illuminate\Support\Facades\Http;
 
 /**
  * Abstraksi sensor sidik jari ZK9500 (via bridge HTTP di 127.0.0.1:8787)
  * dengan driver mock agar seluruh alur bisa diuji TANPA alat fisik.
  *
- * Konfigurasi (.env):
+ * Konfigurasi (config/fingerprint.php / .env):
  *   FINGERPRINT_DRIVER=mock|bridge
  *   FINGERPRINT_BASE_URL=http://127.0.0.1:8787
+ *   FINGERPRINT_TIMEOUT=10
  *
  * Semua pemanggilan dilakukan SERVER-SIDE lewat Http facade —
  * browser TIDAK PERNAH memanggil bridge langsung (hindari CORS).
@@ -21,15 +23,14 @@ class FingerprintService
         private readonly string $driver = 'mock',
         private readonly string $baseUrl = 'http://127.0.0.1:8787',
         private readonly int $timeout = 10,
-    ) {
-    }
+    ) {}
 
     public static function dariConfig(): self
     {
         return new self(
-            (string) env('FINGERPRINT_DRIVER', 'mock'),
-            (string) env('FINGERPRINT_BASE_URL', 'http://127.0.0.1:8787'),
-            (int) env('FINGERPRINT_TIMEOUT', 10),
+            (string) config('fingerprint.driver', 'mock'),
+            (string) config('fingerprint.base_url', 'http://127.0.0.1:8787'),
+            (int) config('fingerprint.timeout', 10),
         );
     }
 
@@ -45,7 +46,7 @@ class FingerprintService
         }
 
         try {
-            $res = Http::timeout(5)->get($this->baseUrl . '/estado');
+            $res = Http::timeout(5)->get($this->baseUrl.'/estado');
             if ($res->successful() && ($res->json('conectado') ?? false) === true) {
                 return ['conectado' => true, 'modelo' => $res->json('modelo'), 'driver' => 'bridge'];
             }
@@ -68,7 +69,7 @@ class FingerprintService
         }
 
         try {
-            $res = Http::timeout($this->timeout)->get($this->baseUrl . '/identificar');
+            $res = Http::timeout($this->timeout)->get($this->baseUrl.'/identificar');
             if (! $res->successful()) {
                 return null;
             }
@@ -89,13 +90,13 @@ class FingerprintService
     {
         if ($this->driver !== 'bridge') {
             return [
-                'huellaId' => 'MOCK-' . strtoupper(uniqid()),
+                'huellaId' => 'MOCK-'.strtoupper(uniqid()),
                 'template' => base64_encode(random_bytes(32)),
             ];
         }
 
         try {
-            $res = Http::timeout($this->timeout)->post($this->baseUrl . '/enrolar');
+            $res = Http::timeout($this->timeout)->post($this->baseUrl.'/enrolar');
             if (! $res->successful()) {
                 return null;
             }
@@ -119,6 +120,6 @@ class FingerprintService
      */
     private function mockIdentify(): ?string
     {
-        return \App\Models\Student::whereNotNull('fingerprint_id')->orderBy('id')->value('fingerprint_id');
+        return Student::whereNotNull('fingerprint_id')->orderBy('id')->value('fingerprint_id');
     }
 }

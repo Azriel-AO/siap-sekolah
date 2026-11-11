@@ -5,11 +5,10 @@ namespace Tests\Feature;
 use App\Models\SchoolClass;
 use App\Models\Setting;
 use App\Models\Student;
-use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class FingerprintTest extends TestCase
@@ -18,27 +17,27 @@ class FingerprintTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function fakeJpegDataUrl(string $seed = 'a'): string
     {
-        return 'data:image/jpeg;base64,' . base64_encode("\xFF\xD8" . str_repeat($seed, 150) . "\xFF\xD9");
+        return 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat($seed, 150)."\xFF\xD9");
     }
 
     private function withDriver(string $driver, callable $callback): mixed
     {
-        $lama = getenv('FINGERPRINT_DRIVER');
-        putenv("FINGERPRINT_DRIVER={$driver}");
+        $lama = config('fingerprint.driver');
+        config(['fingerprint.driver' => $driver]);
 
         try {
             return $callback();
         } finally {
-            putenv($lama === false ? 'FINGERPRINT_DRIVER' : "FINGERPRINT_DRIVER={$lama}");
+            config(['fingerprint.driver' => $lama]);
         }
     }
 
-    public function test_mock_enrolar_mengembalikan_huellaId_dan_siswa_mendapatkannya(): void
+    public function test_mock_enrolar_mengembalikan_huella_id_dan_siswa_mendapatkannya(): void
     {
         $this->seedDemo();
         $this->aktifkanPendaftaran();
