@@ -213,35 +213,6 @@
                 </div>
             </div>
 
-            <!-- Pengaturan Admin: Mode Pendaftaran Gerbang -->
-            @if($user->role === 'admin')
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div class="flex items-start space-x-3">
-                        <div class="w-11 h-11 rounded-lg flex items-center justify-center shrink-0 {{ $modePendaftaranGerbang ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-400' }}">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-5.13a4 4 0 100-8m0 0a4 4 0 00-1.2.18M12 11a4 4 0 00-4-4H6m10 8a4 4 0 014 3" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h3 class="text-sm font-bold text-gray-900">Mode Pendaftaran Gerbang</h3>
-                            <p class="text-xs text-gray-500 mt-1 leading-relaxed">Bila AKTIF, siswa baru dapat mendaftar mandiri (foto wajah + sidik jari + kartu) di halaman<br><code class="text-[11px] text-indigo-600">/pendaftaran</code> — tanpa login. Bila DITUTUP, halaman menolak pendaftaran.</p>
-                            <span class="inline-flex items-center mt-2 px-2.5 py-0.5 rounded-full text-[11px] font-bold {{ $modePendaftaranGerbang ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500' }}">
-                                {{ $modePendaftaranGerbang ? 'AKTIF — pendaftaran dibuka' : 'DITUTUP' }}
-                            </span>
-                            @if(session('status'))
-                                <p class="text-[11px] text-emerald-700 font-semibold mt-2">{{ session('status') }}</p>
-                            @endif
-                        </div>
-                    </div>
-                    <form method="POST" action="{{ route('admin.toggle.pendaftaran') }}" class="shrink-0">
-                        @csrf
-                        <button type="submit" class="inline-flex items-center px-5 py-2.5 rounded-lg font-semibold text-sm shadow-sm transition {{ $modePendaftaranGerbang ? 'bg-rose-600 hover:bg-rose-700 text-white' : 'bg-emerald-600 hover:bg-emerald-700 text-white' }}">
-                            {{ $modePendaftaranGerbang ? 'Nonaktifkan' : 'Aktifkan' }}
-                        </button>
-                    </form>
-                </div>
-            @endif
-
             <!-- Info Bar Fondasi Milestone 0 -->
             <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 text-xs text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="flex items-center space-x-2">

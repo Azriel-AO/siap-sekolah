@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\SchoolClass;
-use App\Models\Setting;
 use App\Models\Student;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -40,7 +40,6 @@ class FingerprintTest extends TestCase
     public function test_mock_enrolar_mengembalikan_huella_id_dan_siswa_mendapatkannya(): void
     {
         $this->seedDemo();
-        $this->aktifkanPendaftaran();
 
         // Enroll via endpoint mock
         $response = $this->postJson('/pendaftaran/fingerprint/enrolar');
@@ -154,7 +153,6 @@ class FingerprintTest extends TestCase
     public function test_bridge_enrolar_gagal_pesan_ramah_tanpa_crash_500(): void
     {
         $this->seedDemo();
-        $this->aktifkanPendaftaran();
 
         Http::fake(fn () => throw new ConnectionException('Connection refused'));
 
@@ -162,10 +160,5 @@ class FingerprintTest extends TestCase
 
         $response->assertStatus(503);
         $this->assertStringContainsString('Sensor sidik jari tidak tersedia', $response->json('message'));
-    }
-
-    private function aktifkanPendaftaran(): void
-    {
-        Setting::set('mode_pendaftaran_gerbang', '1');
     }
 }

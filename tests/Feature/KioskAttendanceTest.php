@@ -351,4 +351,72 @@ class KioskAttendanceTest extends TestCase
         ]);
         $this->assertStringContainsString('Sensor sidik jari', $response->json('message'));
     }
+    public function test_kiosk_200_dan_link_daftar_dulu_tetap_ada(): void
+    {
+        $this->seedDemo();
+
+        $response = $this->get('/kiosk');
+
+        $response->assertStatus(200);
+        $response->assertSee('Absen Gerbang');
+        $response->assertSee('Daftar dulu');
+    }
+
+    public function test_mock_identify_dengan_auto_1_selalu_tidak_dikenali(): void
+    {
+        $this->seedDemo();
+
+        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+
+        // auto=1 (loop otomatis kiosk): mock TIDAK BOLEH mengembalikan siswa
+        $response = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+
+        $response->assertStatus(503);
+        $response->assertJson([
+            'success' => false,
+            'type' => 'fingerprint_unavailable',
+        ]);
+        $this->assertArrayNotHasKey('student_name', $response->json());
+    }
+
+    public function test_mock_identify_tanpa_auto_tetap_mengenali_siswa(): void
+    {
+        $this->seedDemo();
+
+        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+
+        $response = $this->postJson('/kiosk/fingerprint/identificar', []);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'student_name' => 'Hendra Wijaya',
+        ]);
+    }
+
+    public function test_bridge_identify_dengan_auto_1_tetap_sukses(): void
+    {
+        $this->seedDemo();
+
+        \Illuminate\Support\Facades\Http::fake(fn ($request) => match (true) {
+            str_contains($request->url(), '/identificar') => \Illuminate\Support\Facades\Http::response(['ok' => true, 'huellaId' => 'BRIDGE-HUELLA-1'], 200),
+            default => \Illuminate\Support\Facades\Http::response(['message' => 'not found'], 404),
+        });
+
+        Student::where('nis', '10240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);
+
+        config(['fingerprint.driver' => 'bridge']);
+        try {
+            $response = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+        } finally {
+            config(['fingerprint.driver' => 'mock']);
+        }
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'type' => 'check_in',
+            'student_name' => 'Hendra Wijaya',
+        ]);
+    }
 }

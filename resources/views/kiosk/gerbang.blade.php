@@ -40,73 +40,55 @@
     <!-- Main Kiosk Body -->
     <main class="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto w-full">
 
-        <!-- Default State: Pilih Metode -->
+        <!-- Default State: Dua Kanal Selalu Aktif -->
         <div x-show="!result" x-transition.opacity.duration.300ms class="w-full space-y-8">
             <div>
                 <h2 class="text-3xl sm:text-5xl font-black text-white tracking-tight">Absen Gerbang</h2>
-                <p class="text-slate-400 text-sm sm:text-lg mt-3 max-w-md mx-auto">
-                    Pilih cara absen: tempelkan kartu pelajar atau letakkan jari pada sensor sidik jari.
+                <p class="text-slate-400 text-sm sm:text-lg mt-3 max-w-2xl mx-auto">
+                    Tempelkan kartu pelajar ATAU letakkan jari pada sensor — keduanya langsung aktif, tanpa perlu berganti mode.
                 </p>
             </div>
 
-            <!-- Tombol Metode -->
-            <div class="flex justify-center gap-4">
-                <button type="button" @click="setMetode('kartu')"
-                        :class="metode === 'kartu' ? 'bg-indigo-600 border-indigo-400 shadow-indigo-500/30' : 'bg-slate-800 border-slate-700'"
-                        class="flex flex-col items-center gap-2 px-8 py-5 rounded-2xl border-2 shadow-lg transition">
-                    <svg class="w-10 h-10 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {{-- Input tersembunyi untuk pembaca kartu (wedge capture): UID diketik reader + Enter --}}
+            <input type="text" x-ref="cardInput" x-model="cardUid" @keydown.enter.prevent="submitTap()"
+                   class="sr-only" autocomplete="off" aria-hidden="true" tabindex="-1" />
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+
+                {{-- Kanal 1: Kartu --}}
+                <div class="rounded-3xl border-2 border-indigo-500/40 bg-slate-800/60 p-6 flex flex-col items-center justify-center gap-3">
+                    <svg class="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                     </svg>
-                    <span class="text-sm font-bold text-white">Kartu</span>
-                </button>
-                <button type="button" @click="setMetode('sidik-jari')"
-                        :class="metode === 'sidik-jari' ? 'bg-indigo-600 border-indigo-400 shadow-indigo-500/30' : 'bg-slate-800 border-slate-700'"
-                        class="flex flex-col items-center gap-2 px-8 py-5 rounded-2xl border-2 shadow-lg transition">
-                    <svg class="w-10 h-10 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <p class="text-xl font-black text-white tracking-wide">Tempelkan Kartu</p>
+                    <p class="text-xs text-slate-400">Pelajar menempelkan kartu pada scanner</p>
+                </div>
+
+                {{-- Kanal 2: Sidik Jari --}}
+                <div class="rounded-3xl border-2 border-indigo-500/40 bg-slate-800/60 p-6 flex flex-col items-center justify-center gap-3">
+                    <svg class="w-16 h-16 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11c0-1.1.9-2 2-2s2 .9 2 2m-6.5 1.5A6.5 6.5 0 0112 5a6.5 6.5 0 014.5 11M8 14.5A3.5 3.5 0 0012 17a3.5 3.5 0 003.5-3M5.5 12H3m18 0h-2.5" />
                     </svg>
-                    <span class="text-sm font-bold text-white">Sidik Jari</span>
-                </button>
-                <button type="button" disabled title="Segera hadir"
-                        class="flex flex-col items-center gap-2 px-8 py-5 rounded-2xl border-2 border-slate-800 bg-slate-800/40 opacity-60 cursor-not-allowed">
-                    <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0" />
-                    </svg>
-                    <span class="text-sm font-bold text-slate-500">Wajah</span>
-                    <span class="text-[10px] font-black uppercase tracking-widest text-amber-400 bg-amber-950/60 border border-amber-500/40 rounded-full px-2 py-0.5 -mt-1">Segera</span>
-                </button>
+                    <p class="text-xl font-black text-white tracking-wide">Tekan Jari pada Sensor</p>
+                    {{-- Indikator status sensor (kecil) --}}
+                    <div class="flex items-center space-x-2 text-[11px]">
+                        <span class="w-2 h-2 rounded-full" :class="sensorBelumAktif ? 'bg-amber-400' : 'bg-emerald-400'"></span>
+                        <span class="text-slate-400 font-medium" x-text="sensorBelumAktif ? 'Sensor belum aktif — hadir dengan tap kartu' : 'Sensor aktif'"></span>
+                    </div>
+                </div>
             </div>
 
-            {{-- Panel: Kartu --}}
-            <template x-if="metode === 'kartu'">
-                <form @submit.prevent="submitTap()" class="max-w-md mx-auto">
-                    <div class="relative">
-                        <input type="text"
-                               x-ref="cardInput"
-                               x-model="cardUid"
-                               placeholder="Tempelkan kartu ke scanner..."
-                               class="w-full px-5 py-4 bg-slate-800/80 border-2 border-slate-700 focus:border-indigo-500 rounded-2xl text-center text-lg font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 transition"
-                               autocomplete="off" />
-                    </div>
-                    <button type="submit" class="mt-3 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl shadow-md transition">
-                        Simulasi Tap Kartu (Enter)
+            {{-- Tombol HANYA untuk driver mock (presenter demo). Di produksi (bridge) tidak muncul sama sekali. --}}
+            @if($isMockFingerprint)
+                <div class="max-w-md mx-auto">
+                    <button type="button" @click="simulasiJari()"
+                            :disabled="demoLoading"
+                            class="w-full px-6 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-800 text-slate-900 font-black tracking-wide shadow-lg transition">
+                        <span x-text="demoLoading ? 'Membaca sidik jari…' : 'DEMO — Simulasi jari'"></span>
                     </button>
-                </form>
-            </template>
-
-            {{-- Panel: Sidik Jari --}}
-            <template x-if="metode === 'sidik-jari'">
-                <div class="max-w-md mx-auto space-y-4">
-                    <div class="rounded-3xl border-2 border-indigo-500/40 bg-indigo-950/40 p-6">
-                        <div class="w-20 h-20 mx-auto rounded-full border-4 border-indigo-400/60 border-t-transparent animate-spin"></div>
-                        <p class="mt-4 text-xl font-bold text-indigo-200">Letakkan jari pada sensor…</p>
-                        <p class="mt-1 text-xs text-slate-400" x-text="fingerprintStatus"></p>
-                    </div>
-                    <button type="button" @click="setMetode('kartu')" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition">
-                        Batal / pakai Kartu
-                    </button>
+                    <p class="text-[10px] text-amber-500/80 font-mono mt-1.5">Hanya tampil di driver mock (laptop demo). Sensor nyata tidak menampilkan tombol ini.</p>
                 </div>
-            </template>
+            @endif
         </div>
 
         <!-- Result State -->
@@ -188,34 +170,16 @@
         </div>
     </div>
 
-    <!-- Footer Kiosk -->
     <footer class="p-6 border-t border-slate-800 bg-slate-900/90 text-center">
-        <p class="text-xs text-slate-400 font-medium mb-3">
-            Simulasi Cepat untuk Evaluator Demo (Klik untuk otomatis tap):
-        </p>
-        <div class="flex flex-wrap justify-center gap-2 max-w-3xl mx-auto">
-            <button type="button" @click="testCard('CARD-TKJ-009')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-emerald-300 border border-slate-700">
-                CARD-TKJ-009
-            </button>
-            <button type="button" @click="testCard('CARD-TKJ-010')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-emerald-300 border border-slate-700">
-                CARD-TKJ-010
-            </button>
-            <button type="button" @click="testCard('CARD-TKJ-001')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-blue-300 border border-slate-700">
-                CARD-TKJ-001
-            </button>
-            <button type="button" @click="testCard('CARD-SALAH-999')" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-mono text-red-300 border border-slate-700">
-                CARD-SALAH-999
-            </button>
-        </div>
-        <div class="mt-4 text-[11px] text-slate-500">
+        <p class="text-xs text-slate-500 font-medium">
             Kiosk Gerbang Sekolah — satu titik untuk semua kelas. Jam masuk/pulang mengikuti kelas masing-masing siswa.
-        </div>
+        </p>
     </footer>
 
     <script>
         function kioskGerbangApp() {
             return {
-                metode: 'kartu',
+                isMockFingerprint: @js($isMockFingerprint),
                 cardUid: '',
                 result: null,
                 fotoBukti: '',
@@ -223,15 +187,24 @@
                 currentDate: '',
                 resetTimer: null,
                 cameraStream: null,
-                fingerprintPolling: null,
-                fingerprintStatus: 'Menunggu jari di sensor…',
+                loopTimer: null,
+                sensorBelumAktif: false,
+                demoLoading: false,
 
                 initKiosk() {
                     this.updateClock();
                     setInterval(() => this.updateClock(), 1000);
                     this.$nextTick(() => this.focusInput());
                     this.startCamera();
-                    window.addEventListener('beforeunload', () => this.stopCamera());
+                    window.addEventListener('beforeunload', () => {
+                        this.stopCamera();
+                        this.stopAutoLoop();
+                    });
+                    // Loop identify otomatis HANYA di driver bridge (produksi).
+                    // Mock tidak boleh loop (identify mock selalu "menemukan" siswa).
+                    if (!this.isMockFingerprint) {
+                        this.loopFingerprint();
+                    }
                 },
 
                 stopCamera() {
@@ -276,31 +249,70 @@
                     }
                 },
 
-                setMetode(m) {
-                    this.metode = m;
-                    this.stopFingerprintPolling();
-                    if (m === 'sidik-jari') {
-                        this.mulaiPollingSidikJari();
-                    } else {
-                        this.$nextTick(() => this.focusInput());
+                stopAutoLoop() {
+                    if (this.loopTimer) {
+                        clearTimeout(this.loopTimer);
+                        this.loopTimer = null;
                     }
                 },
 
-                stopFingerprintPolling() {
-                    if (this.fingerprintPolling) {
-                        clearInterval(this.fingerprintPolling);
-                        this.fingerprintPolling = null;
+                // Loop identify otomatis (bridge): panggil terus-menerus;
+                // satu panggilan boleh berjalan sampai ~10 detik (menunggu jari);
+                // jeda antar-panggilan <= 1 detik. Mock TIDAK memanggil ini.
+                async loopFingerprint() {
+                    // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk)
+                    if (this.result) {
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 1000);
+                        return;
+                    }
+
+                    const foto = this.ambilFotoBukti();
+                    try {
+                        const res = await fetch("{{ route('kiosk.fingerprint.identificar') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ photo: foto, auto: 1 })
+                        });
+
+                        const data = await res.json();
+
+                        // Bridge mati / sensor belum siap (503) -> tampil pesan,
+                        // JANGAN di-poll cepat (cukup tiap ~15 detik)
+                        if (res.status === 503) {
+                            this.sensorBelumAktif = true;
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
+                            return;
+                        }
+
+                        this.sensorBelumAktif = false;
+
+                        // Hasil tampil (sukses / cooldown / tidak dikenal) -> pause loop sejenak
+                        if (data.success || data.type === 'cooldown' || data.type === 'already_completed' || (res.status === 404 && data.type === 'fingerprint_not_found')) {
+                            this.fotoBukti = foto || '';
+                            this.showResult(data);
+                            const jeda = (data.type === 'fingerprint_not_found') ? 8500 : 4500;
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), jeda);
+                            return;
+                        }
+
+                        // Tidak ada jari di sensor (bridge timeout) -> coba lagi segera (<= 1 detik jeda)
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 700);
+                    } catch (e) {
+                        // Network error / bridge mati -> pesan tenang, coba ~15 detik lagi
+                        this.sensorBelumAktif = true;
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
                     }
                 },
 
-                // Polling server (server memanggil sensor/mock) tiap 1,5 detik
-                mulaiPollingSidikJari() {
-                    this.fingerprintStatus = 'Menunggu jari di sensor…';
-                    this.stopFingerprintPolling();
-                    this.fingerprintPolling = setInterval(() => this.pollSidikJari(), 1500);
-                },
-
-                async pollSidikJari() {
+                // HANYA driver mock: satu panggilan identify tanpa auto=1
+                // (menghasilkan siswa terpilih = bahan demo presenter).
+                async simulasiJari() {
+                    if (!this.isMockFingerprint || this.demoLoading || this.result) return;
+                    this.demoLoading = true;
                     const foto = this.ambilFotoBukti();
                     try {
                         const res = await fetch("{{ route('kiosk.fingerprint.identificar') }}", {
@@ -314,38 +326,17 @@
                         });
 
                         const data = await res.json();
-
-                        // Respons gagal "sensor tidak tersedia" (503) -> tampilkan,
-                        // tapi jangan bombardir layar setiap 1,5 detik
-                        if (res.status === 503) {
-                            this.fingerprintStatus = data.message ?? 'Sensor tidak tersedia.';
-                            return;
-                        }
-
-                        if (res.status === 404 && data.type === 'fingerprint_not_found') {
-                            this.stopFingerprintPolling();
-                            this.fotoBukti = foto || '';
-                            this.showResult(data);
-                            return;
-                        }
-
-                        if (data.success) {
-                            this.stopFingerprintPolling();
-                            this.fotoBukti = foto || '';
-                            this.showResult(data);
-                        } else if (data.type === 'cooldown' || data.type === 'already_completed') {
-                            this.stopFingerprintPolling();
-                            this.fotoBukti = foto || '';
-                            this.showResult(data);
-                        }
+                        this.fotoBukti = foto || '';
+                        this.showResult(data);
                     } catch (e) {
-                        this.fingerprintStatus = 'Gagal menghubungi server. Memeriksa lagi…';
+                        this.showResult({
+                            success: false,
+                            type: 'ERROR',
+                            message: 'Gagal menghubungi server kiosk. Periksa koneksi.'
+                        });
+                    } finally {
+                        this.demoLoading = false;
                     }
-                },
-
-                testCard(uid) {
-                    this.cardUid = uid;
-                    this.submitTap();
                 },
 
                 // Ambil 1 frame dari kamera sebagai foto bukti absen (PRD F1).
@@ -403,7 +394,6 @@
                     this.resetTimer = setTimeout(() => {
                         this.result = null;
                         this.fotoBukti = '';
-                        this.metode = 'kartu';
                         this.$nextTick(() => this.focusInput());
                     }, resetDuration);
                 }

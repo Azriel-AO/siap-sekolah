@@ -33,7 +33,7 @@ Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang')
 Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
 Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
 
-// Terminal Pendaftaran Mandiri (guest; aktif hanya bila toggle admin ON)
+// Terminal Pendaftaran Mandiri (guest; SELALU terbuka — pengawasan guru piket)
 Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaftaran.index');
 Route::post('/pendaftaran', [PendaftaranController::class, 'store'])->name('pendaftaran.simpan');
 Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])->name('pendaftaran.fingerprint.enrolar');
@@ -61,9 +61,6 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         // Admin: export rekap (Excel & PDF)
         Route::get('/admin/rekap-export/excel', [AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
         Route::get('/admin/rekap-export/pdf', [AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
-
-        // Admin: pengaturan aplikasi
-        Route::post('/admin/pengaturan/mode-pendaftaran-gerbang', [DashboardController::class, 'toggleModePendaftaranGerbang'])->name('admin.toggle.pendaftaran');
 
         // Admin: Data Kelas
         Route::get('/admin/data-kelas', [AdminClassController::class, 'index'])->name('admin.kelas.index');

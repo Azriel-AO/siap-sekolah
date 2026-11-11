@@ -23,20 +23,9 @@
 
     <main class="max-w-2xl mx-auto px-4 py-6">
 
-        {{-- Mode pendaftaran DITUTUP --}}
-        @if(! $modeAktif)
-            <div class="bg-white rounded-2xl border border-amber-200 shadow-sm p-8 text-center space-y-3">
-                <svg class="w-14 h-14 text-amber-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.7 3.86a2 2 0 00-3.4 0z" />
-                </svg>
-                <h2 class="text-xl font-extrabold text-gray-800">Pendaftaran Ditutup</h2>
-                <p class="text-sm text-gray-600">Pendaftaran ditutup, hubungi guru piket.</p>
-            </div>
+        {{-- Pendaftaran SELALU terbuka — pengawasan guru piket --}}
 
-        {{-- Mode pendaftaran AKTIF --}}
-        @else
-
-            {{-- Daftar error dari server --}}
+        {{-- Daftar error dari server --}}
             <div x-show="message" x-cloak class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 <p class="font-semibold" x-text="message"></p>
                 <ul x-show="errorList.length" class="list-disc list-inside mt-1">
@@ -177,7 +166,6 @@
                     <span x-text="saving ? 'Menyimpan…' : 'Selesaikan Pendaftaran'"></span>
                 </button>
             </form>
-        @endif
     </main>
 
     <script>

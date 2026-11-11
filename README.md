@@ -534,7 +534,7 @@ Artinya: bila kiosk diakses lewat `http://192.168.1.x` (bukan localhost, bukan H
 3. Login `guru@knbi.sch.id` → buka **Rekap Harian** → siswa tampil beserta badge "Wajah".
 4. Login sebagai salah satu akun siswa → menu **Pendaftaran Wajah** tampil.
 5. Isi data master: `admin@knbi.sch.id` → menu **Data Kelas** → buat kelas (mis. "X TKJ 1") → menu **Data Siswa** → tambah siswa satu per satu (nama, NIS, UID kartu, opsi buat akun login). Sebelum ada siswa + kartu, kiosk belum bisa mencatat apa pun.
-6. Buka `http://localhost:<port>/kiosk/<slug-kelas>` di komputer kiosk → tap kartu percobaan → tercatat di rekap guru.
+6. Buka `http://localhost:<port>/kiosk` di komputer kiosk → tap kartu percobaan → tercatat di rekap guru.
 7. Backup berkala: salin file `database/database.sqlite` dan folder `storage/app/` ke tempat aman (mis. flashdisk sekolah).
 
 ### 12. Troubleshooting pemasangan

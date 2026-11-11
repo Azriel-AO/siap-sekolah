@@ -60,12 +60,15 @@ class FingerprintService
     /**
      * Identifikasi sidik jari yang sedang diletakkan pada sensor.
      *
+     * @param  bool  $auto  true bila dipanggil loop otomatis kiosk.
+     *                     Di driver mock + auto=1, identify SELALU null (anti spam absen).
+     *                     Di driver bridge, auto=1 diperlakukan identik dengan pemanggilan biasa.
      * @return string|null huellaId siswa, null bila tidak dikenali / sensor error
      */
-    public function identify(): ?string
+    public function identify(bool $auto = false): ?string
     {
         if ($this->driver !== 'bridge') {
-            return $this->mockIdentify();
+            return $auto ? null : $this->mockIdentify();
         }
 
         try {

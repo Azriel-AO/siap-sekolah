@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\FaceEnrollment;
 use App\Models\RfidCard;
 use App\Models\SchoolClass;
-use App\Models\Setting;
 use App\Models\Student;
 use App\Services\FingerprintService;
 use Carbon\Carbon;
@@ -20,24 +19,19 @@ use Illuminate\View\View;
 
 /**
  * Terminal Pendaftaran Mandiri Siswa Baru (guest, tanpa login).
- * Hanya aktif bila admin mengaktifkan toggle "Mode pendaftaran gerbang".
+ * SELALU terbuka — pengawasan dilakukan guru piket (bukan toggle admin).
  * Semua data siswa (student + kartu + wajah + sidik jari) disimpan
  * dalam SATU transaksi — belum ada akun login.
  */
 class PendaftaranController extends Controller
 {
-    private const TOGGLE_KEY = 'mode_pendaftaran_gerbang';
-
     /**
-     * Halaman pendaftaran (guest).
+     * Halaman pendaftaran (guest) — selalu aktif.
      */
     public function show(): View
     {
-        $modeAktif = Setting::get(self::TOGGLE_KEY, '0') === '1';
-
         return view('pendaftaran.index', [
-            'modeAktif' => $modeAktif,
-            'classes' => $modeAktif ? SchoolClass::orderBy('name')->get() : collect(),
+            'classes' => SchoolClass::orderBy('name')->get(),
         ]);
     }
 
@@ -46,13 +40,6 @@ class PendaftaranController extends Controller
      */
     public function fingerprintEnrolar(Request $request): JsonResponse
     {
-        if (Setting::get(self::TOGGLE_KEY, '0') !== '1') {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Pendaftaran sedang ditutup. Hubungi guru piket.',
-            ], 403);
-        }
-
         $hasil = FingerprintService::dariConfig()->enroll();
 
         if ($hasil === null) {
@@ -75,12 +62,6 @@ class PendaftaranController extends Controller
      */
     public function store(Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
     {
-        if (Setting::get(self::TOGGLE_KEY, '0') !== '1') {
-            return redirect()
-                ->route('pendaftaran.index')
-                ->with('error', 'Pendaftaran sedang ditutup. Hubungi guru piket.');
-        }
-
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],

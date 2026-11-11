@@ -16,10 +16,13 @@ class KioskController extends Controller
 {
     /**
      * Layar Kiosk Gerbang Tunggal (absen masuk/pulang lewat kartu / sidik jari).
+     * Dua kanal selalu aktif bersamaan — tanpa tombol pilih di layar.
      */
     public function gerbang(): View
     {
-        return view('kiosk.gerbang');
+        return view('kiosk.gerbang', [
+            'isMockFingerprint' => config('fingerprint.driver', 'mock') === 'mock',
+        ]);
     }
 
     /**
@@ -65,10 +68,16 @@ class KioskController extends Controller
     {
         $request->validate([
             'photo' => ['nullable', 'string', 'max:400000'],
+            // auto=1 dikirim loop otomatis kiosk saat bridge (dipasok sebagai number/string/bool)
+            'auto' => ['nullable'],
         ]);
 
+        // Mock + auto=1 SELALU "tidak dikenali" (anti spam absen otomatis).
+        // Bridge memperlakukan auto=1 identik dengan pemanggilan biasa.
+        $auto = filter_var($request->input('auto'), FILTER_VALIDATE_BOOLEAN);
+
         $fingerprint = FingerprintService::dariConfig();
-        $huellaId = $fingerprint->identify();
+        $huellaId = $fingerprint->identify($auto);
 
         if ($huellaId === null) {
             return response()->json([
