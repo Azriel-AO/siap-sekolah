@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AdminClassController;
+use App\Http\Controllers\AdminRekapExportController;
+use App\Http\Controllers\AdminRekapitulasiController;
 use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
@@ -8,7 +10,6 @@ use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PendaftaranController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\TeacherAttendanceController;
-use App\Http\Controllers\AdminRekapitulasiController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -55,11 +56,11 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/admin/rekap-grafik', [AdminRekapitulasiController::class, 'grafik'])->name('admin.rekap.grafik');
 
         // Admin: export rekap (Excel & PDF)
-        Route::get('/admin/rekap-export/excel', [\App\Http\Controllers\AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
-        Route::get('/admin/rekap-export/pdf', [\App\Http\Controllers\AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
+        Route::get('/admin/rekap-export/excel', [AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
+        Route::get('/admin/rekap-export/pdf', [AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
 
         // Admin: pengaturan aplikasi
-        Route::post('/admin/pengaturan/mode-pendaftaran-gerbang', [\App\Http\Controllers\DashboardController::class, 'toggleModePendaftaranGerbang'])->name('admin.toggle.pendaftaran');
+        Route::post('/admin/pengaturan/mode-pendaftaran-gerbang', [DashboardController::class, 'toggleModePendaftaranGerbang'])->name('admin.toggle.pendaftaran');
 
         // Admin: Data Kelas
         Route::get('/admin/data-kelas', [AdminClassController::class, 'index'])->name('admin.kelas.index');
@@ -75,6 +76,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/admin/data-siswa', [AdminStudentController::class, 'store'])->name('admin.siswa.store');
         Route::get('/admin/data-siswa/{student}/edit', [AdminStudentController::class, 'edit'])->name('admin.siswa.edit');
         Route::put('/admin/data-siswa/{student}', [AdminStudentController::class, 'update'])->name('admin.siswa.update');
+        Route::delete('/admin/data-siswa/{student}', [AdminStudentController::class, 'destroy'])->name('admin.siswa.destroy');
     });
 
     // Riwayat Absensi Siswa (US-31)

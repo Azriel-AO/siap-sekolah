@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -33,7 +34,7 @@ class AdminStudentController extends Controller
         }
 
         $students = $kelasDipilih
-            ? $kelasDipilih->students()->with(['rfidCard', 'user'])->orderBy('name')->get()
+            ? $kelasDipilih->students()->with(['rfidCard', 'user', 'faceEnrollment'])->withCount('attendances')->orderBy('name')->get()
             : collect();
 
         return view('admin.students.index', [
@@ -80,7 +81,7 @@ class AdminStudentController extends Controller
 
         return redirect()
             ->route('admin.siswa.index', ['kelas' => SchoolClass::find($validated['school_class_id'])?->slug])
-            ->with('status', 'Siswa "' . $validated['name'] . '" berhasil ditambahkan.');
+            ->with('status', 'Siswa "'.$validated['name'].'" berhasil ditambahkan.');
     }
 
     /**
@@ -122,7 +123,7 @@ class AdminStudentController extends Controller
 
         return redirect()
             ->route('admin.siswa.index', ['kelas' => SchoolClass::find($validated['school_class_id'])?->slug])
-            ->with('status', 'Data siswa "' . $validated['name'] . '" berhasil diperbarui.');
+            ->with('status', 'Data siswa "'.$validated['name'].'" berhasil diperbarui.');
     }
 
     /**
@@ -173,11 +174,11 @@ class AdminStudentController extends Controller
      */
     private function buatAkun(Student $student): void
     {
-        $email = $student->nis . '@knbi.sch.id';
+        $email = $student->nis.'@knbi.sch.id';
 
         if (User::where('email', $email)->exists()) {
             throw ValidationException::withMessages([
-                'buat_akun' => 'Email ' . $email . ' sudah dipakai. Siswa belum dibuat — periksa dulu.',
+                'buat_akun' => 'Email '.$email.' sudah dipakai. Siswa belum dibuat — periksa dulu.',
             ]);
         }
 
@@ -190,5 +191,54 @@ class AdminStudentController extends Controller
 
         $student->update(['user_id' => $user->id]);
     }
-}
 
+    /**
+     * Hapus permanen data siswa (hard delete) beserta seluruh data terkait dalam 1 transaksi DB:
+     * - Catatan absensi (& file foto bukti)
+     * - Kartu RFID
+     * - Data pendaftaran wajah (& folder foto face-photos/{id}/ dari storage privat)
+     * - Akun login user terhubung (jika ada)
+     * - Data siswa itu sendiri
+     */
+    public function destroy(Student $student): RedirectResponse
+    {
+        $namaSiswa = $student->name;
+        $classSlug = $student->schoolClass?->slug;
+
+        DB::transaction(function () use ($student) {
+            // 1. Hapus catatan absensi miliknya & file foto bukti jika ada
+            foreach ($student->attendances as $attendance) {
+                if ($attendance->photo_in_path) {
+                    Storage::disk('local')->delete($attendance->photo_in_path);
+                }
+                if ($attendance->photo_out_path) {
+                    Storage::disk('local')->delete($attendance->photo_out_path);
+                }
+            }
+            $student->attendances()->delete();
+
+            // 2. Hapus kartu RFID
+            $student->rfidCard()->delete();
+
+            // 3. Hapus data wajah dan hapus folder foto face-photos/{id}/ dari disk privat
+            if ($student->faceEnrollment) {
+                $student->faceEnrollment()->delete();
+            }
+            Storage::disk('local')->deleteDirectory("face-photos/{$student->id}");
+
+            // 4. Hapus akun login terhubung (bila user_id ada)
+            $user = $student->user;
+            if ($user) {
+                $student->update(['user_id' => null]);
+                $user->delete();
+            }
+
+            // 5. Hapus data siswa
+            $student->delete();
+        });
+
+        return redirect()
+            ->route('admin.siswa.index', array_filter(['kelas' => $classSlug]))
+            ->with('status', 'Data siswa "'.$namaSiswa.'" berhasil dihapus.');
+    }
+}
