@@ -4,6 +4,8 @@ use App\Http\Controllers\AdminClassController;
 use App\Http\Controllers\AdminRekapExportController;
 use App\Http\Controllers\AdminRekapitulasiController;
 use App\Http\Controllers\AdminStudentController;
+use App\Http\Controllers\DaftarHadirController;
+use App\Http\Controllers\PengaturanLaporanController;
 use App\Http\Controllers\KehadiranManualController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
@@ -62,6 +64,12 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         // Admin: export rekap (Excel & PDF)
         Route::get('/admin/rekap-export/excel', [AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
         Route::get('/admin/rekap-export/pdf', [AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
+
+        // Admin: "Daftar Hadir" (format sekolah) & Pengaturan Laporan
+        Route::get('/admin/daftar-hadir', [DaftarHadirController::class, 'index'])->name('admin.daftar-hadir');
+        Route::get('/admin/daftar-hadir/excel', [DaftarHadirController::class, 'excel'])->name('admin.daftar-hadir.excel');
+        Route::get('/admin/pengaturan-laporan', [PengaturanLaporanController::class, 'index'])->name('admin.pengaturan.laporan');
+        Route::post('/admin/pengaturan-laporan', [PengaturanLaporanController::class, 'simpan'])->name('admin.pengaturan.laporan.simpan');
 
         // Admin: Catat Izin / Sakit
         Route::get('/admin/kehadiran-manual', [KehadiranManualController::class, 'index'])->name('admin.kehadiran.manual');
