@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
+use App\Services\RekapPeriodeHelper;
+use App\Services\RekapRingkasanPeriode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,15 +22,25 @@ class TeacherAttendanceController extends Controller
 
         $schoolClass = $this->kelasDipilih($request);
         $classes = SchoolClass::orderBy('name')->get();
-        $today = $this->tanggalDipilih($request);
+        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $rentang = RekapPeriodeHelper::hitungRentang($periode, $this->tanggalDipilih($request));
 
-        $studentsData = $this->getAttendanceData($schoolClass, $today);
+        if ($periode === 'hari') {
+            $studentsData = $this->getAttendanceData($schoolClass, $rentang['tanggal']);
+        } else {
+            $studentsData = $this->getRingkasanData($schoolClass, $rentang);
+        }
 
         return view('teacher.attendance-today', [
             'schoolClass' => $schoolClass,
             'classes' => $classes,
-            'today' => $today,
-            'tanggalDisplay' => Carbon::parse($today)->translatedFormat('l, d F Y'),
+            'periode' => $periode,
+            'periodeLabel' => $rentang['label_periode'],
+            'rentangLabel' => $rentang['label_rentang'],
+            'today' => $rentang['tanggal'],
+            'tanggalDisplay' => $periode === 'hari'
+                ? Carbon::parse($rentang['tanggal'])->translatedFormat('l, d F Y')
+                : $rentang['label_rentang'],
             'summary' => $studentsData['summary'],
             'students' => $studentsData['students'],
         ]);
@@ -42,14 +54,24 @@ class TeacherAttendanceController extends Controller
         $this->pastikanGuruAtauAdmin($request);
 
         $schoolClass = $this->kelasDipilih($request);
-        $today = $this->tanggalDipilih($request);
+        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $rentang = RekapPeriodeHelper::hitungRentang($periode, $this->tanggalDipilih($request));
 
-        $data = $this->getAttendanceData($schoolClass, $today);
+        if ($periode === 'hari') {
+            $data = $this->getAttendanceData($schoolClass, $rentang['tanggal']);
+        } else {
+            $data = $this->getRingkasanData($schoolClass, $rentang);
+        }
 
         return response()->json([
             'success' => true,
             'class_name' => $schoolClass->name,
-            'date_formatted' => Carbon::parse($today)->translatedFormat('l, d F Y'),
+            'periode' => $periode,
+            'periode_label' => $rentang['label_periode'],
+            'rentang_label' => $rentang['label_rentang'],
+            'date_formatted' => $periode === 'hari'
+                ? Carbon::parse($rentang['tanggal'])->translatedFormat('l, d F Y')
+                : $rentang['label_rentang'],
             'server_time' => Carbon::now('Asia/Jakarta')->format('H:i:s'),
             'summary' => $data['summary'],
             'students' => $data['students'],
@@ -82,6 +104,7 @@ class TeacherAttendanceController extends Controller
             return [
                 'id' => $student->id,
                 'nis' => $student->nis,
+                'nisn' => $student->nisn ?? '-',
                 'name' => $student->name,
                 'gender' => $student->gender,
                 'card_uid' => $student->rfidCard?->card_uid ?? '-',
@@ -94,6 +117,7 @@ class TeacherAttendanceController extends Controller
                 },
                 'check_in' => $checkIn,
                 'check_out' => $checkOut,
+                'metode' => $this->metodeLabel($att?->kiosk_device),
                 'photo_in' => $this->fotoDataUrl($att?->photo_in_path),
                 'photo_out' => $this->fotoDataUrl($att?->photo_out_path),
                 'face' => $this->wajahStatus($student->faceEnrollment),
@@ -119,6 +143,83 @@ class TeacherAttendanceController extends Controller
             ],
             'students' => $formatted,
         ];
+    }
+
+    /**
+     * Ringkasan per siswa untuk periode Minggu/Bulan:
+     * Hadir / Terlambat / Tidak Hadir (jumlah hari) + Persentase kehadiran.
+     * Hari sekolah = Senin–Jumat (RekapPeriodeHelper).
+     */
+    protected function getRingkasanData(SchoolClass $schoolClass, array $rentang): array
+    {
+        $students = $schoolClass->students()
+            ->with('faceEnrollment')
+            ->orderBy('name')
+            ->get();
+
+        $perSiswa = RekapRingkasanPeriode::hitungPerSiswa(
+            $students,
+            $rentang['start_date'],
+            $rentang['end_date'],
+            $rentang['hari_sekolah']
+        );
+
+        $formatted = $students->map(function ($student) use ($perSiswa) {
+            $r = $perSiswa[$student->id];
+
+            return [
+                'id' => $student->id,
+                'nis' => $student->nis,
+                'nisn' => $student->nisn ?? '-',
+                'name' => $student->name,
+                'gender' => $student->gender,
+                'hadir' => $r['hadir'],
+                'terlambat' => $r['terlambat'],
+                'tidak_hadir' => $r['tidak_hadir'],
+                'persentase' => $r['persentase'],
+                'face' => $this->wajahStatus($student->faceEnrollment),
+            ];
+        });
+
+        $hadirSum = (int) $formatted->sum('hadir');
+        $terlambatSum = (int) $formatted->sum('terlambat');
+        $tidakHadirSum = (int) $formatted->sum('tidak_hadir');
+        $rataPersen = $formatted->count() > 0
+            ? (int) round($formatted->avg('persentase'))
+            : 0;
+
+        return [
+            'summary' => [
+                'total' => $formatted->count(),
+                'hadir' => $hadirSum,
+                'terlambat' => $terlambatSum,
+                'tidak_hadir' => $tidakHadirSum,
+                'rata_persen' => $rataPersen,
+            ],
+            'students' => $formatted,
+        ];
+    }
+
+    /**
+     * Metode absen dari jejak perangkat (kiosk_device).
+     */
+    private function metodeLabel(?string $device): string
+    {
+        $device = strtolower((string) ($device ?? ''));
+
+        if ($device === '') {
+            return '-';
+        }
+
+        if (str_contains($device, 'fingerprint')) {
+            return 'Sidik Jari';
+        }
+
+        if (str_contains($device, 'kartu') || str_starts_with($device, 'kiosk')) {
+            return 'Kartu';
+        }
+
+        return 'Lainnya';
     }
 
     /**

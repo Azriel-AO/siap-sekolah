@@ -204,7 +204,7 @@ class KioskAttendanceTest extends TestCase
         $this->actingAs($admin)
             ->get('/guru/rekap-harian')
             ->assertStatus(200)
-            ->assertSee('Rekap Kehadiran Harian');
+            ->assertSee('Rekap Kehadiran');
 
         $response = $this->actingAs($admin)
             ->getJson('/guru/rekap-harian/data');

@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
 use App\Models\SchoolClass;
+use App\Services\RekapPeriodeHelper;
+use App\Services\RekapRingkasanPeriode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,33 +17,43 @@ class AdminRekapitulasiController extends Controller
      */
     public function index(Request $request): View
     {
+        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $tanggal = $this->tanggalDipilih($request);
+        $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
+
         return view('admin.rekapitulasi', [
-            'tanggal' => Carbon::now('Asia/Jakarta')->toDateString(),
-            'tanggalDisplay' => Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y'),
+            'periode' => $periode,
+            'periodeLabel' => $rentang['label_periode'],
+            'rentangLabel' => $rentang['label_rentang'],
+            'tanggal' => $rentang['tanggal'],
+            'tanggalDisplay' => $periode === 'hari'
+                ? Carbon::parse($rentang['tanggal'])->translatedFormat('l, d F Y')
+                : $rentang['label_rentang'],
         ]);
     }
 
     /**
      * Endpoint JSON grafik: per kelas, hitung Hadir / Terlambat / Tidak Hadir
-     * dari catatan kehadiran HARI INI.
+     * dari catatan kehadiran dalam rentang periode yang dipilih.
      *
      * Definisi (mengikuti logika yang sudah ada):
-     * - Hadir/Terlambat = status yang sudah tercatat di attendances hari ini
-     *   (dibangkitkan otomatis dari jam masuk kelas saat siswa tap).
-     * - Tidak Hadir = total siswa kelas − Hadir − Terlambat (belum tap / ALPA / dst.).
+     * - Hadir/Terlambat = status yang tercatat di attendances dalam rentang.
+     * - Tidak Hadir = total siswa kelas x hari sekolah (Senin–Jumat) − Hadir − Terlambat.
      */
     public function grafik(Request $request): JsonResponse
     {
-        $today = Carbon::now('Asia/Jakarta')->toDateString();
+        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $tanggal = $this->tanggalDipilih($request);
+        $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
 
         $classes = SchoolClass::withCount('students')->orderBy('name')->get();
-
-        $counts = Attendance::where('date', $today)
-            ->selectRaw('school_class_id, status, count(*) as jumlah')
-            ->groupBy('school_class_id', 'status')
-            ->get()
-            ->groupBy('school_class_id')
-            ->map(fn ($rows) => $rows->pluck('jumlah', 'status'));
+        $students = \App\Models\Student::whereIn('school_class_id', $classes->pluck('id'))->get();
+        $perSiswa = RekapRingkasanPeriode::hitungPerSiswa(
+            $students,
+            $rentang['start_date'],
+            $rentang['end_date'],
+            $rentang['hari_sekolah']
+        );
 
         $labels = [];
         $hadir = [];
@@ -50,22 +61,41 @@ class AdminRekapitulasiController extends Controller
         $tidakHadir = [];
 
         foreach ($classes as $kelas) {
-            $byStatus = $counts[$kelas->id] ?? collect();
-            $h = (int) ($byStatus['HADIR'] ?? 0);
-            $t = (int) ($byStatus['TERLAMBAT'] ?? 0);
+            $kelasSiswaIds = $students->where('school_class_id', $kelas->id)->pluck('id');
+            $h = 0;
+            $t = 0;
+            foreach ($kelasSiswaIds as $id) {
+                $h += $perSiswa[$id]['hadir'];
+                $t += $perSiswa[$id]['terlambat'];
+            }
 
             $labels[] = $kelas->name;
             $hadir[] = $h;
             $terlambat[] = $t;
-            $tidakHadir[] = max(0, $kelas->students_count - $h - $t);
+            $tidakHadir[] = max(0, $kelas->students_count * $rentang['hari_sekolah'] - $h - $t);
         }
 
         return response()->json([
-            'tanggal' => $today,
+            'tanggal' => $rentang['tanggal'],
+            'periode' => $periode,
+            'periode_label' => $rentang['label_periode'],
+            'rentang_label' => $rentang['label_rentang'],
+            'hari_sekolah' => $rentang['hari_sekolah'],
             'labels' => $labels,
             'hadir' => $hadir,
             'terlambat' => $terlambat,
             'tidak_hadir' => $tidakHadir,
         ]);
+    }
+
+    private function tanggalDipilih(Request $request): string
+    {
+        $t = (string) $request->query('tanggal', '');
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) !== false) {
+            return $t;
+        }
+
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 }

@@ -32,8 +32,9 @@
     </div>
 
     <div class="judul">Rekap Kehadiran Siswa</div>
-    <div class="subjudul">Periode: {{ $periode }} &nbsp;|&nbsp; Kelas: {{ $kelasLabel }}</div>
+    <div class="subjudul">Periode: {{ $periodeLabel }} ({{ $rentangLabel }}) &nbsp;|&nbsp; Kelas: {{ $kelasLabel }}</div>
 
+    @if($periode === 'hari')
     <table>
         <thead>
             <tr>
@@ -62,8 +63,39 @@
             @endforeach
         </tbody>
     </table>
+    @else
+    <table>
+        <thead>
+            <tr>
+                <th>NISN</th>
+                <th>Nama</th>
+                <th>Kelas</th>
+                <th>Hadir</th>
+                <th>Terlambat</th>
+                <th>Tidak Hadir</th>
+                <th>Persentase</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach(array_slice($rows, 1) as $row)
+                <tr>
+                    <td>{{ $row[0] }}</td>
+                    <td>{{ $row[1] }}</td>
+                    <td>{{ $row[2] }}</td>
+                    <td>{{ $row[3] }}</td>
+                    <td>{{ $row[4] }}</td>
+                    <td>{{ $row[5] }}</td>
+                    <td>{{ $row[6] }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
 
     <div class="kaki">
+        @if($periode !== 'hari')
+            Definisi: Hadir/Terlambat = jumlah hari berstatus tersebut dalam rentang. Tidak Hadir = hari sekolah (Senin–Jumat) dalam rentang − Hadir − Terlambat. Persentase = (Hadir + Terlambat) / hari sekolah × 100.<br>
+        @endif
         Dicetak oleh sistem SIAP KNBI pada {{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y H.i') }} WIB. Jam yang tercatat adalah jam server.
     </div>
 

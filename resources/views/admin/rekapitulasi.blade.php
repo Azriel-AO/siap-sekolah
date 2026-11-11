@@ -3,11 +3,26 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Rekapitulasi Kehadiran</h1>
-                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Per kelas — {{ $tanggalDisplay }}</p>
+                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Per kelas — {{ $periodeLabel }}: {{ $tanggalDisplay }}</p>
             </div>
-            <a href="{{ route('guru.rekap') }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition">
-                Buka Rekap Harian
-            </a>
+            <div class="flex items-center space-x-3">
+                <select onchange="window.location.href='{{ route('admin.rekapitulasi') }}?periode=' + encodeURIComponent(this.value) + '&tanggal={{ $tanggal }}'"
+                        class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                        aria-label="Pilih periode">
+                    <option value="hari" @selected($periode === 'hari')>Hari Ini</option>
+                    <option value="minggu" @selected($periode === 'minggu')>Minggu Ini</option>
+                    <option value="bulan" @selected($periode === 'bulan')>Bulan Ini</option>
+                </select>
+                <form method="GET" action="{{ route('admin.rekapitulasi') }}" class="flex items-center">
+                    <input type="hidden" name="periode" value="{{ $periode }}">
+                    <input type="date" name="tanggal" value="{{ $tanggal }}" onchange="this.form.submit()"
+                           class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                           aria-label="Tanggal acuan periode">
+                </form>
+                <a href="{{ route('guru.rekap', ['periode' => $periode, 'tanggal' => $tanggal]) }}" class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition">
+                    Buka Rekap Harian
+                </a>
+            </div>
         </div>
     </x-slot>
 
@@ -16,7 +31,7 @@
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                    <h2 class="text-lg font-bold text-gray-900 mb-1">Kehadiran per Kelas — Hari Ini</h2>
+                    <h2 class="text-lg font-bold text-gray-900 mb-1">Kehadiran per Kelas — {{ $periodeLabel }}</h2>
                     <p class="text-xs text-gray-400 mb-4">Batang menunjukkan jumlah siswa per status.</p>
                     <div class="relative" style="height: 340px;">
                         <canvas id="grafikKehadiran"></canvas>
@@ -42,10 +57,10 @@
 
             <p class="text-[11px] text-gray-400 leading-relaxed border-t border-gray-200 pt-4">
                 <strong>Catatan:</strong> Hadir / Terlambat dihitung dari status yang tercatat di absensi
-                hari ini — status ditentukan otomatis oleh jam server dibandingkan jam masuk
-                masing-masing kelas saat siswa tap (sama dengan aturan rekap harian).
-                Tidak Hadir = total siswa kelas − Hadir − Terlambat (termasuk yang belum tap hari ini).
-                Data diambil langsung dari catatan absensi hari ini.
+                dalam rentang periode terpilih — status ditentukan otomatis oleh jam server
+                dibandingkan jam masuk masing-masing kelas saat siswa tap (sama dengan aturan rekap harian).
+                Tidak Hadir = jumlah siswa kelas × hari sekolah (Senin–Jumat) − Hadir − Terlambat.
+                Data diambil langsung dari catatan absensi pada rentang tersebut.
             </p>
         </div>
     </div>
@@ -59,7 +74,7 @@
 
                 async muatGrafik() {
                     try {
-                        const res = await fetch("{{ route('admin.rekap.grafik') }}", {
+                        const res = await fetch("{{ route('admin.rekap.grafik') }}?periode={{ $periode }}&tanggal={{ $tanggal }}", {
                             headers: { 'Accept': 'application/json' }
                         });
                         if (!res.ok) {

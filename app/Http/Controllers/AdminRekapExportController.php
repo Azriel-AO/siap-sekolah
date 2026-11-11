@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\RekapExportData;
+use App\Services\RekapPeriodeHelper;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -16,14 +17,14 @@ class AdminRekapExportController extends Controller
      */
     public function excel(Request $request): Response
     {
-        [$tanggal, $slugKelas] = $this->filter($request);
+        [$tanggal, $slugKelas, $periode] = $this->filter($request);
 
-        $data = (new RekapExportData)->build($tanggal, $slugKelas);
+        $data = (new RekapExportData)->build($tanggal, $slugKelas, $periode);
 
         // Judul di atas tabel: nama sekolah + periode/kelas
         $rows = [
             [$data['sekolah']],
-            ['Rekap Kehadiran — ' . $data['periode'] . ' — ' . $data['kelasLabel']],
+            ['Rekap Kehadiran — ' . $data['periodeLabel'] . ' (' . $data['rentangLabel'] . ') — ' . $data['kelasLabel']],
             [''],
             ...$data['rows'],
         ];
@@ -41,11 +42,9 @@ class AdminRekapExportController extends Controller
         $content = file_get_contents($tmp);
         unlink($tmp);
 
-        $filename = 'rekap-' . $tanggal . '-' . ($slugKelas ?? 'semua') . '.xlsx';
-
         return new Response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $this->namaFile($data, 'xlsx') . '"',
         ]);
     }
 
@@ -54,23 +53,36 @@ class AdminRekapExportController extends Controller
      */
     public function pdf(Request $request): Response
     {
-        [$tanggal, $slugKelas] = $this->filter($request);
+        [$tanggal, $slugKelas, $periode] = $this->filter($request);
 
-        $data = (new RekapExportData)->build($tanggal, $slugKelas);
+        $data = (new RekapExportData)->build($tanggal, $slugKelas, $periode);
 
         $pdf = Pdf::loadView('admin.rekap-export-pdf', $data)
             ->setPaper('a4', 'landscape');
 
-        $filename = 'rekap-' . $tanggal . '-' . ($slugKelas ?? 'semua') . '.pdf';
-
         return new Response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="' . $this->namaFile($data, 'pdf') . '"',
         ]);
     }
 
     /**
-     * Filter tanggal (default hari ini, format Y-m-d) + kelas (slug | semua).
+     * Nama file: rekap-hari-YYYY-MM-DD-[kelas|semua].ext
+     *            rekap-minggu|bulan-YYYY-MM-DD-sd-YYYY-MM-DD-[kelas|semua].ext
+     */
+    private function namaFile(array $data, string $ext): string
+    {
+        $kelas = str_replace(' ', '-', $data['kelasLabel']);
+
+        if ($data['periode'] === 'hari') {
+            return 'rekap-hari-' . $data['tanggal'] . '-' . $kelas . '.' . $ext;
+        }
+
+        return 'rekap-' . $data['periode'] . '-' . $data['rentangAwal'] . '-sd-' . $data['rentangAkhir'] . '-' . $kelas . '.' . $ext;
+    }
+
+    /**
+     * Filter: tanggal (default hari ini), kelas (slug | semua), periode (hari|minggu|bulan).
      */
     private function filter(Request $request): array
     {
@@ -82,6 +94,8 @@ class AdminRekapExportController extends Controller
         $slug = $request->query('kelas');
         $slug = ($slug === null || $slug === '' ) ? 'semua' : $slug;
 
-        return [$t, $slug];
+        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+
+        return [$t, $slug, $periode];
     }
 }
