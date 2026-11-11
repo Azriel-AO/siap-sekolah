@@ -151,9 +151,12 @@ class DaftarHadirTest extends TestCase
         $this->assertSame('DAFTAR HADIR SISWA SEMESTER GENAP', $rows[0][0]);
         $this->assertSame('SMK UJI COBA BOYOLALI', $rows[1][0]);
         $this->assertSame('TAHUN PELAJARAN 2025/2026', $rows[2][0]);
-        $this->assertSame('BULAN  : Januari', $rows[3][0]);
-        $this->assertSame('KELAS  : X TKJ 1', $rows[4][0]);
-        $this->assertSame('WALI KELAS : Wahyu Nugroho, S.Kom', $rows[5][0]);
+        $this->assertSame('BULAN  :', $rows[3][0]);
+        $this->assertSame('Januari', $rows[3][4]);
+        $this->assertSame('KELAS  :', $rows[4][0]);
+        $this->assertSame('X TKJ 1', $rows[4][4]);
+        $this->assertSame('WALI KELAS :', $rows[5][0]);
+        $this->assertSame('Wahyu Nugroho, S.Kom', $rows[5][4]);
         $this->assertSame('NO', $rows[7][0]);
         $this->assertSame('NISN', $rows[7][1]);
         $this->assertSame('INDUK', $rows[7][2]);

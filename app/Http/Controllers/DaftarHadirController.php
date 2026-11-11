@@ -9,6 +9,10 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Style\Border;
+use OpenSpout\Common\Entity\Style\BorderPart;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\CellAlignment;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
 
@@ -46,7 +50,8 @@ class DaftarHadirController extends Controller
 
     /**
      * Unduh Excel "DAFTAR HADIR" — satu sheet per kelas, setiap sheet berisi blok bulan.
-     * NISN & INDUK selalu teks (leading zeros aman).
+     * NISN & INDUK selalu teks (leading zeros aman). Style: kop center + border matrix +
+     * abu-abu muda kolom Sabtu/Minggu + footer 4 baris rata kanan.
      */
     public function excel(Request $request): Response
     {
@@ -60,6 +65,21 @@ class DaftarHadirController extends Controller
         $pengaturan = DaftarHadirBulanan::pengaturan();
 
         $bold = (new Style)->setFontBold();
+        $boldCenter = (new Style)->setFontBold()->setCellAlignment(CellAlignment::CENTER);
+        $center = (new Style)->setCellAlignment(CellAlignment::CENTER);
+        $thin = (new Style)->setBorder(new Border(
+            new BorderPart(Border::LEFT, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::RIGHT, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::TOP, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::BOTTOM, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID)
+        ));
+        $grayThin = (new Style)->setBackgroundColor('E5E7EB')->setBorder(new Border(
+            new BorderPart(Border::LEFT, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::RIGHT, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::TOP, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID),
+            new BorderPart(Border::BOTTOM, Color::BLACK, Border::WIDTH_THIN, Border::STYLE_SOLID)
+        ));
+        $right = (new Style)->setCellAlignment(CellAlignment::RIGHT);
 
         $tmp = tempnam(sys_get_temp_dir(), 'daftar_hadir_') . '.xlsx';
 
@@ -68,18 +88,57 @@ class DaftarHadirController extends Controller
 
         $first = true;
         foreach ($kelasExport as $kelas) {
-            // Sheet pertama sudah dibuat otomatis saat openToFile
             if (! $first) {
                 $writer->addNewSheetAndMakeItCurrent();
             }
-            $writer->getCurrentSheet()->setName(DaftarHadirBulanan::namaSheet($kelas->name));
+            $sheet = $writer->getCurrentSheet();
+            $sheet->setName(DaftarHadirBulanan::namaSheet($kelas->name));
+
+            // Lebar kolom: NO=4, NISN=14, INDUK=12, NAMA=40, hari 1..31 = 4.5
+            $sheet->setColumnWidth(4, 1);
+            $sheet->setColumnWidth(14, 2);
+            $sheet->setColumnWidth(12, 3);
+            $sheet->setColumnWidth(40, 4);
+            for ($d = 5; $d <= 35; $d++) {
+                $sheet->setColumnWidth(4.5, $d);
+            }
 
             $rows = $builder->buildRows($kelas, $bulan, $tahun, $pengaturan)['rows'];
 
             foreach ($rows as $i => $row) {
-                // Baris judul (0-2) + baris kelas (4) + wali kelas (5) + header hari (7-8) ditebalkan
-                $style = (in_array($i, [0, 1, 2, 4, 5, 7, 8], true)) ? $bold : null;
-                $writer->addRow(Row::fromValues($row, $style));
+                // Baris judul (0,1,2) ditebalkan & rata tengah
+                if ($i === 0 || $i === 1 || $i === 2) {
+                    $writer->addRow(Row::fromValues($row, $boldCenter));
+                } elseif ($i === 4 || $i === 5 || $i === 6) {
+                    // BULAN / KELAS / WALI KELAS: label di kolom 1, nilai mulai kolom 5
+                    $writer->addRow(Row::fromValues($row, $bold));
+                } elseif ($i === 7) {
+                    // Header kolom NO/NISN/INDUK/NAMA/TANGGAL ditebalkan
+                    $writer->addRow(Row::fromValues($row, $bold));
+                } elseif ($i === 8) {
+                    // Angka hari 1..31 + border; Sabtu/Minggu abu-abu
+                    $dayStyles = [];
+                    for ($d = 1; $d <= 31; $d++) {
+                        $weekend = Carbon::create($tahun, $bulan, $d)->isWeekend();
+                        $dayStyles[4 + $d - 1] = $weekend ? $grayThin : $thin;
+                    }
+                    $writer->addRow(Row::fromValues($row, $boldCenter, $dayStyles));
+                } elseif ($i >= 9 && $i < count($rows) - 5) {
+                    // Baris siswa: border tipis + hari weekend abu-abu
+                    $cellStyles = [];
+                    for ($d = 1; $d <= 31; $d++) {
+                        $weekend = Carbon::create($tahun, $bulan, $d)->isWeekend();
+                        $cellStyles[4 + $d - 1] = $weekend ? $grayThin : $thin;
+                    }
+                    for ($c = 0; $c <= 3; $c++) {
+                        $cellStyles[$c] = $thin;
+                    }
+                    $writer->addRow(Row::fromValues($row, null, $cellStyles));
+                } else {
+                    // Footer 4 baris: rata kanan di kolom 5 (index 4)
+                    $val = $row[5] ?? ($row[0] ?? '');
+                    $writer->addRow(Row::fromValues(['', '', '', '', $val], $right));
+                }
             }
 
             $first = false;
@@ -104,4 +163,3 @@ class DaftarHadirController extends Controller
         ]);
     }
 }
-
