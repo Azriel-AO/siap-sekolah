@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\FaceEnrollment;
 use App\Models\Student;
 use App\Models\User;
+use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -15,7 +17,7 @@ class FaceEnrollmentTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function siswa(): User
@@ -28,14 +30,19 @@ class FaceEnrollmentTest extends TestCase
         return User::where('email', 'guru@knbi.sch.id')->firstOrFail();
     }
 
+    private function admin(): User
+    {
+        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+    }
+
     /**
      * Buat data URL JPEG kecil yang sah (SOI FFD8 ... EOI FFD9, >= 100 B).
      */
     private function fakeJpegDataUrl(string $seed = 'a'): string
     {
-        $binary = "\xFF\xD8" . str_repeat($seed, 150) . "\xFF\xD9";
+        $binary = "\xFF\xD8".str_repeat($seed, 150)."\xFF\xD9";
 
-        return 'data:image/jpeg;base64,' . base64_encode($binary);
+        return 'data:image/jpeg;base64,'.base64_encode($binary);
     }
 
     public function test_halaman_pendaftaran_wajah_terbuka_untuk_siswa(): void
@@ -138,7 +145,7 @@ class FaceEnrollmentTest extends TestCase
 
         $siswa = $this->siswa();
 
-        \Carbon\Carbon::setTestNow('2026-11-10 09:00:00');
+        Carbon::setTestNow('2026-11-10 09:00:00');
         $this->actingAs($siswa)->postJson('/siswa/pendaftaran-wajah', [
             'consent' => true,
             'photos' => [
@@ -152,7 +159,7 @@ class FaceEnrollmentTest extends TestCase
         $pathLama = [$sebelum->photo_1_path, $sebelum->photo_2_path, $sebelum->photo_3_path];
         $this->assertNull($sebelum->last_reenrolled_at);
 
-        \Carbon\Carbon::setTestNow('2026-11-10 10:00:00');
+        Carbon::setTestNow('2026-11-10 10:00:00');
         $this->actingAs($siswa)->postJson('/siswa/pendaftaran-wajah', [
             'consent' => true,
             'photos' => [
@@ -161,7 +168,7 @@ class FaceEnrollmentTest extends TestCase
                 $this->fakeJpegDataUrl('r'),
             ],
         ])->assertStatus(200)->assertJson(['success' => true]);
-        \Carbon\Carbon::setTestNow();
+        Carbon::setTestNow();
 
         $this->assertDatabaseCount('face_enrollments', 1);
 
@@ -222,7 +229,7 @@ class FaceEnrollmentTest extends TestCase
             ],
         ])->assertStatus(200);
 
-        $response = $this->actingAs($this->guru())->getJson('/guru/rekap-harian/data');
+        $response = $this->actingAs($this->admin())->getJson('/guru/rekap-harian/data');
 
         $response->assertStatus(200);
         $students = collect($response->json('students'));
@@ -252,7 +259,7 @@ class FaceEnrollmentTest extends TestCase
         $enrollment = FaceEnrollment::firstOrFail();
         Storage::disk('local')->delete($enrollment->photo_2_path);
 
-        $response = $this->actingAs($this->guru())->getJson('/guru/rekap-harian/data');
+        $response = $this->actingAs($this->admin())->getJson('/guru/rekap-harian/data');
 
         $response->assertStatus(200);
         $raka = collect($response->json('students'))->firstWhere('nis', '10240101');
@@ -264,7 +271,7 @@ class FaceEnrollmentTest extends TestCase
         $this->seedDemo();
         Storage::fake('local');
 
-        $bukanJpeg = 'data:image/jpeg;base64,' . base64_encode(str_repeat('x', 200)); // tanpa SOI/EOI JPEG
+        $bukanJpeg = 'data:image/jpeg;base64,'.base64_encode(str_repeat('x', 200)); // tanpa SOI/EOI JPEG
 
         $response = $this->actingAs($this->siswa())->postJson('/siswa/pendaftaran-wajah', [
             'consent' => true,

@@ -23,9 +23,9 @@ Route::get('/', function () {
     return redirect()->route('dashboard');
 });
 
-// Halaman dashboard dilindungi middleware 'auth' dan pencegah cache histori
+// Halaman dashboard dilindungi middleware 'auth', 'admin' dan pencegah cache histori
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'prevent-back-history'])
+    ->middleware(['auth', 'admin', 'prevent-back-history'])
     ->name('dashboard');
 
 // Kiosk Gerbang Tunggal (kartu + sidik jari; tanpa scoping kelas)
@@ -43,14 +43,17 @@ Route::get('/pendaftaran/berhasil', [PendaftaranController::class, 'berhasil'])-
 Route::redirect('/kiosk/{slug}', '/kiosk', 301)->where('slug', '[A-Za-z0-9\-]+');
 Route::redirect('/kiosk/{slug}/tap', '/kiosk/tap', 301)->where('slug', '[A-Za-z0-9\-]+');
 
-// Rute Guru & Siswa terproteksi sesi autentikasi
+// Rute terproteksi sesi autentikasi
 Route::middleware(['auth', 'prevent-back-history'])->group(function () {
-    // Rekap Absensi Guru (US-21, US-22)
-    Route::get('/guru/rekap-harian', [TeacherAttendanceController::class, 'index'])->name('guru.rekap');
-    Route::get('/guru/rekap-harian/data', [TeacherAttendanceController::class, 'data'])->name('guru.rekap.data');
-
-    // Admin: semua route /admin/* khusus peran admin (middleware 'admin'). Guru & siswa → 403.
+    // Admin: semua route /admin/* serta rekap & riwayat khusus peran admin (middleware 'admin'). Guru & siswa → 403.
     Route::middleware(['admin'])->group(function () {
+        // Rekap Absensi (US-21, US-22) — sekarang dibuka oleh admin
+        Route::get('/guru/rekap-harian', [TeacherAttendanceController::class, 'index'])->name('guru.rekap');
+        Route::get('/guru/rekap-harian/data', [TeacherAttendanceController::class, 'data'])->name('guru.rekap.data');
+
+        // Riwayat Absensi Siswa (US-31) — dilindungi middleware admin
+        Route::get('/siswa/riwayat-absensi', [StudentAttendanceController::class, 'index'])->name('siswa.riwayat');
+
         // Admin: Rekapitulasi grafis per kelas
         Route::get('/admin/rekapitulasi', [AdminRekapitulasiController::class, 'index'])->name('admin.rekapitulasi');
         Route::get('/admin/rekap-grafik', [AdminRekapitulasiController::class, 'grafik'])->name('admin.rekap.grafik');
@@ -78,9 +81,6 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::put('/admin/data-siswa/{student}', [AdminStudentController::class, 'update'])->name('admin.siswa.update');
         Route::delete('/admin/data-siswa/{student}', [AdminStudentController::class, 'destroy'])->name('admin.siswa.destroy');
     });
-
-    // Riwayat Absensi Siswa (US-31)
-    Route::get('/siswa/riwayat-absensi', [StudentAttendanceController::class, 'index'])->name('siswa.riwayat');
 
     // Pendaftaran Wajah Mandiri Siswa (US-10 tahap 1, PRD F3) — tanpa pengenalan wajah
     Route::get('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'show'])->name('siswa.wajah');

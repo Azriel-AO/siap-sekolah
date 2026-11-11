@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
 use App\Models\SchoolClass;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -29,7 +28,7 @@ class TeacherAttendanceController extends Controller
             'schoolClass' => $schoolClass,
             'classes' => $classes,
             'today' => $today,
-            'tanggalDisplay' => \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y'),
+            'tanggalDisplay' => Carbon::parse($today)->translatedFormat('l, d F Y'),
             'summary' => $studentsData['summary'],
             'students' => $studentsData['students'],
         ]);
@@ -50,7 +49,7 @@ class TeacherAttendanceController extends Controller
         return response()->json([
             'success' => true,
             'class_name' => $schoolClass->name,
-            'date_formatted' => \Carbon\Carbon::parse($today)->translatedFormat('l, d F Y'),
+            'date_formatted' => Carbon::parse($today)->translatedFormat('l, d F Y'),
             'server_time' => Carbon::now('Asia/Jakarta')->format('H:i:s'),
             'summary' => $data['summary'],
             'students' => $data['students'],
@@ -102,9 +101,13 @@ class TeacherAttendanceController extends Controller
         });
 
         foreach ($formatted as $row) {
-            if ($row['status'] === 'HADIR') $hadirCount++;
-            elseif ($row['status'] === 'TERLAMBAT') $terlambatCount++;
-            else $belumAbsenCount++;
+            if ($row['status'] === 'HADIR') {
+                $hadirCount++;
+            } elseif ($row['status'] === 'TERLAMBAT') {
+                $terlambatCount++;
+            } else {
+                $belumAbsenCount++;
+            }
         }
 
         return [
@@ -150,12 +153,12 @@ class TeacherAttendanceController extends Controller
 
     /**
      * Rekap harian (termasuk foto bukti absen, PRD F1) hanya boleh dilihat
-     * guru dan admin — bukan siswa, bukan pengunjung publik.
+     * oleh admin — bukan guru, bukan siswa, bukan pengunjung publik.
      */
     private function pastikanGuruAtauAdmin(Request $request): void
     {
-        if (! in_array($request->user()->role, ['guru', 'admin'])) {
-            abort(403, 'Halaman ini hanya untuk guru dan admin.');
+        if ($request->user()->role !== 'admin') {
+            abort(403, 'Halaman ini hanya untuk admin.');
         }
     }
 
@@ -200,7 +203,7 @@ class TeacherAttendanceController extends Controller
 
             $binary = Storage::disk('local')->get($path);
 
-            return $binary ? 'data:image/jpeg;base64,' . base64_encode($binary) : null;
+            return $binary ? 'data:image/jpeg;base64,'.base64_encode($binary) : null;
         } catch (\Throwable) {
             return null;
         }

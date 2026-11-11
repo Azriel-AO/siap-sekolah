@@ -67,6 +67,10 @@
                 Masuk
             </button>
         </div>
+
+        <p class="text-center text-xs text-gray-500 mt-3">
+            Halaman khusus admin sekolah.
+        </p>
     </form>
 
     <!-- Kredensial Akun Contoh (Seed) untuk Pengujian -->

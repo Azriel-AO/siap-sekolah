@@ -57,7 +57,7 @@ class AuthenticationTest extends TestCase
         $dashboardResponse->assertSee('Laporan');
     }
 
-    public function test_guru_can_login_and_see_guru_dashboard(): void
+    public function test_guru_login_ditolak_dan_tidak_ada_session(): void
     {
         $this->seed(UserSeeder::class);
 
@@ -66,16 +66,13 @@ class AuthenticationTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
-
-        $dashboardResponse = $this->get('/dashboard');
-        $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertSee('Bu Sari');
-        $dashboardResponse->assertSee('Guru / Wali Kelas');
+        $this->assertGuest();
+        $response->assertSessionHasErrors([
+            'email' => 'Login hanya untuk admin. Siswa tidak memerlukan akun — silakan absen langsung di gerbang.',
+        ]);
     }
 
-    public function test_siswa_can_login_and_see_siswa_dashboard(): void
+    public function test_siswa_login_ditolak_dan_tidak_ada_session(): void
     {
         $this->seed(UserSeeder::class);
 
@@ -84,13 +81,21 @@ class AuthenticationTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect(route('dashboard', absolute: false));
+        $this->assertGuest();
+        $response->assertSessionHasErrors([
+            'email' => 'Login hanya untuk admin. Siswa tidak memerlukan akun — silakan absen langsung di gerbang.',
+        ]);
+    }
 
-        $dashboardResponse = $this->get('/dashboard');
-        $dashboardResponse->assertStatus(200);
-        $dashboardResponse->assertSee('Raka Siswa');
-        $dashboardResponse->assertSee('Siswa');
+    public function test_guru_dan_siswa_dilarang_mengakses_dashboard(): void
+    {
+        $this->seed(UserSeeder::class);
+
+        $guru = User::where('email', 'guru@knbi.sch.id')->firstOrFail();
+        $siswa = User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+
+        $this->actingAs($guru)->get('/dashboard')->assertStatus(403);
+        $this->actingAs($siswa)->get('/dashboard')->assertStatus(403);
     }
 
     public function test_invalid_password_returns_indonesian_error_message(): void

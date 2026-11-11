@@ -195,18 +195,18 @@ class KioskAttendanceTest extends TestCase
         $this->assertDatabaseHas('attendances', ['student_id' => $siswaLain->id]);
     }
 
-    public function test_guru_dapat_membuka_rekap_harian_dan_data_polling(): void
+    public function test_admin_dapat_membuka_rekap_harian_dan_data_polling(): void
     {
         $this->seedDemo();
 
-        $guru = User::where('email', 'guru@knbi.sch.id')->first();
+        $admin = User::where('email', 'admin@knbi.sch.id')->first();
 
-        $this->actingAs($guru)
+        $this->actingAs($admin)
             ->get('/guru/rekap-harian')
             ->assertStatus(200)
             ->assertSee('Rekap Kehadiran Harian');
 
-        $response = $this->actingAs($guru)
+        $response = $this->actingAs($admin)
             ->getJson('/guru/rekap-harian/data');
 
         $response->assertStatus(200);
@@ -220,36 +220,40 @@ class KioskAttendanceTest extends TestCase
         $this->assertSame(2, $response->json('summary.belum_absen'));
     }
 
-    public function test_siswa_dan_admin_akses_rekap_sesuai_aturan(): void
+    public function test_guru_dan_siswa_akses_rekap_mendapat_403(): void
     {
         $this->seedDemo();
 
-        // Siswa TIDAK boleh melihat rekap (di dalamnya ada foto bukti absen)
+        // Guru dan Siswa TIDAK boleh melihat rekap (khusus admin)
+        $guru = User::where('email', 'guru@knbi.sch.id')->first();
+        $this->actingAs($guru)->get('/guru/rekap-harian')->assertStatus(403);
+        $this->actingAs($guru)->getJson('/guru/rekap-harian/data')->assertStatus(403);
+
         $siswa = User::where('email', 'siswa@knbi.sch.id')->first();
         $this->actingAs($siswa)->get('/guru/rekap-harian')->assertStatus(403);
         $this->actingAs($siswa)->getJson('/guru/rekap-harian/data')->assertStatus(403);
-
-        // Admin BOLEH melihat rekap
-        $admin = User::where('email', 'admin@knbi.sch.id')->first();
-        $this->actingAs($admin)->get('/guru/rekap-harian')->assertStatus(200);
-        $this->actingAs($admin)->getJson('/guru/rekap-harian/data')->assertStatus(200);
     }
 
-    public function test_siswa_hanya_melihat_riwayat_miliknya(): void
+    public function test_riwayat_absensi_admin_200_dan_guru_siswa_403(): void
     {
         $this->seedDemo();
 
+        // Admin BOLEH melihat riwayat
+        $admin = User::where('email', 'admin@knbi.sch.id')->first();
+        $this->actingAs($admin)
+            ->get('/siswa/riwayat-absensi')
+            ->assertStatus(200);
+
+        // Guru & Siswa DITOLAK (403)
+        $guru = User::where('email', 'guru@knbi.sch.id')->first();
+        $this->actingAs($guru)
+            ->get('/siswa/riwayat-absensi')
+            ->assertStatus(403);
+
         $siswa = User::where('email', 'siswa@knbi.sch.id')->first();
-
-        $response = $this->actingAs($siswa)
-            ->get('/siswa/riwayat-absensi');
-
-        $response->assertStatus(200);
-        // Raka Pratama adalah pemilik akun siswa — namanya harus muncul,
-        // sedangkan nama siswa lain TIDAK boleh tampil (privasi data)
-        $response->assertSee('Raka Pratama');
-        $response->assertDontSee('Adinda Rahma');
-        $response->assertDontSee('Hendra Wijaya');
+        $this->actingAs($siswa)
+            ->get('/siswa/riwayat-absensi')
+            ->assertStatus(403);
     }
 
     public function test_tamu_diarahkan_ke_login_dari_halaman_guru_dan_siswa(): void
