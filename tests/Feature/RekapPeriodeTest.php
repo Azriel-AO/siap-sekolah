@@ -65,10 +65,12 @@ class RekapPeriodeTest extends TestCase
         $response->assertJson(['periode' => 'minggu']);
 
         $row = collect($response->json('students'))->firstWhere('name', 'Hendra Wijaya');
-        $this->assertSame(1, $row['hadir']);      // hanya 11-09
+        $this->assertSame(1, $row['hadir']);      // hadir 11-09 (hari ini 11-10 belum tap)
         $this->assertSame(0, $row['terlambat']);
-        $this->assertSame(4, $row['tidak_hadir']); // 5 hari sekolah − 1 hadir
-        $this->assertSame(20, $row['persentase']); // 1/5
+        $this->assertSame(0, $row['izin']);
+        $this->assertSame(0, $row['sakit']);
+        $this->assertSame(0, $row['alpa']);       // hari sekolah lewat (9 Nov saja) − hadir(1) = 0
+        $this->assertSame(20, $row['persentase']); // 1/5 (pembagi: 5 hari sekolah − 0 izin − 0 sakit)
 
         Carbon::setTestNow();
     }
@@ -136,12 +138,14 @@ class RekapPeriodeTest extends TestCase
 
         $this->assertSame(RekapExportData::HEADER_RINGKASAN, $data['rows'][0]);
 
-        // Hendra: Hadir 1, Terlambat 0, Tidak Hadir 4 (5 hari sekolah), Persentase 20%
+        // Hendra: Hadir 1 (11-09), Terlambat 0, Izin 0, Sakit 0, Alpa 0, Persentase 20%
         $row = collect($data['rows'])->firstWhere(1, 'Hendra Wijaya');
         $this->assertSame(1, $row[3]);
         $this->assertSame(0, $row[4]);
-        $this->assertSame(4, $row[5]);
-        $this->assertSame('20%', $row[6]);
+        $this->assertSame(0, $row[5]);
+        $this->assertSame(0, $row[6]);
+        $this->assertSame(0, $row[7]);
+        $this->assertSame('20%', $row[8]);
 
         Carbon::setTestNow();
     }
@@ -191,9 +195,9 @@ class RekapPeriodeTest extends TestCase
             'rentang_label',
             'date_formatted',
             'server_time',
-            'summary' => ['total', 'hadir', 'terlambat', 'tidak_hadir', 'rata_persen'],
+            'summary' => ['total', 'hadir', 'terlambat', 'alpa', 'rata_persen'],
             'students' => [
-                '*' => ['id', 'nis', 'nisn', 'name', 'gender', 'hadir', 'terlambat', 'tidak_hadir', 'persentase', 'face'],
+                '*' => ['id', 'nis', 'nisn', 'name', 'gender', 'hadir', 'terlambat', 'izin', 'sakit', 'alpa', 'persentase', 'face'],
             ],
         ]);
         $this->assertSame('minggu', $response->json('periode'));
@@ -222,15 +226,20 @@ class RekapPeriodeTest extends TestCase
             'labels',
             'hadir',
             'terlambat',
-            'tidak_hadir',
+            'izin',
+            'sakit',
+            'alpa',
         ]);
 
         $this->assertSame('minggu', $response->json('periode'));
         $this->assertSame(5, $response->json('hari_sekolah'));
-        // 5 (seed hari ini, Selasa) + 1 (raka Senin) = 6 hadir; 3 terlambat; TKJ 1 10 siswa × 5 hari = 50 − 6 − 3 = 41 tidak hadir
+        // 5 (seed hari ini, Selasa 11-10) + 1 (raka Senin 11-09) = 6 hadir; 3 terlambat;
+        // alpa = Hendra+Intan (belum tap sama sekali di rentang) × 1 hari sekolah lewat = 2
         $this->assertSame([6], $response->json('hadir'));
         $this->assertSame([3], $response->json('terlambat'));
-        $this->assertSame([41], $response->json('tidak_hadir'));
+        $this->assertSame([0], $response->json('izin'));
+        $this->assertSame([0], $response->json('sakit'));
+        $this->assertSame([2], $response->json('alpa'));
 
         Carbon::setTestNow();
     }

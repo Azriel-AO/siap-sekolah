@@ -58,21 +58,27 @@ class AdminRekapitulasiController extends Controller
         $labels = [];
         $hadir = [];
         $terlambat = [];
-        $tidakHadir = [];
+        $izin = [];
+        $sakit = [];
+        $alpa = [];
 
         foreach ($classes as $kelas) {
             $kelasSiswaIds = $students->where('school_class_id', $kelas->id)->pluck('id');
-            $h = 0;
-            $t = 0;
+            $h = 0; $t = 0; $i = 0; $s = 0; $a = 0;
             foreach ($kelasSiswaIds as $id) {
                 $h += $perSiswa[$id]['hadir'];
                 $t += $perSiswa[$id]['terlambat'];
+                $i += $perSiswa[$id]['izin'];
+                $s += $perSiswa[$id]['sakit'];
+                $a += $perSiswa[$id]['alpa'];
             }
 
             $labels[] = $kelas->name;
             $hadir[] = $h;
             $terlambat[] = $t;
-            $tidakHadir[] = max(0, $kelas->students_count * $rentang['hari_sekolah'] - $h - $t);
+            $izin[] = $i;
+            $sakit[] = $s;
+            $alpa[] = $a;
         }
 
         return response()->json([
@@ -84,7 +90,9 @@ class AdminRekapitulasiController extends Controller
             'labels' => $labels,
             'hadir' => $hadir,
             'terlambat' => $terlambat,
-            'tidak_hadir' => $tidakHadir,
+            'izin' => $izin,
+            'sakit' => $sakit,
+            'alpa' => $alpa,
         ]);
     }
 

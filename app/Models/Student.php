@@ -19,6 +19,7 @@ class Student extends Model
         'name',
         'gender',
         'nisn',
+        'induk',
         'fingerprint_id',
     ];
 
@@ -45,5 +46,10 @@ class Student extends Model
     public function faceEnrollment(): HasOne
     {
         return $this->hasOne(FaceEnrollment::class);
+    }
+
+    public function izinSakits(): HasMany
+    {
+        return $this->hasMany(IzinSakit::class);
     }
 }

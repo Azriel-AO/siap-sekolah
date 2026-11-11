@@ -108,6 +108,7 @@ class AdminClassController extends Controller
             'name' => ['required', 'string', 'max:50'],
             'slug' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('school_classes', 'slug')->ignore($class?->id)],
             'department' => ['required', 'string', 'max:50'],
+            'wali_kelas' => ['nullable', 'string', 'max:100'],
             'entry_time' => ['required', 'date_format:H:i'],
             'exit_time' => ['required', 'date_format:H:i'],
         ], [
@@ -115,6 +116,7 @@ class AdminClassController extends Controller
             'slug.regex' => 'Slug hanya boleh huruf, angka, dan tanda minus (contoh: X-TKJ-1). Pola diubah otomatis ke kapital.',
             'slug.unique' => 'Slug tersebut sudah dipakai kelas lain.',
             'department.required' => 'Jurusan wajib diisi.',
+            'wali_kelas.max' => 'Nama wali kelas maksimal 100 karakter.',
             'entry_time.required' => 'Jam masuk wajib diisi.',
             'exit_time.required' => 'Jam pulang wajib diisi.',
         ]);

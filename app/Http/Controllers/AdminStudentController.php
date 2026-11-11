@@ -68,6 +68,7 @@ class AdminStudentController extends Controller
             $student = Student::create([
                 'school_class_id' => $validated['school_class_id'],
                 'nis' => $validated['nis'],
+                'induk' => $validated['induk'] ?? null,
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
             ]);
@@ -110,6 +111,7 @@ class AdminStudentController extends Controller
             $student->update([
                 'school_class_id' => $validated['school_class_id'],
                 'nis' => $validated['nis'],
+                'induk' => $validated['induk'] ?? null,
                 'name' => $validated['name'],
                 'gender' => $validated['gender'],
             ]);
@@ -134,6 +136,7 @@ class AdminStudentController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'nis' => ['required', 'string', 'max:20', Rule::unique('students', 'nis')->ignore($student?->id)],
+            'induk' => ['nullable', 'string', 'max:20', Rule::unique('students', 'induk')->ignore($student?->id)],
             'gender' => ['required', Rule::in(['L', 'P'])],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
             'card_uid' => ['nullable', 'string', 'max:50', Rule::unique('rfid_cards', 'card_uid')->ignore($student?->rfidCard?->id)],
@@ -141,6 +144,7 @@ class AdminStudentController extends Controller
             'name.required' => 'Nama siswa wajib diisi.',
             'nis.required' => 'NIS wajib diisi.',
             'nis.unique' => 'NIS tersebut sudah dipakai siswa lain.',
+            'induk.unique' => 'NIS Induk tersebut sudah dipakai siswa lain.',
             'gender.required' => 'Jenis kelamin wajib dipilih.',
             'gender.in' => 'Jenis kelamin tidak valid.',
             'school_class_id.required' => 'Kelas wajib dipilih.',

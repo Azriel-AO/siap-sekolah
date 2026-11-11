@@ -42,6 +42,15 @@
                     </div>
                 </div>
 
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">NIS Induk</label>
+                        <input type="text" name="induk" value="{{ old('induk') }}" maxlength="20"
+                               class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0075384110">
+                        <p class="text-[11px] text-gray-400 mt-1">NIS Induk sekolah (opsional) — jangan tertukar dengan NISN dari pendaftaran.</p>
+                    </div>
+                </div>
+
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
                     <select name="school_class_id" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">

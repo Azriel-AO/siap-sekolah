@@ -14,6 +14,7 @@ class SchoolClass extends Model
         'name',
         'slug',
         'department',
+        'wali_kelas',
         'entry_time',
         'exit_time',
     ];

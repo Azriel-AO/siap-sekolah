@@ -26,20 +26,28 @@ class RekapGrafikTest extends TestCase
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'tanggal',
+            'periode',
+            'periode_label',
+            'rentang_label',
+            'hari_sekolah',
             'labels',
             'hadir',
             'terlambat',
-            'tidak_hadir',
+            'izin',
+            'sakit',
+            'alpa',
         ]);
 
         // Kelas demo satu-satunya: X TKJ 1
         $this->assertSame(['X TKJ 1'], $response->json('labels'));
 
         // Data seed demo: 5 Hadir (Raka, Adinda, Budi, Eka, Farhan),
-        // 3 Terlambat (Citra, Dimas, Gita), 2 Belum Absen (Hendra, Intan)
+        // 3 Terlambat (Citra, Dimas, Gita), 0 Izin/Sakit/Alpa (hari ini belum lewat)
         $this->assertSame([5], $response->json('hadir'));
         $this->assertSame([3], $response->json('terlambat'));
-        $this->assertSame([2], $response->json('tidak_hadir'));
+        $this->assertSame([0], $response->json('izin'));
+        $this->assertSame([0], $response->json('sakit'));
+        $this->assertSame([0], $response->json('alpa'));
     }
 
     public function test_guru_dan_siswa_dilarang_akses_grafik(): void

@@ -49,18 +49,14 @@
                         <div class="text-4xl font-black text-amber-600 mt-1" x-text="total.terlambat">0</div>
                     </div>
                     <div class="bg-white rounded-xl border border-rose-200 shadow-sm p-5">
-                        <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Tidak Hadir</div>
-                        <div class="text-4xl font-black text-rose-600 mt-1" x-text="total.tidakHadir">0</div>
+                        <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Alpa</div>
+                        <div class="text-4xl font-black text-rose-600 mt-1" x-text="total.alpa">0</div>
                     </div>
                 </div>
             </div>
 
             <p class="text-[11px] text-gray-400 leading-relaxed border-t border-gray-200 pt-4">
-                <strong>Catatan:</strong> Hadir / Terlambat dihitung dari status yang tercatat di absensi
-                dalam rentang periode terpilih — status ditentukan otomatis oleh jam server
-                dibandingkan jam masuk masing-masing kelas saat siswa tap (sama dengan aturan rekap harian).
-                Tidak Hadir = jumlah siswa kelas × hari sekolah (Senin–Jumat) − Hadir − Terlambat.
-                Data diambil langsung dari catatan absensi pada rentang tersebut.
+                <strong>Catatan:</strong> Hadir / Terlambat / Izin / Sakit dihitung dari catatan pada rentang periode terpilih — Hadir/Terlambat ditentukan otomatis oleh jam server dibandingkan jam masuk kelas saat siswa tap (sama dengan aturan rekap harian); Izin/Sakit dari halaman "Catat Izin / Sakit". Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit. Data diambil langsung dari database.
             </p>
         </div>
     </div>
@@ -69,7 +65,7 @@
     <script>
         function rekapGrafik() {
             return {
-                total: { hadir: 0, terlambat: 0, tidakHadir: 0 },
+                total: { hadir: 0, terlambat: 0, alpa: 0 },
                 error: '',
 
                 async muatGrafik() {
@@ -85,7 +81,7 @@
 
                         this.total.hadir = data.hadir.reduce((a, b) => a + b, 0);
                         this.total.terlambat = data.terlambat.reduce((a, b) => a + b, 0);
-                        this.total.tidakHadir = data.tidak_hadir.reduce((a, b) => a + b, 0);
+                        this.total.alpa = data.alpa.reduce((a, b) => a + b, 0);
 
                         const ctx = document.getElementById('grafikKehadiran');
                         new Chart(ctx, {
@@ -95,7 +91,9 @@
                                 datasets: [
                                     { label: 'Hadir', data: data.hadir, backgroundColor: '#10b981' },
                                     { label: 'Terlambat', data: data.terlambat, backgroundColor: '#f59e0b' },
-                                    { label: 'Tidak Hadir', data: data.tidak_hadir, backgroundColor: '#f43f5e' },
+                                    { label: 'Izin', data: data.izin, backgroundColor: '#818cf8' },
+                                    { label: 'Sakit', data: data.sakit, backgroundColor: '#3b82f6' },
+                                    { label: 'Alpa', data: data.alpa, backgroundColor: '#f43f5e' },
                                 ],
                             },
                             options: {

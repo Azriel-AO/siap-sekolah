@@ -108,9 +108,9 @@
                 </div>
 
                 <div class="bg-rose-50/60 p-5 rounded-xl border border-rose-200 shadow-sm">
-                    <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Tidak Hadir (hari)</div>
-                    <div class="text-3xl font-black text-rose-700 mt-2" x-text="summary.tidak_hadir">{{ $summary['tidak_hadir'] }}</div>
-                    <div class="text-xs text-rose-600 mt-1">Rata-rata kehadiran: <span x-text="summary.rata_persen">{{ $summary['rata_persen'] }}</span>%</div>
+                    <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Alpa (hari)</div>
+                    <div class="text-3xl font-black text-rose-700 mt-2" x-text="summary.alpa">{{ $summary['alpa'] }}</div>
+                    <div class="text-xs text-rose-600 mt-1">Rata-rata kehadiran: <span x-text="summary.rata_persen ?? '—'">{{ $summary['rata_persen'] ?? '—' }}</span>%</div>
                 </div>
             </div>
             @endif
@@ -212,7 +212,9 @@
                                 <th class="py-3.5 px-4">Nama Siswa</th>
                                 <th class="py-3.5 px-4 text-center">Hadir</th>
                                 <th class="py-3.5 px-4 text-center">Terlambat</th>
-                                <th class="py-3.5 px-4 text-center">Tidak Hadir</th>
+                                <th class="py-3.5 px-4 text-center">Izin</th>
+                                <th class="py-3.5 px-4 text-center">Sakit</th>
+                                <th class="py-3.5 px-4 text-center">Alpa</th>
                                 <th class="py-3.5 px-4 text-center">Persentase</th>
                                 <th class="py-3.5 px-4 text-center">Wajah</th>
                             </tr>
@@ -220,15 +222,19 @@
                         <tbody class="divide-y divide-gray-200 text-sm">
                             <template x-for="(s, index) in students" :key="s.id">
                                 <tr class="hover:bg-slate-50 transition"
-                                    :class="{'bg-emerald-50/20': s.tidak_hadir === 0, 'bg-rose-50/20': s.tidak_hadir > 2}">
+                                    :class="{'bg-emerald-50/20': s.alpa === 0, 'bg-rose-50/20': s.alpa > 2}">
                                     <td class="py-3 px-4 text-center text-xs text-gray-400 font-mono" x-text="index + 1"></td>
                                     <td class="py-3 px-4 font-mono font-medium text-gray-700" x-text="s.nisn"></td>
                                     <td class="py-3 px-4 font-semibold text-gray-900" x-text="s.name"></td>
                                     <td class="py-3 px-4 text-center font-mono font-bold text-emerald-700" x-text="s.hadir"></td>
                                     <td class="py-3 px-4 text-center font-mono font-bold text-amber-700" x-text="s.terlambat"></td>
-                                    <td class="py-3 px-4 text-center font-mono font-bold" :class="s.tidak_hadir > 0 ? 'text-rose-600' : 'text-gray-400'" x-text="s.tidak_hadir"></td>
+                                    <td class="py-3 px-4 text-center font-mono font-semibold text-indigo-700" x-text="s.izin"></td>
+                                    <td class="py-3 px-4 text-center font-mono font-semibold text-sky-700" x-text="s.sakit"></td>
+                                    <td class="py-3 px-4 text-center font-mono font-bold" :class="s.alpa > 0 ? 'text-rose-600' : 'text-gray-400'" x-text="s.alpa"></td>
                                     <td class="py-3 px-4 text-center">
-                                        <span class="font-mono font-bold" :class="s.persentase >= 80 ? 'text-emerald-700' : (s.persentase >= 50 ? 'text-amber-700' : 'text-rose-600')" x-text="s.persentase + '%'"></span>
+                                        <span class="font-mono font-bold"
+                                              :class="s.persentase === null ? 'text-gray-400' : (s.persentase >= 80 ? 'text-emerald-700' : (s.persentase >= 50 ? 'text-amber-700' : 'text-rose-600'))"
+                                              x-text="s.persentase === null ? '—' : s.persentase + '%'"></span>
                                     </td>
                                     <td class="py-3 px-4 text-center">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"

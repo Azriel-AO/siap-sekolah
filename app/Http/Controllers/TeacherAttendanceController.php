@@ -175,7 +175,9 @@ class TeacherAttendanceController extends Controller
                 'gender' => $student->gender,
                 'hadir' => $r['hadir'],
                 'terlambat' => $r['terlambat'],
-                'tidak_hadir' => $r['tidak_hadir'],
+                'izin' => $r['izin'],
+                'sakit' => $r['sakit'],
+                'alpa' => $r['alpa'],
                 'persentase' => $r['persentase'],
                 'face' => $this->wajahStatus($student->faceEnrollment),
             ];
@@ -183,17 +185,18 @@ class TeacherAttendanceController extends Controller
 
         $hadirSum = (int) $formatted->sum('hadir');
         $terlambatSum = (int) $formatted->sum('terlambat');
-        $tidakHadirSum = (int) $formatted->sum('tidak_hadir');
-        $rataPersen = $formatted->count() > 0
-            ? (int) round($formatted->avg('persentase'))
-            : 0;
+        $alpaSum = (int) $formatted->sum('alpa');
+        $persenValues = $formatted->pluck('persentase')->filter(fn ($p) => $p !== null);
+        $rataPersen = $persenValues->count() > 0
+            ? (int) round($persenValues->avg())
+            : null;
 
         return [
             'summary' => [
                 'total' => $formatted->count(),
                 'hadir' => $hadirSum,
                 'terlambat' => $terlambatSum,
-                'tidak_hadir' => $tidakHadirSum,
+                'alpa' => $alpaSum,
                 'rata_persen' => $rataPersen,
             ],
             'students' => $formatted,

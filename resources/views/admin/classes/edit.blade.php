@@ -40,6 +40,13 @@
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                 </div>
 
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Wali Kelas</label>
+                    <input type="text" name="wali_kelas" value="{{ old('wali_kelas', $class->wali_kelas) }}" maxlength="100"
+                           class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: Wahyu Nugroho, S.Kom">
+                    <p class="text-[11px] text-gray-400 mt-1">Nama wali kelas untuk kop laporan "Daftar Hadir" (opsional).</p>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Jam Masuk <span class="text-rose-500">*</span></label>

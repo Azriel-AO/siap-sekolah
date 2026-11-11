@@ -4,6 +4,7 @@ use App\Http\Controllers\AdminClassController;
 use App\Http\Controllers\AdminRekapExportController;
 use App\Http\Controllers\AdminRekapitulasiController;
 use App\Http\Controllers\AdminStudentController;
+use App\Http\Controllers\KehadiranManualController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
 use App\Http\Controllers\KioskController;
@@ -61,6 +62,10 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         // Admin: export rekap (Excel & PDF)
         Route::get('/admin/rekap-export/excel', [AdminRekapExportController::class, 'excel'])->name('admin.rekap.excel');
         Route::get('/admin/rekap-export/pdf', [AdminRekapExportController::class, 'pdf'])->name('admin.rekap.pdf');
+
+        // Admin: Catat Izin / Sakit
+        Route::get('/admin/kehadiran-manual', [KehadiranManualController::class, 'index'])->name('admin.kehadiran.manual');
+        Route::post('/admin/kehadiran-manual', [KehadiranManualController::class, 'simpan'])->name('admin.kehadiran.manual.simpan');
 
         // Admin: Data Kelas
         Route::get('/admin/data-kelas', [AdminClassController::class, 'index'])->name('admin.kelas.index');

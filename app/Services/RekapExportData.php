@@ -18,7 +18,7 @@ class RekapExportData
 {
     public const HEADER = ['Tanggal', 'NISN', 'Nama', 'Kelas', 'Masuk', 'Pulang', 'Status', 'Metode'];
 
-    public const HEADER_RINGKASAN = ['NISN', 'Nama', 'Kelas', 'Hadir', 'Terlambat', 'Tidak Hadir', 'Persentase'];
+    public const HEADER_RINGKASAN = ['NISN', 'Nama', 'Kelas', 'Hadir', 'Terlambat', 'Izin', 'Sakit', 'Alpa', 'Persentase'];
 
     /**
      * @return array{sekolah: string, periode: string, periodeLabel: string, rentangLabel: string, kelasLabel: string, rows: array<int, array>}
@@ -78,8 +78,10 @@ class RekapExportData
                         $kelas->name,
                         $r['hadir'],
                         $r['terlambat'],
-                        $r['tidak_hadir'],
-                        $r['persentase'] . '%',
+                        $r['izin'],
+                        $r['sakit'],
+                        $r['alpa'],
+                        $r['persentase'] !== null ? $r['persentase'] . '%' : '—',
                     ];
                 }
             }

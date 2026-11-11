@@ -72,7 +72,9 @@
                 <th>Kelas</th>
                 <th>Hadir</th>
                 <th>Terlambat</th>
-                <th>Tidak Hadir</th>
+                <th>Izin</th>
+                <th>Sakit</th>
+                <th>Alpa</th>
                 <th>Persentase</th>
             </tr>
         </thead>
@@ -86,6 +88,8 @@
                     <td>{{ $row[4] }}</td>
                     <td>{{ $row[5] }}</td>
                     <td>{{ $row[6] }}</td>
+                    <td>{{ $row[7] }}</td>
+                    <td>{{ $row[8] }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -94,7 +98,7 @@
 
     <div class="kaki">
         @if($periode !== 'hari')
-            Definisi: Hadir/Terlambat = jumlah hari berstatus tersebut dalam rentang. Tidak Hadir = hari sekolah (Senin–Jumat) dalam rentang − Hadir − Terlambat. Persentase = (Hadir + Terlambat) / hari sekolah × 100.<br>
+            Definisi: Hadir/Terlambat/Izin/Sakit = jumlah catatan dalam rentang. Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit (diturunkan, bukan disimpan). Persentase = (Hadir + Terlambat) / (hari sekolah dalam rentang − Izin − Sakit) × 100; bila pembagi ≤ 0 ditampilkan "—".<br>
         @endif
         Dicetak oleh sistem SIAP KNBI pada {{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y H.i') }} WIB. Jam yang tercatat adalah jam server.
     </div>
