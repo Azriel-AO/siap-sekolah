@@ -155,6 +155,19 @@
                 <!-- Pesan -->
                 <div class="mt-6 p-4 rounded-xl bg-black/20 text-base font-medium" x-text="result?.message"></div>
 
+                <!-- Tombol Daftar Mandiri untuk Kartu / Sidik Jari Tidak Dikenal -->
+                <template x-if="result && (result.registration_url || result.type === 'not_found' || result.type === 'fingerprint_not_found')">
+                    <div class="mt-6">
+                        <a :href="result?.registration_url || '{{ route('pendaftaran.index') }}'"
+                           class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base shadow-xl shadow-indigo-600/40 border border-indigo-400/30 transition transform hover:scale-105">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                            </svg>
+                            <span>Daftar dulu</span>
+                        </a>
+                    </div>
+                </template>
+
                 <!-- Waktu Server -->
                 <div class="mt-4 text-xs font-mono opacity-60" x-show="result?.time">
                     Waktu Server: <span x-text="result?.time"></span> WIB
@@ -310,7 +323,9 @@
                         }
 
                         if (res.status === 404 && data.type === 'fingerprint_not_found') {
-                            this.fingerprintStatus = data.message ?? 'Sidik jari tidak terdaftar.';
+                            this.stopFingerprintPolling();
+                            this.fotoBukti = foto || '';
+                            this.showResult(data);
                             return;
                         }
 
@@ -384,12 +399,13 @@
                     this.result = data;
 
                     if (this.resetTimer) clearTimeout(this.resetTimer);
+                    const resetDuration = (data?.type === 'not_found' || data?.type === 'fingerprint_not_found') ? 8000 : 4000;
                     this.resetTimer = setTimeout(() => {
                         this.result = null;
                         this.fotoBukti = '';
                         this.metode = 'kartu';
                         this.$nextTick(() => this.focusInput());
-                    }, 4000);
+                    }, resetDuration);
                 }
             }
         }

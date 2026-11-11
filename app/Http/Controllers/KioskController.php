@@ -46,7 +46,8 @@ class KioskController extends Controller
             return response()->json([
                 'success' => false,
                 'type' => 'not_found',
-                'message' => 'Kartu tidak dikenali. Silakan hubungi petugas tata usaha.',
+                'message' => 'Kartu tidak dikenal. Silakan daftar dulu.',
+                'registration_url' => route('pendaftaran.index'),
             ], 404);
         }
 
@@ -83,7 +84,8 @@ class KioskController extends Controller
             return response()->json([
                 'success' => false,
                 'type' => 'fingerprint_not_found',
-                'message' => 'Sidik jari tidak terdaftar. Hubungi guru piket untuk pendaftaran.',
+                'message' => 'Sidik jari tidak terdaftar. Silakan daftar dulu.',
+                'registration_url' => route('pendaftaran.index'),
             ], 404);
         }
 
@@ -117,7 +119,7 @@ class KioskController extends Controller
                 'success' => false,
                 'type' => 'cooldown',
                 'student_name' => $student->name,
-                'message' => "Kartu baru saja dicatat. Silakan tunggu sebentar.",
+                'message' => 'Kartu baru saja dicatat. Silakan tunggu sebentar.',
             ], 429);
         }
 

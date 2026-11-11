@@ -146,7 +146,9 @@ class FingerprintTest extends TestCase
         $response->assertJson([
             'success' => false,
             'type' => 'fingerprint_not_found',
+            'message' => 'Sidik jari tidak terdaftar. Silakan daftar dulu.',
         ]);
+        $response->assertSee('/pendaftaran');
     }
 
     public function test_bridge_enrolar_gagal_pesan_ramah_tanpa_crash_500(): void

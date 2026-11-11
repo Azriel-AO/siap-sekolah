@@ -8,6 +8,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -21,7 +22,7 @@ class KioskAttendanceTest extends TestCase
      */
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     public function test_halaman_kiosk_gerbang_dapat_dibuka(): void
@@ -32,6 +33,8 @@ class KioskAttendanceTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Absen Gerbang');
+        $response->assertDontSee('login');
+        $response->assertDontSee('dashboard');
     }
 
     public function test_route_kiosk_lama_redirect_301_ke_gerbang(): void
@@ -56,7 +59,9 @@ class KioskAttendanceTest extends TestCase
         $response->assertJson([
             'success' => false,
             'type' => 'not_found',
+            'message' => 'Kartu tidak dikenal. Silakan daftar dulu.',
         ]);
+        $response->assertSee('/pendaftaran');
     }
 
     public function test_tap_pertama_mencatat_absen_masuk_dengan_jam_server(): void
@@ -304,6 +309,7 @@ class KioskAttendanceTest extends TestCase
         $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
         $this->assertNull($attendance->photo_in_path, 'Foto tidak valid tidak boleh tersimpan.');
     }
+
     public function test_fingerprint_mock_mengidentifikasi_siswa_dan_mencatat_absen(): void
     {
         $this->seedDemo();
