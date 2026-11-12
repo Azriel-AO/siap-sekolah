@@ -87,6 +87,30 @@
                 </div>
             </div>
 
+            <!-- Panel Pendaftaran Siswa Baru (khusus admin) -->
+            @if($user->role === 'admin')
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100 p-6 sm:p-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM3 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 019.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-extrabold text-gray-900">Pendaftaran Siswa Baru</h2>
+                                <p class="text-gray-600 mt-1 max-w-2xl leading-relaxed text-sm">
+                                    Buka terminal pendaftaran mandiri — isi data, foto wajah, sidik jari, dan tap kartu RFID.
+                                </p>
+                            </div>
+                        </div>
+                        <a href="{{ route('pendaftaran.index') }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold shadow-sm transition shrink-0">
+                            Buka Terminal Pendaftaran
+                        </a>
+                    </div>
+                </div>
+            @endif
+
             <!-- Menu Navigasi Placeholder (4 Menu Utama dari PRD) -->
             <div>
                 <div class="flex items-center justify-between mb-4">
