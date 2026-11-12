@@ -545,6 +545,25 @@ Artinya: bila kiosk diakses lewat `http://192.168.1.x` (bukan localhost, bukan H
 
 ---
 
+## 🔧 Build FingerBridge dari SDK
+
+Bila tidak ada `FingerBridge.exe` jadi, bangun sendiri dari source di `bridge/FingerBridge.cs` — **tanpa** install .NET SDK / Visual Studio, cukup compiler C# bawaan Windows. ZKFinger SDK harus sudah terpasang (driver ZK9500).
+
+1. Salin DLL SDK ke folder `bridge\` (lokal saja — **jangan di-commit**, file proprietary ZKTeco):
+   ```powershell
+   Copy-Item C:\Windows\SysWOW64\libzkfp.dll bridge\
+   Copy-Item C:\Windows\SysWOW64\libzkfpcsharp.dll bridge\
+   ```
+2. Compile (hasil **32-bit**, sesuai `libzkfp.dll` 32-bit):
+   ```powershell
+   C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe /platform:x86 /target:exe /out:bridge\fingerbridge.exe /reference:bridge\libzkfpcsharp.dll /reference:System.Web.Extensions.dll bridge\FingerBridge.cs
+   ```
+3. Jalankan: `bridge\fingerbridge.exe` — harus tampil `Sensor: TERHUBUNG`. Biarkan jendela terbuka.
+4. Uji: buka `http://127.0.0.1:8787/estado` → `{"conectado":true,"modelo":"ZK9500"}`.
+5. Di `.env`: `FINGERPRINT_DRIVER=bridge` (dan `FINGERPRINT_TIMEOUT=15` disarankan), lalu `php artisan config:clear` dan restart `php artisan serve`.
+6. Daftar jari lewat `/pendaftaran` (letakkan jari saat diminta, ±8 detik), lalu tap jari di `/kiosk`.
+
+Catatan: `fingerbridge.exe`, DLL SDK, dan `templates.json` (template sidik jari = data biometrik) sudah di `.gitignore`. Bridge hanya mendengarkan `127.0.0.1:8787`. Kontrak: `GET /estado`, `POST /enrolar`, `GET /identificar`.
 ## 🛠️ Mengatasi Masalah Umum (Troubleshooting)
 
 - **Port 8000 sudah dipakai aplikasi lain?**

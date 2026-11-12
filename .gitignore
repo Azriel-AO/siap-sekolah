@@ -25,3 +25,10 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# FingerBridge (T19): binari/DLL proprietary ZKTeco & data biometrik JANGAN di-commit
+/bridge/fingerbridge.exe
+/bridge/libzkfp.dll
+/bridge/libzkfpcsharp.dll
+/bridge/ZKFPSensors/
+templates.json
