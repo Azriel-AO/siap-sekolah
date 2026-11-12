@@ -16,8 +16,17 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('SIAP — SMK Karya Nugraha');
+        $response->assertSee('E-PRESKNBI — SMK Karya Nugraha');
         $response->assertSee('Masuk');
+    }
+
+    public function test_login_screen_memakai_brand_baru_tanpa_siap(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertStatus(200);
+        $response->assertSee('E-PRESKNBI');
+        $response->assertDontSee('SIAP');
     }
 
     public function test_root_url_redirects_to_dashboard(): void
@@ -50,7 +59,7 @@ class AuthenticationTest extends TestCase
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertSee('Admin KNBI');
         $dashboardResponse->assertSee('Administrator');
-        $dashboardResponse->assertSee('SIAP — SMK Karya Nugraha');
+        $dashboardResponse->assertSee('E-PRESKNBI — SMK Karya Nugraha');
         $dashboardResponse->assertSee('Data Siswa');
         $dashboardResponse->assertSee('Jadwal Kelas');
         $dashboardResponse->assertSee('Kiosk Absen');

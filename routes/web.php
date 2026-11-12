@@ -5,19 +5,19 @@ use App\Http\Controllers\AdminRekapExportController;
 use App\Http\Controllers\AdminRekapitulasiController;
 use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\DaftarHadirController;
-use App\Http\Controllers\PengaturanLaporanController;
-use App\Http\Controllers\KehadiranManualController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FaceEnrollmentController;
+use App\Http\Controllers\KehadiranManualController;
 use App\Http\Controllers\KioskController;
 use App\Http\Controllers\PendaftaranController;
+use App\Http\Controllers\PengaturanLaporanController;
 use App\Http\Controllers\StudentAttendanceController;
 use App\Http\Controllers\TeacherAttendanceController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes — SIAP SMK Karya Nugraha (KNBI)
+| Web Routes — E-PRESKNBI (SMK Karya Nugraha / KNBI)
 |--------------------------------------------------------------------------
 */
 

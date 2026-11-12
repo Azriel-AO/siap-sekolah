@@ -1,4 +1,4 @@
-# SIAP KNBI — Sistem Informasi Absensi Pelajar
+# E-PRESKNBI — Sistem Informasi Absensi Pelajar
 
 > **Aplikasi Web Absensi Siswa SMK Karya Nugraha (KNBI)**
 > Status Saat Ini: **Milestone DEMO — Absensi Kiosk RFID & Monitoring** (di atas Fondasi Login & Dashboard)
@@ -116,7 +116,7 @@ Lakukan 10 pengujian berikut di browser untuk memverifikasi aplikasi berfungsi 1
 1. Buka `http://localhost:8000` (otomatis dialihkan ke halaman masuk `/login`).
 2. Masukkan email: `admin@knbi.sch.id` dan kata sandi: `password`.
 3. Klik tombol **Masuk**.
-4. **Hasil**: Halaman berpindah ke `/dashboard`. Tampak tulisan **SIAP — SMK Karya Nugraha**, nama pengguna **Admin KNBI**, dan lencana peran **Administrator**.
+4. **Hasil**: Halaman berpindah ke `/dashboard`. Tampak tulisan **E-PRESKNBI — SMK Karya Nugraha**, nama pengguna **Admin KNBI**, dan lencana peran **Administrator**.
 
 ### Skenario 2: Uji Masuk Guru
 1. Klik tombol **Keluar** di pojok kanan atas.
@@ -434,9 +434,9 @@ Mesin di gerbang dirancang untuk langsung membuka layar absensi satu pintu tanpa
 
 ---
 
-## 🌐 Deployment untuk Guru (Memasang SIAP di Komputer Sekolah)
+## 🌐 Deployment untuk Guru (Memasang E-PRESKNBI di Komputer Sekolah)
 
-Panduan memasang SIAP KNBI di komputer/server sekolah agar bisa dipakai harian — ditulis untuk guru/TU, bukan ahli IT. Langkah dijalankan **sekali** saat pemasangan. Bagian yang belum sempat diuji disebutkan dengan jelas; jangan dianggap pasti.
+Panduan memasang E-PRESKNBI di komputer/server sekolah agar bisa dipakai harian — ditulis untuk guru/TU, bukan ahli IT. Langkah dijalankan **sekali** saat pemasangan. Bagian yang belum sempat diuji disebutkan dengan jelas; jangan dianggap pasti.
 
 ### 1. Prasyarat komputer
 - **PHP 8.3 atau lebih baru** + **Composer** (untuk paket PHP)

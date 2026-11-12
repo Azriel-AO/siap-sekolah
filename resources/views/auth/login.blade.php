@@ -1,10 +1,10 @@
 <x-guest-layout>
     <div class="mb-6 text-center">
         <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white font-extrabold text-2xl shadow-sm mb-3">
-            S
+            E
         </div>
         <h2 class="text-xl font-bold text-gray-900 tracking-tight">
-            SIAP — SMK Karya Nugraha
+            E-PRESKNBI — SMK Karya Nugraha
         </h2>
         <p class="text-xs text-gray-500 mt-1">
             Sistem Informasi Absensi Pelajar (KNBI)

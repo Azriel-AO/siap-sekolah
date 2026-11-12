@@ -100,7 +100,7 @@
         @if($periode !== 'hari')
             Definisi: Hadir/Terlambat/Izin/Sakit = jumlah catatan dalam rentang. Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit (diturunkan, bukan disimpan). Persentase = (Hadir + Terlambat) / (hari sekolah dalam rentang − Izin − Sakit) × 100; bila pembagi ≤ 0 ditampilkan "—".<br>
         @endif
-        Dicetak oleh sistem SIAP KNBI pada {{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y H.i') }} WIB. Jam yang tercatat adalah jam server.
+        Dicetak oleh sistem E-PRESKNBI pada {{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y H.i') }} WIB. Jam yang tercatat adalah jam server.
     </div>
 
     <div class="footer">

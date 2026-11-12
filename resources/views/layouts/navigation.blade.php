@@ -7,10 +7,10 @@
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 text-indigo-700 font-bold text-lg tracking-tight hover:text-indigo-800 transition">
                         <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
-                            S
+                            E
                         </div>
-                        <span class="hidden sm:inline">SIAP — SMK Karya Nugraha</span>
-                        <span class="sm:hidden">SIAP KNBI</span>
+                        <span class="hidden sm:inline">E-PRESKNBI — SMK Karya Nugraha</span>
+                        <span class="sm:hidden">E-PRESKNBI</span>
                     </a>
                 </div>
 

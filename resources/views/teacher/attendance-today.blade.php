@@ -251,7 +251,7 @@
 
                 <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between items-center gap-2">
                     <span>Menampilkan {{ $students->count() }} siswa aktif kelas {{ $schoolClass->name }}@if($periode !== 'hari') — ringkasan {{ strtolower($periodeLabel) }} (hari sekolah: Senin–Jumat)@endif</span>
-                    <span>SMK Karya Nugraha (KNBI) - SIAP Sekolah</span>
+                    <span>SMK Karya Nugraha (KNBI) - E-PRESKNBI</span>
                 </div>
             </div>
 
