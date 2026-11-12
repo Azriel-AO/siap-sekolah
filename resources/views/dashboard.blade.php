@@ -3,7 +3,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
-                    E-PRESKNBI — SMK Karya Nugraha
+                    E-PRESKNBI — SMK KARYA NUGRAHA
                 </h1>
                 <p class="text-sm text-gray-500 mt-0.5">
                     Sistem Informasi Absensi Pelajar — SMK Karya Nugraha (KNBI)

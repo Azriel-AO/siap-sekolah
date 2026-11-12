@@ -16,7 +16,7 @@
             <div class="w-11 h-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl">E</div>
             <div>
                 <h1 class="text-base sm:text-lg font-extrabold text-gray-900 leading-tight">Pendaftaran Siswa Baru</h1>
-                <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI — SMK Karya Nugraha</p>
+                <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI — SMK KARYA NUGRAHA</p>
             </div>
         </div>
     </header>

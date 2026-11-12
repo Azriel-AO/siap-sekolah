@@ -16,7 +16,7 @@ class AuthenticationTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('E-PRESKNBI — SMK Karya Nugraha');
+        $response->assertSee('E-PRESKNBI — SMK KARYA NUGRAHA');
         $response->assertSee('Masuk');
     }
 
@@ -59,7 +59,7 @@ class AuthenticationTest extends TestCase
         $dashboardResponse->assertStatus(200);
         $dashboardResponse->assertSee('Admin KNBI');
         $dashboardResponse->assertSee('Administrator');
-        $dashboardResponse->assertSee('E-PRESKNBI — SMK Karya Nugraha');
+        $dashboardResponse->assertSee('E-PRESKNBI — SMK KARYA NUGRAHA');
         $dashboardResponse->assertSee('Data Siswa');
         $dashboardResponse->assertSee('Jadwal Kelas');
         $dashboardResponse->assertSee('Kiosk Absen');

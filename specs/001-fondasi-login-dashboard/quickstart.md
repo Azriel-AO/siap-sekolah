@@ -38,7 +38,7 @@ Lalu buka browser dan ketik: **http://localhost:8000**
 
 **Hasil yang diharapkan** ✅:
 - Halaman berpindah ke `http://localhost:8000/dashboard`
-- Di bagian atas (header) tampil tulisan **"SIAP — SMK Karya Nugraha"**
+- Di bagian atas (header) tampil tulisan **"E-PRESKNBI — SMK KARYA NUGRAHA"**
 - Di header juga tampil nama **"Admin KNBI"** dan label **"Admin"**
 - Ada 4 menu: Data Siswa, Jadwal Kelas, Kiosk Absen, Laporan
 - Ada tombol **"Keluar"**

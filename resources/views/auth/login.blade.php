@@ -4,7 +4,7 @@
             E
         </div>
         <h2 class="text-xl font-bold text-gray-900 tracking-tight">
-            E-PRESKNBI — SMK Karya Nugraha
+            E-PRESKNBI — SMK KARYA NUGRAHA
         </h2>
         <p class="text-xs text-gray-500 mt-1">
             Sistem Informasi Absensi Pelajar (KNBI)

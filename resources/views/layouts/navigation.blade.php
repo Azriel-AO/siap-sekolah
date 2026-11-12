@@ -9,7 +9,7 @@
                         <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
                             E
                         </div>
-                        <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI — SMK Karya Nugraha</span>
+                        <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI — SMK KARYA NUGRAHA</span>
                         <span class="2xl:hidden whitespace-nowrap">E-PRESKNBI</span>
                     </a>
                 </div>

@@ -41,17 +41,17 @@ data seed yang tersedia di README, dan memverifikasi tampilan dashboard yang mun
 
 2. **Given** pengguna sudah login sebagai admin,
    **When** pengguna membuka halaman `/dashboard`,
-   **Then** tampil header "SIAP — SMK Karya Nugraha", nama admin, label "Admin",
+   **Then** tampil header "E-PRESKNBI — SMK KARYA NUGRAHA", nama admin, label "Admin",
    dan menu navigasi (Data Siswa, Jadwal Kelas, Kiosk Absen, Laporan).
 
 3. **Given** pengguna sudah login sebagai guru,
    **When** pengguna membuka halaman `/dashboard`,
-   **Then** tampil header "SIAP — SMK Karya Nugraha", nama guru, label "Guru",
+   **Then** tampil header "E-PRESKNBI — SMK KARYA NUGRAHA", nama guru, label "Guru",
    dan menu navigasi yang sama (placeholder, belum berfungsi).
 
 4. **Given** pengguna sudah login sebagai siswa,
    **When** pengguna membuka halaman `/dashboard`,
-   **Then** tampil header "SIAP — SMK Karya Nugraha", nama siswa, label "Siswa",
+   **Then** tampil header "E-PRESKNBI — SMK KARYA NUGRAHA", nama siswa, label "Siswa",
    dan menu navigasi yang sama (placeholder, belum berfungsi).
 
 ---
@@ -137,7 +137,7 @@ kembali URL dashboard.
 - **FR-004**: Sistem WAJIB memvalidasi format email yang dimasukkan (harus berformat x@y.z).
 - **FR-005**: Sistem WAJIB menolak kombinasi email/password yang salah dengan pesan ramah pengguna.
 - **FR-006**: Sistem WAJIB mengarahkan pengguna ke halaman dashboard setelah login berhasil.
-- **FR-007**: Dashboard WAJIB menampilkan nama aplikasi "SIAP — SMK Karya Nugraha" di header.
+- **FR-007**: Dashboard WAJIB menampilkan nama aplikasi "E-PRESKNBI — SMK KARYA NUGRAHA" di header.
 - **FR-008**: Dashboard WAJIB menampilkan nama lengkap pengguna yang sedang login di header.
 - **FR-009**: Dashboard WAJIB menampilkan label peran pengguna: "Admin", "Guru", atau "Siswa".
 - **FR-010**: Dashboard WAJIB menampilkan empat item menu navigasi sebagai placeholder:

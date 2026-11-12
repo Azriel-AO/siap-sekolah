@@ -17,7 +17,7 @@
 **Purpose**: Inisialisasi project Laravel 13, setup SQLite database, dan kompilasi Tailwind CSS via Vite.
 
 - [X] T001 Initialize Laravel 13 project scaffolding with Breeze (Blade stack) in repository root
-- [X] T002 Configure environment variables in `.env` and `.env.example` (`APP_NAME="SIAP — SMK Karya Nugraha"`, `DB_CONNECTION=sqlite`, `SESSION_DRIVER=file`) and ensure `database/database.sqlite` exists
+- [X] T002 Configure environment variables in `.env` and `.env.example` (`APP_NAME="E-PRESKNBI — SMK KARYA NUGRAHA"`, `DB_CONNECTION=sqlite`, `SESSION_DRIVER=file`) and ensure `database/database.sqlite` exists
 - [X] T003 Install npm packages and build frontend assets using Vite in `package.json`
 
 ---
@@ -46,7 +46,7 @@
 ### Implementation for User Story 1
 
 - [X] T008 [US1] Create DashboardController in `app/Http/Controllers/DashboardController.php` with `index` method passing authenticated user data (`auth()->user()`) to dashboard view
-- [X] T009 [P] [US1] Create dashboard view in `resources/views/dashboard.blade.php` displaying header "SIAP — SMK Karya Nugraha", current user name, role label ("Admin" / "Guru" / "Siswa"), 4 placeholder navigation items ("Data Siswa", "Jadwal Kelas", "Kiosk Absen", "Laporan" showing "Segera hadir" on click), and a "Keluar" button
+- [X] T009 [P] [US1] Create dashboard view in `resources/views/dashboard.blade.php` displaying header "E-PRESKNBI — SMK KARYA NUGRAHA", current user name, role label ("Admin" / "Guru" / "Siswa"), 4 placeholder navigation items ("Data Siswa", "Jadwal Kelas", "Kiosk Absen", "Laporan" showing "Segera hadir" on click), and a "Keluar" button
 - [X] T010 [P] [US1] Customize login view in `resources/views/auth/login.blade.php` with Indonesian labels ("Email", "Kata Sandi", "Masuk"), clear branding, and autofocus
 - [X] T011 [US1] Configure routes in `routes/web.php` for root redirect (`GET /` -> `/dashboard`) and dashboard route (`GET /dashboard`) protected by `auth` middleware
 
