@@ -298,4 +298,68 @@ class DaftarHadirTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_excel_memuat_warna_simbol_kop_center_tanpa_border_dan_gridlines_mati(): void
+    {
+        Carbon::setTestNow('2026-11-11 10:00:00');
+        $this->seedDemo();
+
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $raka = Student::where('nis', '10240101')->firstOrFail();
+        $adinda = Student::where('nis', '10240102')->firstOrFail();
+        $bima = Student::where('nis', '10240103')->firstOrFail();
+
+        Attendance::create([
+            'student_id' => $raka->id,
+            'school_class_id' => $kelas->id,
+            'date' => '2026-11-09',
+            'check_in_at' => '06:45:00',
+            'status' => 'HADIR',
+            'last_tap_at' => Carbon::parse('2026-11-09 06:45:00', 'Asia/Jakarta'),
+            'kiosk_device' => 'gerbang-kartu',
+        ]);
+        IzinSakit::create([
+            'student_id' => $adinda->id,
+            'tanggal' => '2026-11-09',
+            'status' => 'izin',
+            'keterangan' => 'Izin keluarga',
+        ]);
+        IzinSakit::create([
+            'student_id' => $bima->id,
+            'tanggal' => '2026-11-09',
+            'status' => 'sakit',
+            'keterangan' => 'Demam',
+        ]);
+
+        $response = $this->actingAs($this->admin())
+            ->get('/admin/daftar-hadir/excel?bulan=11&tahun=2026&kelas=X-TKJ-1');
+        $response->assertStatus(200);
+
+        $tmp = tempnam(sys_get_temp_dir(), 'dh_style_').'.xlsx';
+        file_put_contents($tmp, $response->getContent());
+
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($tmp));
+
+        $stylesXml = (string) $zip->getFromName('xl/styles.xml');
+        $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+
+        // 1. Warna simbol terdaftar di styles.xml (√=008000, I=FFA500, A=FF0000, S=2563EB)
+        $this->assertStringContainsString('008000', strtoupper($stylesXml));
+        $this->assertStringContainsString('FFA500', strtoupper($stylesXml));
+        $this->assertStringContainsString('FF0000', strtoupper($stylesXml));
+        $this->assertStringContainsString('2563EB', strtoupper($stylesXml));
+
+        // 2. Kop 3 baris ditulis di kolom P (kolom 16, indeks 15): P1, P2, P3
+        $this->assertStringContainsString('r="P1"', $sheetXml);
+        $this->assertStringContainsString('r="P2"', $sheetXml);
+        $this->assertStringContainsString('r="P3"', $sheetXml);
+
+        // 3. Gridlines disembunyikan via SheetView
+        $this->assertStringContainsString('showGridLines="false"', $sheetXml);
+
+        $zip->close();
+        unlink($tmp);
+        Carbon::setTestNow();
+    }
 }
