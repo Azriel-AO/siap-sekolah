@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -12,7 +13,7 @@ class NavHighlightTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function admin(): User
@@ -23,7 +24,7 @@ class NavHighlightTest extends TestCase
     private function assertLinkAktif($response, string $label): void
     {
         $html = (string) $response->getContent();
-        preg_match('/<a\b[^>]*>\s*' . preg_quote($label, '#') . '\s*<\/a>/s', $html, $m);
+        preg_match('/<a\b[^>]*>\s*'.preg_quote($label, '#').'\s*<\/a>/s', $html, $m);
         $this->assertNotEmpty($m, "Link '{$label}' tidak ditemukan di HTML.");
         $this->assertStringContainsString(
             'aria-current="page"',
@@ -35,7 +36,7 @@ class NavHighlightTest extends TestCase
     private function assertLinkTidakAktif($response, string $label): void
     {
         $html = (string) $response->getContent();
-        preg_match('/<a\b[^>]*>\s*' . preg_quote($label, '#') . '\s*<\/a>/s', $html, $m);
+        preg_match('/<a\b[^>]*>\s*'.preg_quote($label, '#').'\s*<\/a>/s', $html, $m);
         if ($m) {
             $this->assertStringNotContainsString(
                 'aria-current="page"',
@@ -81,5 +82,17 @@ class NavHighlightTest extends TestCase
         $response->assertStatus(200);
 
         $this->assertStringContainsString('x-show="modalHapus" x-cloak', (string) $response->getContent());
+    }
+
+    public function test_navbar_desktop_tidak_menimpa_blok_user_dan_hamburger_aktif_sebelum_overlap(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+
+        $html = $this->actingAs($admin)->get(route('dashboard'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('hidden lg:flex lg:space-x-2 lg:items-center min-w-0 flex-1 overflow-x-auto', $html);
+        $this->assertStringContainsString('hidden lg:flex lg:items-center lg:space-x-4 shrink-0', $html);
+        $this->assertStringContainsString('lg:hidden shrink-0', $html);
     }
 }

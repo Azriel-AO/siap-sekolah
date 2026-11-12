@@ -1,20 +1,20 @@
 <nav x-data="{ open: false, placeholderNotice: '' }" class="bg-white border-b border-gray-200 shadow-sm">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex items-center space-x-6">
+        <div class="flex justify-between h-16 gap-4">
+            <div class="flex items-center space-x-6 min-w-0 flex-1">
                 <!-- Logo & Brand -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 text-indigo-700 font-bold text-lg tracking-tight hover:text-indigo-800 transition">
                         <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
                             E
                         </div>
-                        <span class="hidden sm:inline">E-PRESKNBI — SMK Karya Nugraha</span>
-                        <span class="sm:hidden">E-PRESKNBI</span>
+                        <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI — SMK Karya Nugraha</span>
+                        <span class="2xl:hidden whitespace-nowrap">E-PRESKNBI</span>
                     </a>
                 </div>
 
-                <div class="hidden md:flex md:space-x-4 md:items-center">
+                <div class="hidden lg:flex lg:space-x-2 lg:items-center min-w-0 flex-1 overflow-x-auto whitespace-nowrap [&>*]:shrink-0 [scrollbar-width:thin] [scrollbar-color:var(--color-gray-300)_transparent]">
                     @php
                         $routeName = (string) (request()->route()?->getName() ?? '');
                         $aktif = static fn (string $pattern): bool => \Illuminate\Support\Str::is($pattern, $routeName);
@@ -93,7 +93,7 @@
             </div>
 
             <!-- Settings & User Profile -->
-            <div class="hidden sm:flex sm:items-center sm:space-x-4">
+            <div class="hidden lg:flex lg:items-center lg:space-x-4 shrink-0">
                 <!-- User Info & Role Badge -->
                 <div class="text-right">
                     <div class="text-sm font-semibold text-gray-800">{{ Auth::user()->name }}</div>
@@ -127,7 +127,7 @@
             </div>
 
             <!-- Hamburger Button (Mobile) -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <div class="-me-2 flex items-center lg:hidden shrink-0">
                 <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
                     <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
@@ -150,7 +150,7 @@
     </div>
 
     <!-- Responsive Navigation Menu (Mobile) -->
-    <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-gray-200 bg-gray-50">
+    <div :class="{'block': open, 'hidden': ! open}" class="hidden lg:hidden border-t border-gray-200 bg-gray-50">
         <!-- User Info -->
         <div class="px-4 py-3 border-b border-gray-200 bg-white">
             <div class="font-semibold text-base text-gray-800">{{ Auth::user()->name }}</div>
