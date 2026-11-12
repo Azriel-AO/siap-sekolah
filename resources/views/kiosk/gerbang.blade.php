@@ -56,14 +56,29 @@
                 <input type="text" x-ref="cardInput" x-model="cardUid" @keydown.enter.prevent="submitTap()"
                        class="sr-only" autocomplete="off" aria-hidden="true" tabindex="-1" />
 
-                {{-- Kamera utama: pusat layar, besar & dominan --}}
-                <div x-ref="cameraBox" x-cloak class="hidden w-full select-none">
-                    <div class="relative w-fit max-w-full mx-auto rounded-3xl overflow-hidden border-2 border-indigo-500/40 shadow-2xl shadow-indigo-900/30 bg-slate-800">
-                        <video x-ref="cameraPreview" autoplay muted playsinline class="h-[clamp(240px,40vh,432px)] w-auto max-w-full aspect-video object-cover block"></video>
+                {{-- Kamera utama: pusat layar, rasio tetap, video mengisi penuh container --}}
+                <div x-ref="cameraBox" x-cloak class="w-full select-none">
+                    <div class="relative mx-auto aspect-video w-full rounded-3xl overflow-hidden border-2 border-indigo-500/40 shadow-2xl shadow-indigo-900/30 bg-slate-800"
+                         style="max-width: min(48rem, calc(40vh * 16 / 9));">
+                        <video x-ref="cameraPreview" autoplay muted playsinline x-show="cameraReady"
+                               class="absolute inset-0 h-full w-full object-cover object-center block bg-slate-900"></video>
+
+                        {{-- Fallback ramah: kamera tidak ada / izin ditolak. Kartu & sidik jari tetap aktif. --}}
+                        <div x-show="!cameraReady" x-cloak class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                            <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a3 3 0 003-3V9a3 3 0 00-3-3H5a3 3 0 00-3 3v6a3 3 0 003 3zM3 3l18 18" />
+                            </svg>
+                            <p class="text-sm sm:text-base font-bold text-white">Kamera belum terdeteksi</p>
+                            <p class="text-[11px] sm:text-xs text-slate-400 max-w-sm leading-relaxed">
+                                Absen kartu &amp; jari tetap aktif. Izinkan kamera di browser untuk foto bukti.
+                            </p>
+                            <p x-show="cameraError" x-text="cameraError" class="text-[10px] text-amber-400/90 max-w-sm leading-relaxed"></p>
+                        </div>
+
                         <div class="absolute top-3 left-3 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200 tracking-wide">
                             Kamera Bukti Absen
                         </div>
-                        <div class="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
+                        <div x-show="cameraReady" x-cloak class="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                             <span>LIVE</span>
                         </div>
@@ -197,6 +212,10 @@
                 currentDate: '',
                 resetTimer: null,
                 cameraStream: null,
+                cameraReady: false,
+                cameraError: '',
+                cameraRetryTimer: null,
+                cameraStarting: false,
                 loopTimer: null,
                 sensorBelumAktif: false,
                 demoLoading: false,
@@ -209,6 +228,10 @@
                     window.addEventListener('beforeunload', () => {
                         this.stopCamera();
                         this.stopAutoLoop();
+                        if (this.cameraRetryTimer) {
+                            clearTimeout(this.cameraRetryTimer);
+                            this.cameraRetryTimer = null;
+                        }
                     });
                     // Loop identify otomatis HANYA di driver bridge (produksi).
                     // Mock tidak boleh loop (identify mock selalu "menemukan" siswa).
@@ -222,29 +245,68 @@
                         this.cameraStream.getTracks().forEach(track => track.stop());
                         this.cameraStream = null;
                     }
+                    this.cameraReady = false;
                 },
 
-                // Kamera gagal-aman: tanpa kamera/izin ditolak -> pratinjau disembunyikan,
-                // alur kartu & sidik jari tetap berjalan.
+                // Kamera gagal-aman: container tetap tampil dengan pesan ramah.
+                // Tanpa stream, coba lagi tiap ~10 detik; kartu & sidik jari tidak terblokir.
                 async startCamera() {
+                    if (this.cameraReady || this.cameraStarting) return;
+                    this.cameraStarting = true;
+
                     try {
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                            this.$refs.cameraBox?.classList.add('hidden');
+                            this.cameraError = 'Browser ini belum mendukung akses kamera.';
+                            this.scheduleCameraRetry();
                             return;
                         }
 
-                        this.cameraStream = await navigator.mediaDevices.getUserMedia({
+                        const stream = await navigator.mediaDevices.getUserMedia({
                             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: 'user' },
                             audio: false
                         });
 
+                        this.cameraStream = stream;
                         const preview = this.$refs.cameraPreview;
-                        preview.srcObject = this.cameraStream;
-                        this.$refs.cameraBox.classList.remove('hidden');
+                        if (preview) {
+                            preview.srcObject = stream;
+                        }
+
+                        stream.getTracks().forEach(track => {
+                            track.addEventListener('ended', () => {
+                                this.stopCamera();
+                                this.cameraError = 'Kamera terputus — absen kartu & jari tetap aktif.';
+                                this.scheduleCameraRetry();
+                            });
+                        });
+
+                        if (this.cameraRetryTimer) {
+                            clearTimeout(this.cameraRetryTimer);
+                            this.cameraRetryTimer = null;
+                        }
+                        this.cameraError = '';
+                        this.cameraReady = true;
                     } catch (e) {
                         this.cameraStream = null;
-                        this.$refs.cameraBox?.classList.add('hidden');
+                        this.cameraReady = false;
+                        const izinDitolak = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
+                        this.cameraError = izinDitolak
+                            ? 'Izin kamera ditolak. Izinkan kamera di browser untuk foto bukti.'
+                            : 'Periksa kamera yang terpasang — percobaan ulang otomatis tiap 10 detik.';
+                        this.scheduleCameraRetry();
+                    } finally {
+                        this.cameraStarting = false;
                     }
+                },
+
+                scheduleCameraRetry() {
+                    if (this.cameraRetryTimer) return;
+                    this.cameraRetryTimer = setTimeout(() => {
+                        this.cameraRetryTimer = null;
+                        if (!this.cameraReady) {
+                            this.startCamera();
+                        }
+                    }, 10000);
                 },
 
                 updateClock() {
