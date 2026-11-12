@@ -78,7 +78,8 @@
 
                         <label class="flex items-start space-x-3 p-4 rounded-xl border cursor-pointer transition"
                                :class="form.setuju ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 bg-gray-50'">
-                            <input type="checkbox" x-model="form.setuju" @change="onSetujuChange()" class="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
+                            <input type="checkbox" x-model="form.setuju" @change="onSetujuChange()"
+                                   class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer appearance-none rounded-md border-2 border-gray-500 bg-white text-indigo-600 checked:border-indigo-600 checked:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                             <span class="text-xs text-gray-700 leading-relaxed">Saya menyetujui data <strong>biometrik</strong> (foto wajah dan sidik jari) saya direkam dan dipakai <strong>hanya untuk keperluan absensi</strong> SMK KNBI.</span>
                         </label>
                     </div>
