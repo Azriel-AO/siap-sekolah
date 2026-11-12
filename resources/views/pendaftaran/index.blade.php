@@ -97,8 +97,12 @@
                         Kamera tidak dapat dipakai (perangkat tidak ada / izin ditolak / browser tidak mendukung). Izinkan kamera lewat ikon gembok di bilah alamat browser, lalu muat ulang halaman ini.
                     </div>
 
-                    <div x-show="form.setuju && !kameraGagal" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
+                    <div x-show="form.setuju" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
                         <video x-ref="cameraPreview" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                        <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
+                        <div x-show="kameraGagal" x-cloak class="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
+                            <p class="rounded-lg bg-black/70 px-3 py-1 text-[11px] font-bold text-amber-300">Kamera tidak tersedia — panduan framing tetap tampil</p>
+                        </div>
                         <div x-show="countdown !== null" x-cloak class="absolute inset-0 flex items-center justify-center bg-black/40">
                             <div class="text-7xl font-black text-white drop-shadow-lg" x-text="countdown"></div>
                         </div>

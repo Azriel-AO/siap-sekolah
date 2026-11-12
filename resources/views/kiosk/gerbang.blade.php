@@ -62,6 +62,7 @@
                          style="max-width: min(48rem, calc(40vh * 16 / 9));">
                         <video x-ref="cameraPreview" autoplay muted playsinline x-show="cameraReady"
                                class="absolute inset-0 h-full w-full object-cover object-center block bg-slate-900"></video>
+                        <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
 
                         {{-- Fallback ramah: kamera tidak ada / izin ditolak. Kartu & sidik jari tetap aktif. --}}
                         <div x-show="!cameraReady" x-cloak class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
