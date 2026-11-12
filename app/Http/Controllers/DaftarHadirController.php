@@ -11,8 +11,8 @@ use Illuminate\View\View;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Common\Entity\Style\Border;
 use OpenSpout\Common\Entity\Style\BorderPart;
-use OpenSpout\Common\Entity\Style\Color;
 use OpenSpout\Common\Entity\Style\CellAlignment;
+use OpenSpout\Common\Entity\Style\Color;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Writer\XLSX\Writer;
 
@@ -81,9 +81,9 @@ class DaftarHadirController extends Controller
         ));
         $right = (new Style)->setCellAlignment(CellAlignment::RIGHT);
 
-        $tmp = tempnam(sys_get_temp_dir(), 'daftar_hadir_') . '.xlsx';
+        $tmp = tempnam(sys_get_temp_dir(), 'daftar_hadir_').'.xlsx';
 
-        $writer = new Writer();
+        $writer = new Writer;
         $writer->openToFile($tmp);
 
         $first = true;
@@ -104,30 +104,35 @@ class DaftarHadirController extends Controller
             }
 
             $rows = $builder->buildRows($kelas, $bulan, $tahun, $pengaturan)['rows'];
+            $hariDalamBulan = Carbon::create($tahun, $bulan, 1)->daysInMonth;
 
             foreach ($rows as $i => $row) {
                 // Baris judul (0,1,2) ditebalkan & rata tengah
                 if ($i === 0 || $i === 1 || $i === 2) {
                     $writer->addRow(Row::fromValues($row, $boldCenter));
-                } elseif ($i === 4 || $i === 5 || $i === 6) {
-                    // BULAN / KELAS / WALI KELAS: label di kolom 1, nilai mulai kolom 5
+                } elseif ($i >= 3 && $i <= 5) {
+                    // BULAN / KELAS / WALI KELAS: label kolom 18, nilai kolom 25 (area kanan)
                     $writer->addRow(Row::fromValues($row, $bold));
+                } elseif ($i === 6) {
+                    $writer->addRow(Row::fromValues($row));
                 } elseif ($i === 7) {
                     // Header kolom NO/NISN/INDUK/NAMA/TANGGAL ditebalkan
                     $writer->addRow(Row::fromValues($row, $bold));
                 } elseif ($i === 8) {
                     // Angka hari 1..31 + border; Sabtu/Minggu abu-abu
                     $dayStyles = [];
-                    for ($d = 1; $d <= 31; $d++) {
-                        $weekend = Carbon::create($tahun, $bulan, $d)->isWeekend();
+                    for ($d = 1; $d <= DaftarHadirBulanan::JUMLAH_KOLOM_TANGGAL; $d++) {
+                        // Shading hanya untuk tanggal nyata bulan ini; kolom 29-31 di luar bulan = kosong biasa
+                        $weekend = $d <= $hariDalamBulan && Carbon::create($tahun, $bulan, $d)->isWeekend();
                         $dayStyles[4 + $d - 1] = $weekend ? $grayThin : $thin;
                     }
                     $writer->addRow(Row::fromValues($row, $boldCenter, $dayStyles));
                 } elseif ($i >= 9 && $i < count($rows) - 5) {
                     // Baris siswa: border tipis + hari weekend abu-abu
                     $cellStyles = [];
-                    for ($d = 1; $d <= 31; $d++) {
-                        $weekend = Carbon::create($tahun, $bulan, $d)->isWeekend();
+                    for ($d = 1; $d <= DaftarHadirBulanan::JUMLAH_KOLOM_TANGGAL; $d++) {
+                        // Shading hanya untuk tanggal nyata bulan ini; kolom 29-31 di luar bulan = kosong biasa
+                        $weekend = $d <= $hariDalamBulan && Carbon::create($tahun, $bulan, $d)->isWeekend();
                         $cellStyles[4 + $d - 1] = $weekend ? $grayThin : $thin;
                     }
                     for ($c = 0; $c <= 3; $c++) {
@@ -135,9 +140,8 @@ class DaftarHadirController extends Controller
                     }
                     $writer->addRow(Row::fromValues($row, null, $cellStyles));
                 } else {
-                    // Footer 4 baris: rata kanan di kolom 5 (index 4)
-                    $val = $row[5] ?? ($row[0] ?? '');
-                    $writer->addRow(Row::fromValues(['', '', '', '', $val], $right));
+                    // Footer: teks di kolom 25, rata kanan
+                    $writer->addRow(Row::fromValues($row, $right));
                 }
             }
 
@@ -155,11 +159,11 @@ class DaftarHadirController extends Controller
         unlink($tmp);
 
         $namaBulan = Carbon::create($tahun, $bulan, 1)->translatedFormat('F');
-        $filename = 'DAFTAR-HADIR-' . $namaBulan . '-' . $tahun . '-' . str_replace(' ', '-', $slug) . '.xlsx';
+        $filename = 'DAFTAR-HADIR-'.$namaBulan.'-'.$tahun.'-'.str_replace(' ', '-', $slug).'.xlsx';
 
         return new Response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 }

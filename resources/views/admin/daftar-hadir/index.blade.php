@@ -76,7 +76,7 @@
                             @foreach(array_slice($preview['rows'], 0, 18) as $i => $row)
                                 <tr>
                                     @foreach($row as $cell)
-                                        <td @if(in_array($i, [0,1,2,4,5])) class="font-bold text-gray-900 px-2 py-0.5" @else class="border border-gray-200 px-2 py-0.5 text-center {{ $i >= 7 ? 'bg-gray-50 font-bold' : '' }}" @endif>{{ $cell }}</td>
+                                        <td @if(in_array($i, [0,1,2,3,4,5,6])) class="font-bold text-gray-900 px-2 py-0.5" @else class="border border-gray-200 px-2 py-0.5 text-center {{ $i >= 7 ? 'bg-gray-50 font-bold' : '' }}" @endif>{{ $cell }}</td>
                                     @endforeach
                                 </tr>
                             @endforeach

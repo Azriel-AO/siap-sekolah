@@ -6,8 +6,8 @@ use App\Models\Attendance;
 use App\Models\IzinSakit;
 use App\Models\SchoolClass;
 use App\Models\Setting;
-use App\Models\Student;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * Pembangkit laporan "Daftar Hadir" (format sekolah SMK Karya Nugraha Boyolali).
@@ -37,6 +37,45 @@ use Carbon\Carbon;
  */
 class DaftarHadirBulanan
 {
+    /** Kolom tanggal selalu 1..31 (format resmi sekolah), berapa pun hari dalam bulan. */
+    public const JUMLAH_KOLOM_TANGGAL = 31;
+
+    /** Total kolom tabel: NO, NISN, INDUK, NAMA + 31 tanggal. */
+    public const JUMLAH_KOLOM = 35;
+
+    /** Indeks (0-based) kolom label blok BULAN/KELAS/WALI = kolom 18. */
+    public const KOLOM_LABEL_KANAN = 17;
+
+    /** Indeks (0-based) kolom nilai blok & mulai footer tanda tangan = kolom 25. */
+    public const KOLOM_NILAI_KANAN = 24;
+
+    /**
+     * Baris label + nilai di area kanan (label kolom 18, nilai kolom 25).
+     *
+     * @return array<int, string>
+     */
+    public static function barisBlokKanan(string $label, string $nilai): array
+    {
+        $baris = array_fill(0, self::JUMLAH_KOLOM, '');
+        $baris[self::KOLOM_LABEL_KANAN] = $label;
+        $baris[self::KOLOM_NILAI_KANAN] = $nilai;
+
+        return $baris;
+    }
+
+    /**
+     * Baris footer tanda tangan; teks di kolom 25.
+     *
+     * @return array<int, string>
+     */
+    public static function barisFooter(string $teks): array
+    {
+        $baris = array_fill(0, self::JUMLAH_KOLOM, '');
+        $baris[self::KOLOM_NILAI_KANAN] = $teks;
+
+        return $baris;
+    }
+
     /**
      * Default pengaturan laporan (dipakai bila tabel settings belum diisi).
      */
@@ -66,7 +105,7 @@ class DaftarHadirBulanan
     /**
      * Kelas yang akan diexport (semua, atau satu via slug).
      *
-     * @return \Illuminate\Support\Collection<int, SchoolClass>
+     * @return Collection<int, SchoolClass>
      */
     public function classesExport(?string $slug)
     {
@@ -122,39 +161,49 @@ class DaftarHadirBulanan
         $hariIni = Carbon::now('Asia/Jakarta')->startOfDay();
 
         $rows = [
-            ['DAFTAR HADIR SISWA SEMESTER ' . strtoupper($pengaturan['laporan_semester'])],
+            ['DAFTAR HADIR SISWA SEMESTER '.strtoupper($pengaturan['laporan_semester'])],
             [$pengaturan['laporan_nama_sekolah']],
-            ['TAHUN PELAJARAN ' . $pengaturan['laporan_tahun_pelajaran']],
-            ['BULAN  :', '', '', '', $namaBulan],
-            ['KELAS  :', '', '', '', $kelas->name],
-            ['WALI KELAS :', '', '', '', ($kelas->wali_kelas ?: '-')],
+            ['TAHUN PELAJARAN '.$pengaturan['laporan_tahun_pelajaran']],
+            self::barisBlokKanan('BULAN  :', $namaBulan),
+            self::barisBlokKanan('KELAS  :', $kelas->name),
+            self::barisBlokKanan('WALI KELAS :', $kelas->wali_kelas ?: '-'),
             [''],
-            array_merge(['NO', 'NISN', 'INDUK', 'NAMA', 'TANGGAL']),
-            array_merge(['', '', '', ''], range(1, $hariDalamBulan)),
+            ['NO', 'NISN', 'INDUK', 'NAMA', 'TANGGAL'],
+            array_merge(['', '', '', ''], range(1, self::JUMLAH_KOLOM_TANGGAL)),
         ];
 
         foreach ($alunos as $index => $siswa) {
             $baris = [$index + 1, $siswa->nisn ?? '', $siswa->induk ?? '', $siswa->name];
 
-            for ($d = 1; $d <= $hariDalamBulan; $d++) {
+            for ($d = 1; $d <= self::JUMLAH_KOLOM_TANGGAL; $d++) {
+                // Tanggal di luar jumlah hari bulan ini ? sel kosong
+                if ($d > $hariDalamBulan) {
+                    $baris[] = '';
+
+                    continue;
+                }
+
                 $date = Carbon::create($tahun, $bulan, $d)->startOfDay();
                 $dateStr = $date->toDateString();
 
                 // Bukan hari sekolah (Sabtu/Minggu) → kosong
                 if (! $date->isWeekday()) {
                     $baris[] = '';
+
                     continue;
                 }
 
                 $att = $attMap[$siswa->id][$dateStr] ?? null;
                 if ($att) {
                     $baris[] = '√'; // Hadir maupun Terlambat = √
+
                     continue;
                 }
 
                 $izinSakit = $izinSakitMap[$siswa->id][$dateStr] ?? null;
                 if ($izinSakit) {
                     $baris[] = $izinSakit->status === 'izin' ? 'I' : 'S';
+
                     continue;
                 }
 
@@ -166,10 +215,10 @@ class DaftarHadirBulanan
         }
 
         $rows[] = [''];
-        $rows[] = ['', '', '', '', '', $pengaturan['laporan_kota'] . ', ' . $namaBulan . ' ' . $tahun];
-        $rows[] = ['', '', '', '', '', $pengaturan['laporan_jabatan_ttd'] . ','];
-        $rows[] = ['', '', '', '', ''];
-        $rows[] = ['', '', '', '', '', $pengaturan['laporan_nama_ttd']];
+        $rows[] = self::barisFooter($pengaturan['laporan_kota'].', '.$namaBulan.' '.$tahun);
+        $rows[] = self::barisFooter($pengaturan['laporan_jabatan_ttd'].',');
+        $rows[] = self::barisFooter('');
+        $rows[] = self::barisFooter($pengaturan['laporan_nama_ttd']);
 
         return [
             'kelas' => $kelas,

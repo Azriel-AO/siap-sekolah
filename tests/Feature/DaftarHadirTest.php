@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attendance;
 use App\Models\IzinSakit;
 use App\Models\SchoolClass;
 use App\Models\Setting;
@@ -9,6 +10,7 @@ use App\Models\Student;
 use App\Models\User;
 use App\Services\DaftarHadirBulanan;
 use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +20,7 @@ class DaftarHadirTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function admin(): User
@@ -80,7 +82,7 @@ class DaftarHadirTest extends TestCase
         $intan = Student::where('nis', '10240110')->firstOrFail();
 
         // Kehadiran nyata: Raka Senin 9 Nov HADIR, Adinda izin, Hendra tidak hadir sama sekali
-        \App\Models\Attendance::create([
+        Attendance::create([
             'student_id' => $raka->id,
             'school_class_id' => $kelas->id,
             'date' => '2026-11-09',
@@ -105,6 +107,7 @@ class DaftarHadirTest extends TestCase
                     return $row;
                 }
             }
+
             return null;
         };
 
@@ -151,21 +154,21 @@ class DaftarHadirTest extends TestCase
         $this->assertSame('DAFTAR HADIR SISWA SEMESTER GENAP', $rows[0][0]);
         $this->assertSame('SMK UJI COBA BOYOLALI', $rows[1][0]);
         $this->assertSame('TAHUN PELAJARAN 2025/2026', $rows[2][0]);
-        $this->assertSame('BULAN  :', $rows[3][0]);
-        $this->assertSame('Januari', $rows[3][4]);
-        $this->assertSame('KELAS  :', $rows[4][0]);
-        $this->assertSame('X TKJ 1', $rows[4][4]);
-        $this->assertSame('WALI KELAS :', $rows[5][0]);
-        $this->assertSame('Wahyu Nugroho, S.Kom', $rows[5][4]);
+        $this->assertSame('BULAN  :', $rows[3][17]);
+        $this->assertSame('Januari', $rows[3][24]);
+        $this->assertSame('KELAS  :', $rows[4][17]);
+        $this->assertSame('X TKJ 1', $rows[4][24]);
+        $this->assertSame('WALI KELAS :', $rows[5][17]);
+        $this->assertSame('Wahyu Nugroho, S.Kom', $rows[5][24]);
         $this->assertSame('NO', $rows[7][0]);
         $this->assertSame('NISN', $rows[7][1]);
         $this->assertSame('INDUK', $rows[7][2]);
         $this->assertSame('NAMA', $rows[7][3]);
         $this->assertSame('TANGGAL', $rows[7][4]);
         $this->assertSame(1, $rows[8][4], 'Angka hari pertama kolom 4 (untuk Januari 31 hari)');
-        $this->assertSame('Surakarta, Januari 2026', $rows[count($rows) - 4][5]);
-        $this->assertSame('Guru Mata Pelajaran,', $rows[count($rows) - 3][5]);
-        $this->assertSame('Budi Santoso, S.Pd', $rows[count($rows) - 1][5]);
+        $this->assertSame('Surakarta, Januari 2026', $rows[count($rows) - 4][24]);
+        $this->assertSame('Guru Mata Pelajaran,', $rows[count($rows) - 3][24]);
+        $this->assertSame('Budi Santoso, S.Pd', $rows[count($rows) - 1][24]);
 
         Carbon::setTestNow();
     }
@@ -200,10 +203,10 @@ class DaftarHadirTest extends TestCase
         $this->assertStringStartsWith('PK', $response->getContent());
 
         // Baca workbook via ZipArchive → pastikan 2 sheet & nama cocok
-        $tmp = tempnam(sys_get_temp_dir(), 'dh_test_') . '.xlsx';
+        $tmp = tempnam(sys_get_temp_dir(), 'dh_test_').'.xlsx';
         file_put_contents($tmp, $response->getContent());
 
-        $zip = new \ZipArchive();
+        $zip = new \ZipArchive;
         $this->assertTrue($zip->open($tmp));
         $workbookXml = $zip->getFromName('xl/workbook.xml');
         $sheetCount = substr_count($workbookXml, '<sheet ');
@@ -232,5 +235,67 @@ class DaftarHadirTest extends TestCase
         $response->assertRedirect(route('admin.pengaturan.laporan'));
         $this->assertSame('SMK HASIL UBAH', Setting::get('laporan_nama_sekolah'));
         $this->assertSame('Genap', Setting::get('laporan_semester'));
+    }
+
+    public function test_nilai_bulan_terisi_nama_indonesia_dan_wali_kosong_jadi_strip(): void
+    {
+        $this->seedDemo();
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $kelas->update(['wali_kelas' => null]);
+
+        $namaBulan = [1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April', 5 => 'Mei', 6 => 'Juni',
+            7 => 'Juli', 8 => 'Agustus', 9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'];
+
+        foreach ($namaBulan as $angka => $nama) {
+            $rows = (new DaftarHadirBulanan)->buildRows($kelas, $angka, 2026, DaftarHadirBulanan::defaultPengaturan())['rows'];
+            $this->assertSame($nama, $rows[3][DaftarHadirBulanan::KOLOM_NILAI_KANAN]);
+        }
+
+        $rows = (new DaftarHadirBulanan)->buildRows($kelas, 11, 2026, DaftarHadirBulanan::defaultPengaturan())['rows'];
+        $this->assertSame('-', $rows[5][24], 'Wali kelas null tampil "-" di kolom nilai');
+    }
+
+    public function test_footer_empat_baris_di_kolom_kanan(): void
+    {
+        $this->seedDemo();
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $rows = (new DaftarHadirBulanan)->buildRows($kelas, 11, 2026, DaftarHadirBulanan::defaultPengaturan())['rows'];
+        $footer = array_slice($rows, -4);
+
+        $this->assertSame('Boyolali, November 2026', $footer[0][24]);
+        $this->assertSame('Guru mapel,', $footer[1][24]);
+        $this->assertSame('', $footer[2][24]);
+        $this->assertSame('Indriyanto, S.Kom', $footer[3][24]);
+        foreach ($footer as $baris) {
+            $this->assertCount(35, $baris);
+            $this->assertSame('', $baris[0]);
+        }
+    }
+
+    public function test_kolom_tanggal_selalu_31_dan_di_luar_bulan_kosong(): void
+    {
+        Carbon::setTestNow('2026-12-31 10:00:00');
+        $this->seedDemo();
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        Student::where('nis', '10240101')->update(['nisn' => '0012345678', 'induk' => '0007']);
+
+        foreach ([[2, 2026], [2, 2028], [4, 2026], [1, 2026]] as [$bulan, $tahun]) {
+            $rows = (new DaftarHadirBulanan)->buildRows($kelas, $bulan, $tahun, DaftarHadirBulanan::defaultPengaturan())['rows'];
+
+            $this->assertSame(range(1, 31), array_slice($rows[8], 4), 'Header tanggal selalu 1..31');
+            $hariBulan = Carbon::create($tahun, $bulan, 1)->daysInMonth;
+
+            foreach ($rows as $row) {
+                if (($row[3] ?? null) === 'Raka Pratama') {
+                    $this->assertCount(35, $row);
+                    $this->assertSame('0012345678', $row[1]);
+                    for ($d = $hariBulan + 1; $d <= 31; $d++) {
+                        $this->assertSame('', $row[4 + $d - 1], "Tanggal $d di luar bulan $bulan harus kosong");
+                    }
+                }
+            }
+        }
+
+        Carbon::setTestNow();
     }
 }
