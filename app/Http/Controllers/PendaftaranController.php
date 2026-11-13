@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -60,7 +61,7 @@ class PendaftaranController extends Controller
      * Simpan pendaftaran lengkap: siswa + kartu + 3 foto wajah + sidik jari (opsional).
      * SATU transaksi DB — semua berhasil atau tidak ada yang tersimpan.
      */
-    public function store(Request $request): \Illuminate\Http\JsonResponse|RedirectResponse
+    public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
@@ -92,7 +93,7 @@ class PendaftaranController extends Controller
         $kartuTerpakai = RfidCard::with('student')->where('card_uid', $cardUid)->first();
         if ($kartuTerpakai && $kartuTerpakai->student) {
             throw ValidationException::withMessages([
-                'card_uid' => 'Kartu dengan UID "' . $cardUid . '" sudah dipakai oleh ' . $kartuTerpakai->student->name . '. Gunakan kartu lain atau hubungi guru piket.',
+                'card_uid' => 'Kartu dengan UID "'.$cardUid.'" sudah dipakai oleh '.$kartuTerpakai->student->name.'. Gunakan kartu lain atau hubungi guru piket.',
             ]);
         }
 
@@ -102,7 +103,7 @@ class PendaftaranController extends Controller
             $binary = $this->decodeDataUrlJpeg($dataUrl);
             if ($binary === null) {
                 throw ValidationException::withMessages([
-                    'photos.' . $index => 'Foto ke-' . ($index + 1) . ' tidak sah. Ambil ulang foto tersebut.',
+                    'photos.'.$index => 'Foto ke-'.($index + 1).' tidak sah. Ambil ulang foto tersebut.',
                 ]);
             }
             $binaries[] = $binary;
@@ -134,7 +135,7 @@ class PendaftaranController extends Controller
 
                 // Tulis 3 foto wajah ke disk privat + catat pendaftaran
                 foreach ($binaries as $slot => $binary) {
-                    $paths[] = "face-photos/{$siswa->id}/face-{$siswa->id}-" . ($slot + 1) . "-{$now->format('YmdHis')}.jpg";
+                    $paths[] = "face-photos/{$siswa->id}/face-{$siswa->id}-".($slot + 1)."-{$now->format('YmdHis')}.jpg";
                 }
                 foreach ($paths as $i => $path) {
                     Storage::disk('local')->put($path, $binaries[$i]);
@@ -151,6 +152,8 @@ class PendaftaranController extends Controller
 
                 return $siswa;
             });
+
+            Cache::forget('kiosk_face_templates');
         } catch (ValidationException $e) {
             foreach ($paths as $path) {
                 Storage::disk('local')->delete($path);

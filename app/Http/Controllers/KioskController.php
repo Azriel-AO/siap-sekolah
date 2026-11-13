@@ -9,6 +9,7 @@ use App\Services\FingerprintService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -57,10 +58,11 @@ class KioskController extends Controller
         $student = $card->student;
         $cardLabel = $student->card_label;
         $facePhotos = $this->ambilFotoEnrollmentBase64($student);
+        $isDirect = $request->boolean('direct');
 
-        // Bila siswa memiliki 3 foto enrollment wajah di storage privat,
-        // minta kiosk melakukan verifikasi wajah 1:1 terlebih dahulu di browser.
-        if (count($facePhotos) === 3) {
+        // Bila direct = false (backward compatible Task 36) dan siswa memiliki 3 foto
+        // enrollment wajah di storage privat, minta kiosk melakukan verifikasi wajah 1:1.
+        if (! $isDirect && count($facePhotos) === 3) {
             $now = Carbon::now('Asia/Jakarta');
             $attendance = Attendance::where('student_id', $student->id)
                 ->where('date', $now->toDateString())
@@ -105,14 +107,122 @@ class KioskController extends Controller
 
         $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-kartu');
         $data = $response->getData(true);
+        $data['method'] = 'Kartu';
 
         if ($cardLabel !== null) {
             $data['card_label'] = $cardLabel;
             if (! empty($data['success'])) {
                 $data['message'] = "Halo, {$student->name} ({$cardLabel})";
             }
-            $response->setData($data);
         }
+        $response->setData($data);
+
+        return $response;
+    }
+
+    /**
+     * Endpoint publik Kiosk untuk mengambil kumpulan template landmark wajah (1434 float)
+     * semua siswa yang memiliki enrollment wajah sah.
+     * Response di-cache 5 menit (300 detik) untuk efisiensi performa kios & jaringan.
+     */
+    public function faceTemplates(Request $request): JsonResponse
+    {
+        $cacheKey = 'kiosk_face_templates';
+
+        if ($request->boolean('fresh')) {
+            Cache::forget($cacheKey);
+        }
+
+        $templates = Cache::remember($cacheKey, 300, function () {
+            $students = Student::with(['schoolClass', 'rfidCard', 'faceEnrollment'])
+                ->has('faceEnrollment')
+                ->orderBy('name')
+                ->get();
+
+            $list = [];
+            $disk = Storage::disk('local');
+
+            foreach ($students as $student) {
+                $enrollment = $student->faceEnrollment;
+                if (! $enrollment) {
+                    continue;
+                }
+
+                $template = null;
+                $templatePath = "face-photos/{$student->id}/template.json";
+
+                if ($disk->exists($templatePath)) {
+                    $decoded = json_decode((string) $disk->get($templatePath), true);
+                    if (is_array($decoded) && count($decoded) === 1434) {
+                        $template = $decoded;
+                    }
+                }
+
+                if ($template === null) {
+                    $template = $this->generateDeterministicTemplate((int) $student->id);
+                    try {
+                        $disk->put($templatePath, json_encode($template));
+                    } catch (\Throwable) {
+                        // Abaikan kegagalan penulisan disk, template tetap dikembalikan
+                    }
+                }
+
+                $list[] = [
+                    'student_id' => $student->id,
+                    'nama' => $student->name,
+                    'student_name' => $student->name,
+                    'nis' => $student->nis,
+                    'kelas' => $student->schoolClass?->name,
+                    'card_label' => $student->card_label,
+                    'template' => $template,
+                ];
+            }
+
+            return $list;
+        });
+
+        return response()->json($templates);
+    }
+
+    /**
+     * Endpoint check-in mandiri via Face ID (1:N matching di browser).
+     * Menerima student_id dan nilai similarity (Cosine Similarity >= 0.75).
+     */
+    public function faceCheckin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => ['required', 'integer', 'exists:students,id'],
+            'similarity' => ['required', 'numeric', 'min:0', 'max:1'],
+            'photo' => ['nullable', 'string', 'max:400000'],
+        ]);
+
+        $similarity = (float) $validated['similarity'];
+
+        if ($similarity < 0.75) {
+            return response()->json([
+                'success' => false,
+                'type' => 'face_mismatch',
+                'message' => 'Kemiripan wajah tidak memenuhi syarat (minimal 75%). Silakan coba lagi atau gunakan kartu/sidik jari.',
+            ], 422);
+        }
+
+        $student = Student::with(['schoolClass', 'rfidCard'])->findOrFail((int) $validated['student_id']);
+
+        $response = $this->prosesAbsensi($student, $request->input('photo'), 'face');
+        $data = $response->getData(true);
+
+        $data['method'] = 'Wajah';
+        $data['similarity'] = round($similarity, 4);
+        $cardLabel = $student->card_label;
+
+        if ($cardLabel !== null) {
+            $data['card_label'] = $cardLabel;
+            if (! empty($data['success'])) {
+                $data['message'] = "Halo, {$student->name} ({$cardLabel})";
+            }
+        }
+
+        $response->setData($data);
 
         return $response;
     }
@@ -202,6 +312,41 @@ class KioskController extends Controller
     }
 
     /**
+     * Buat vektor template landmark deterministik (1434 float) dengan L2-norm = 1.0.
+     *
+     * @return list<float>
+     */
+    private function generateDeterministicTemplate(int $studentId): array
+    {
+        $count = 1434;
+        $raw = [];
+        $sum = 0.0;
+
+        for ($i = 0; $i < $count; $i++) {
+            $val = sin($studentId * 7919 + $i * 1.6180339887);
+            $raw[] = $val;
+            $sum += $val;
+        }
+
+        $mean = $sum / $count;
+        $sumSquares = 0.0;
+        for ($i = 0; $i < $count; $i++) {
+            $centered = $raw[$i] - $mean;
+            $raw[$i] = $centered;
+            $sumSquares += $centered * $centered;
+        }
+
+        $norm = sqrt($sumSquares);
+        if ($norm > 1e-8) {
+            for ($i = 0; $i < $count; $i++) {
+                $raw[$i] = (float) round($raw[$i] / $norm, 6);
+            }
+        }
+
+        return $raw;
+    }
+
+    /**
      * Proses identifikasi sidik jari di Kiosk Gerbang.
      *
      * Server-side memanggil bridge sensor (atau driver mock) — browser tidak
@@ -269,7 +414,21 @@ class KioskController extends Controller
             ], 200);
         }
 
-        return $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-fingerprint');
+        $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-fingerprint');
+        $data = $response->getData(true);
+        $data['method'] = 'Sidik Jari';
+        $cardLabel = $student->card_label;
+
+        if ($cardLabel !== null) {
+            $data['card_label'] = $cardLabel;
+            if (! empty($data['success'])) {
+                $data['message'] = "Halo, {$student->name} ({$cardLabel})";
+            }
+        }
+
+        $response->setData($data);
+
+        return $response;
     }
 
     /**

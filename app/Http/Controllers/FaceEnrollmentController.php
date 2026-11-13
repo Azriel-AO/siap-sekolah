@@ -7,6 +7,7 @@ use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -88,6 +89,7 @@ class FaceEnrollmentController extends Controller
         $photos = $request->input('photos');
         if (! is_array($photos) || count($photos) !== 3) {
             $jumlah = is_array($photos) ? count($photos) : 0;
+
             return $this->gagal("Foto wajah wajib lengkap 3 foto. Saat ini baru {$jumlah} foto sah.", 422);
         }
 
@@ -172,6 +174,8 @@ class FaceEnrollmentController extends Controller
             }
         }
 
+        Cache::forget('kiosk_face_templates');
+
         return response()->json([
             'success' => true,
             'status_label' => 'Terdaftar',
@@ -229,7 +233,7 @@ class FaceEnrollmentController extends Controller
                 $binary = $path && Storage::disk('local')->exists($path)
                     ? Storage::disk('local')->get($path)
                     : null;
-                $photos[] = $binary ? 'data:image/jpeg;base64,' . base64_encode($binary) : null;
+                $photos[] = $binary ? 'data:image/jpeg;base64,'.base64_encode($binary) : null;
             } catch (\Throwable) {
                 $photos[] = null;
             }

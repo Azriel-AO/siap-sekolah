@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\SchoolClass;
-use App\Models\Student;
 use Carbon\Carbon;
 
 /**
@@ -81,7 +80,7 @@ class RekapExportData
                         $r['izin'],
                         $r['sakit'],
                         $r['alpa'],
-                        $r['persentase'] !== null ? $r['persentase'] . '%' : '—',
+                        $r['persentase'] !== null ? $r['persentase'].'%' : '—',
                     ];
                 }
             }
@@ -124,6 +123,10 @@ class RekapExportData
 
         if ($device === '') {
             return '-';
+        }
+
+        if (str_contains($device, 'face') || str_contains($device, 'wajah')) {
+            return 'Wajah';
         }
 
         if (str_contains($device, 'fingerprint')) {

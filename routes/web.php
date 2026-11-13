@@ -34,7 +34,9 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 // Kiosk Gerbang Tunggal (kartu + sidik jari; tanpa scoping kelas)
 Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang');
+Route::get('/kiosk/face-templates', [KioskController::class, 'faceTemplates'])->name('kiosk.face.templates');
 Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
+Route::post('/kiosk/face-checkin', [KioskController::class, 'faceCheckin'])->name('kiosk.face.checkin');
 Route::post('/kiosk/face-verify', [KioskController::class, 'faceVerify'])->name('kiosk.face.verify');
 Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
 

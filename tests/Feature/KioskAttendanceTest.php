@@ -12,6 +12,7 @@ use Carbon\Carbon;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -609,6 +610,149 @@ class KioskAttendanceTest extends TestCase
 
         $this->assertDatabaseMissing('attendances', [
             'student_id' => $student->id,
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+        ]);
+    }
+
+    public function test_kiosk_face_templates_mengembalikan_array_template_dan_di_cache(): void
+    {
+        Storage::fake('local');
+        Cache::flush();
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        FaceEnrollment::create([
+            'student_id' => $student->id,
+            'photo_1_path' => "face-photos/{$student->id}/1.jpg",
+            'photo_2_path' => "face-photos/{$student->id}/2.jpg",
+            'photo_3_path' => "face-photos/{$student->id}/3.jpg",
+            'consented_at' => now(),
+        ]);
+
+        $response = $this->getJson('/kiosk/face-templates');
+
+        $response->assertStatus(200);
+        $data = $response->json();
+        $this->assertIsArray($data);
+        $this->assertNotEmpty($data);
+
+        $first = $data[0];
+        $this->assertEquals($student->id, $first['student_id']);
+        $this->assertEquals($student->name, $first['nama']);
+        $this->assertEquals('X-TKJ-1-009', $first['card_label']);
+        $this->assertIsArray($first['template']);
+        $this->assertCount(1434, $first['template']);
+
+        $this->assertTrue(Cache::has('kiosk_face_templates'));
+    }
+
+    public function test_kiosk_face_checkin_berhasil_mencatat_absen_dengan_similarity_valid(): void
+    {
+        Storage::fake('local');
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+        $fotoBukti = 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat('a', 200)."\xFF\xD9");
+
+        $response = $this->postJson('/kiosk/face-checkin', [
+            'student_id' => $student->id,
+            'similarity' => 0.88,
+            'photo' => $fotoBukti,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'type' => 'check_in',
+            'method' => 'Wajah',
+            'similarity' => 0.88,
+            'student_name' => 'Hendra Wijaya',
+            'card_label' => 'X-TKJ-1-009',
+        ]);
+
+        $this->assertDatabaseHas('attendances', [
+            'student_id' => $student->id,
+            'kiosk_device' => 'face',
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+        ]);
+    }
+
+    public function test_kiosk_face_checkin_ditolak_422_jika_similarity_kurang_dari_threshold(): void
+    {
+        $this->seedDemo();
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        $response = $this->postJson('/kiosk/face-checkin', [
+            'student_id' => $student->id,
+            'similarity' => 0.74,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'type' => 'face_mismatch',
+        ]);
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $student->id,
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+        ]);
+    }
+
+    public function test_kiosk_face_checkin_mengembalikan_429_jika_cooldown(): void
+    {
+        $this->seedDemo();
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        $first = $this->postJson('/kiosk/face-checkin', [
+            'student_id' => $student->id,
+            'similarity' => 0.85,
+        ]);
+        $first->assertStatus(200);
+
+        $second = $this->postJson('/kiosk/face-checkin', [
+            'student_id' => $student->id,
+            'similarity' => 0.85,
+        ]);
+        $second->assertStatus(429);
+        $second->assertJson([
+            'success' => false,
+            'type' => 'cooldown',
+        ]);
+    }
+
+    public function test_kiosk_tap_dengan_direct_langsung_absen_tanpa_face_verify(): void
+    {
+        Storage::fake('local');
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        FaceEnrollment::create([
+            'student_id' => $student->id,
+            'photo_1_path' => "face-photos/{$student->id}/1.jpg",
+            'photo_2_path' => "face-photos/{$student->id}/2.jpg",
+            'photo_3_path' => "face-photos/{$student->id}/3.jpg",
+            'consented_at' => now(),
+        ]);
+
+        $response = $this->postJson('/kiosk/tap', [
+            'card_uid' => 'CARD-TKJ-009',
+            'direct' => 1,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson([
+            'success' => true,
+            'type' => 'check_in',
+            'method' => 'Kartu',
+            'student_name' => 'Hendra Wijaya',
+        ]);
+
+        $this->assertDatabaseHas('attendances', [
+            'student_id' => $student->id,
+            'kiosk_device' => 'gerbang-kartu',
             'date' => Carbon::now('Asia/Jakarta')->toDateString(),
         ]);
     }

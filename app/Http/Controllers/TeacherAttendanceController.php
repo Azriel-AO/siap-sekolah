@@ -215,6 +215,10 @@ class TeacherAttendanceController extends Controller
             return '-';
         }
 
+        if (str_contains($device, 'face') || str_contains($device, 'wajah')) {
+            return 'Wajah';
+        }
+
         if (str_contains($device, 'fingerprint')) {
             return 'Sidik Jari';
         }
