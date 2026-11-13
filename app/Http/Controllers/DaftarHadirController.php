@@ -14,7 +14,6 @@ use OpenSpout\Common\Entity\Style\BorderPart;
 use OpenSpout\Common\Entity\Style\CellAlignment;
 use OpenSpout\Common\Entity\Style\Color;
 use OpenSpout\Common\Entity\Style\Style;
-use OpenSpout\Writer\XLSX\Entity\SheetView;
 use OpenSpout\Writer\XLSX\Writer;
 
 class DaftarHadirController extends Controller
@@ -78,9 +77,10 @@ class DaftarHadirController extends Controller
 
         $thin = (new Style)->setBorder($borderThin);
         $boldThin = (new Style)->setFontBold()->setBorder($borderThin);
+        $boldGrayThin = (new Style)->setFontBold()->setBackgroundColor('E5E7EB')->setBorder($borderThin);
         $boldCenterThin = (new Style)->setFontBold()->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin);
-        $grayThin = (new Style)->setBackgroundColor('E5E7EB')->setBorder($borderThin);
         $boldCenterGrayThin = (new Style)->setFontBold()->setCellAlignment(CellAlignment::CENTER)->setBackgroundColor('E5E7EB')->setBorder($borderThin);
+        $grayThin = (new Style)->setBackgroundColor('E5E7EB')->setBorder($borderThin);
 
         $symbolStyles = [
             '√' => (new Style)->setFontBold()->setFontColor('008000')->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin),
@@ -90,7 +90,6 @@ class DaftarHadirController extends Controller
         ];
 
         $right = (new Style)->setCellAlignment(CellAlignment::RIGHT);
-        $sheetView = (new SheetView)->setShowGridLines(false);
 
         $tmp = tempnam(sys_get_temp_dir(), 'daftar_hadir_').'.xlsx';
 
@@ -104,7 +103,6 @@ class DaftarHadirController extends Controller
             }
             $sheet = $writer->getCurrentSheet();
             $sheet->setName(DaftarHadirBulanan::namaSheet($kelas->name));
-            $sheet->setSheetView($sheetView);
 
             // Lebar kolom: NO=4, NISN=14, INDUK=12, NAMA=40, hari 1..31 = 4.5
             $sheet->setColumnWidth(4, 1);
@@ -119,10 +117,10 @@ class DaftarHadirController extends Controller
             $hariDalamBulan = Carbon::create($tahun, $bulan, 1)->daysInMonth;
 
             foreach ($rows as $i => $row) {
-                // Baris judul (0,1,2) ditebalkan & rata tengah di kolom 16 (indeks 15), tanpa border
+                // Baris judul (0,1,2) di kolom tengah (kolom 19 / indeks 18 = S), ditebalkan & rata tengah, tanpa border
                 if ($i === 0 || $i === 1 || $i === 2) {
                     $kopRow = array_fill(0, DaftarHadirBulanan::JUMLAH_KOLOM, '');
-                    $kopRow[15] = (string) ($row[0] ?? ($row[15] ?? ''));
+                    $kopRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] = (string) ($row[0] ?? ($row[DaftarHadirBulanan::KOLOM_KOP_TENGAH] ?? ''));
                     $writer->addRow(Row::fromValues($kopRow, $boldCenter));
                 } elseif ($i >= 3 && $i <= 5) {
                     // BULAN / KELAS / WALI KELAS: label kolom 18, nilai kolom 25 (area kanan), tanpa border
@@ -130,10 +128,14 @@ class DaftarHadirController extends Controller
                 } elseif ($i === 6) {
                     $writer->addRow(Row::fromValues($row));
                 } elseif ($i === 7) {
-                    // Header kolom NO/NISN/INDUK/NAMA/TANGGAL ditebalkan + border tipis matrix
+                    // Header kolom NO/NISN/INDUK/NAMA/TANGGAL ditebalkan + border tipis matrix + Sabtu/Minggu abu-abu
                     $headerStyles = [];
-                    for ($c = 0; $c < DaftarHadirBulanan::JUMLAH_KOLOM; $c++) {
+                    for ($c = 0; $c <= 3; $c++) {
                         $headerStyles[$c] = $boldThin;
+                    }
+                    for ($d = 1; $d <= DaftarHadirBulanan::JUMLAH_KOLOM_TANGGAL; $d++) {
+                        $weekend = $d <= $hariDalamBulan && Carbon::create($tahun, $bulan, $d)->isWeekend();
+                        $headerStyles[4 + $d - 1] = $weekend ? $boldGrayThin : $boldThin;
                     }
                     $headerRow = array_pad($row, DaftarHadirBulanan::JUMLAH_KOLOM, '');
                     $writer->addRow(Row::fromValuesWithStyles($headerRow, null, $headerStyles));

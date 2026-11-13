@@ -43,6 +43,9 @@ class DaftarHadirBulanan
     /** Total kolom tabel: NO, NISN, INDUK, NAMA + 31 tanggal. */
     public const JUMLAH_KOLOM = 35;
 
+    /** Indeks (0-based) kolom tengah untuk kop 3 baris = kolom 19 (S). */
+    public const KOLOM_KOP_TENGAH = 18;
+
     /** Indeks (0-based) kolom label blok BULAN/KELAS/WALI = kolom 18. */
     public const KOLOM_LABEL_KANAN = 17;
 

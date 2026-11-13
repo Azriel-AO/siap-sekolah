@@ -299,7 +299,7 @@ class DaftarHadirTest extends TestCase
         Carbon::setTestNow();
     }
 
-    public function test_excel_memuat_warna_simbol_kop_center_tanpa_border_dan_gridlines_mati(): void
+    public function test_excel_memuat_kop_center_kolom_tengah_border_matrix_dan_warna_simbol(): void
     {
         Carbon::setTestNow('2026-11-11 10:00:00');
         $this->seedDemo();
@@ -345,18 +345,30 @@ class DaftarHadirTest extends TestCase
         $sheetXml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
 
         // 1. Warna simbol terdaftar di styles.xml (√=008000, I=FFA500, A=FF0000, S=2563EB)
-        $this->assertStringContainsString('008000', strtoupper($stylesXml));
-        $this->assertStringContainsString('FFA500', strtoupper($stylesXml));
-        $this->assertStringContainsString('FF0000', strtoupper($stylesXml));
-        $this->assertStringContainsString('2563EB', strtoupper($stylesXml));
+        $this->assertStringContainsString('FF008000', strtoupper($stylesXml));
+        $this->assertStringContainsString('FFFFA500', strtoupper($stylesXml));
+        $this->assertStringContainsString('FFFF0000', strtoupper($stylesXml));
+        $this->assertStringContainsString('FF2563EB', strtoupper($stylesXml));
 
-        // 2. Kop 3 baris ditulis di kolom P (kolom 16, indeks 15): P1, P2, P3
-        $this->assertStringContainsString('r="P1"', $sheetXml);
-        $this->assertStringContainsString('r="P2"', $sheetXml);
-        $this->assertStringContainsString('r="P3"', $sheetXml);
+        // 2. Border tipis matrix & shading E5E7EB terdaftar di styles.xml
+        $this->assertStringContainsString('<left style="thin"><color rgb="000000"/></left>', $stylesXml);
+        $this->assertStringContainsString('<fgColor rgb="E5E7EB"/>', $stylesXml);
 
-        // 3. Gridlines disembunyikan via SheetView
-        $this->assertStringContainsString('showGridLines="false"', $sheetXml);
+        // 3. Kop 3 baris ditulis di kolom S (kolom 19, indeks 18): S1, S2, S3 — BUKAN di A1..A3
+        $this->assertStringContainsString('r="S1"', $sheetXml);
+        $this->assertStringContainsString('r="S2"', $sheetXml);
+        $this->assertStringContainsString('r="S3"', $sheetXml);
+        $this->assertStringNotContainsString('r="A1"', $sheetXml);
+        $this->assertStringNotContainsString('r="A2"', $sheetXml);
+        $this->assertStringNotContainsString('r="A3"', $sheetXml);
+
+        // 4. Seluruh 35 kolom matrix (A..AI) pada header (baris 8), angka hari (baris 9), dan siswa (baris 10) tertulis
+        $this->assertStringContainsString('r="A8"', $sheetXml);
+        $this->assertStringContainsString('r="AI8"', $sheetXml);
+        $this->assertStringContainsString('r="A9"', $sheetXml);
+        $this->assertStringContainsString('r="AI9"', $sheetXml);
+        $this->assertStringContainsString('r="A10"', $sheetXml);
+        $this->assertStringContainsString('r="AI10"', $sheetXml);
 
         $zip->close();
         unlink($tmp);
