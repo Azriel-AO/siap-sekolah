@@ -40,7 +40,7 @@ class KioskController extends Controller
 
         $cardUid = trim($request->input('card_uid'));
 
-        $card = RfidCard::with(['student.schoolClass'])
+        $card = RfidCard::with(['student.schoolClass', 'student.faceEnrollment'])
             ->where('card_uid', $cardUid)
             ->where('is_active', true)
             ->first();
@@ -54,19 +54,151 @@ class KioskController extends Controller
             ], 404);
         }
 
-        $response = $this->prosesAbsensi($card->student, $request->input('photo'), 'gerbang-kartu');
+        $student = $card->student;
+        $cardLabel = $student->card_label;
+        $facePhotos = $this->ambilFotoEnrollmentBase64($student);
+
+        // Bila siswa memiliki 3 foto enrollment wajah di storage privat,
+        // minta kiosk melakukan verifikasi wajah 1:1 terlebih dahulu di browser.
+        if (count($facePhotos) === 3) {
+            $now = Carbon::now('Asia/Jakarta');
+            $attendance = Attendance::where('student_id', $student->id)
+                ->where('date', $now->toDateString())
+                ->first();
+
+            if ($attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'cooldown',
+                    'student_name' => $student->name,
+                    'card_label' => $cardLabel,
+                    'message' => 'Kartu baru saja dicatat. Silakan tunggu sebentar.',
+                ], 429);
+            }
+
+            if ($attendance && $attendance->check_out_at) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'already_completed',
+                    'student_name' => $student->name,
+                    'kelas' => $student->schoolClass?->name,
+                    'card_label' => $cardLabel,
+                    'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
+                ], 200);
+            }
+
+            return response()->json([
+                'success' => true,
+                'requires_face_verify' => true,
+                'type' => 'face_verification_required',
+                'student_id' => $student->id,
+                'student_name' => $student->name,
+                'nis' => $student->nis,
+                'kelas' => $student->schoolClass?->name,
+                'card_label' => $cardLabel,
+                'face_photos' => $facePhotos,
+                'message' => $cardLabel !== null
+                    ? "Halo, {$student->name} ({$cardLabel}) — silakan verifikasi wajah di kamera."
+                    : "Halo, {$student->name} — silakan verifikasi wajah di kamera.",
+            ]);
+        }
+
+        $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-kartu');
         $data = $response->getData(true);
-        $cardLabel = $card->student->card_label;
 
         if ($cardLabel !== null) {
             $data['card_label'] = $cardLabel;
             if (! empty($data['success'])) {
-                $data['message'] = "Halo, {$card->student->name} ({$cardLabel})";
+                $data['message'] = "Halo, {$student->name} ({$cardLabel})";
             }
             $response->setData($data);
         }
 
         return $response;
+    }
+
+    /**
+     * Proses verifikasi wajah 1:1 di Kiosk setelah tap kartu.
+     * Menerima student_id dan match_score hasil perbandingan 478 landmark
+     * MediaPipe FaceLandmarker di browser (1 - Euclidean distance).
+     * Wajib match_score > 0.85 (setara Euclidean distance < 0.15).
+     */
+    public function faceVerify(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => ['required', 'integer', 'exists:students,id'],
+            'match_score' => ['required', 'numeric'],
+            'photo' => ['nullable', 'string', 'max:400000'],
+        ]);
+
+        $score = (float) $validated['match_score'];
+
+        if ($score <= 0.85 || $score > 1.0) {
+            return response()->json([
+                'success' => false,
+                'type' => 'face_mismatch',
+                'message' => 'Wajah tidak cocok. Silakan coba lagi atau gunakan sidik jari.',
+            ], 422);
+        }
+
+        $student = Student::with(['schoolClass', 'rfidCard'])->findOrFail((int) $validated['student_id']);
+
+        $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-kartu');
+        $data = $response->getData(true);
+        $cardLabel = $student->card_label;
+
+        $data['face_verified'] = true;
+        $data['match_score'] = round($score, 4);
+
+        if ($cardLabel !== null) {
+            $data['card_label'] = $cardLabel;
+            if (! empty($data['success'])) {
+                $data['message'] = "Halo, {$student->name} ({$cardLabel})";
+            }
+        }
+
+        $response->setData($data);
+
+        return $response;
+    }
+
+    /**
+     * Ambil 3 foto enrollment wajah siswa dari storage privat (disk 'local')
+     * dalam format data URL JPEG base64. Mengembalikan array kosong bila siswa
+     * belum memiliki ketiganya secara lengkap di disk.
+     *
+     * @return list<string>
+     */
+    private function ambilFotoEnrollmentBase64(Student $student): array
+    {
+        $enrollment = $student->faceEnrollment;
+        if (! $enrollment) {
+            return [];
+        }
+
+        $paths = [
+            $enrollment->photo_1_path,
+            $enrollment->photo_2_path,
+            $enrollment->photo_3_path,
+        ];
+
+        $disk = Storage::disk('local');
+        $photos = [];
+
+        foreach ($paths as $path) {
+            if (! $path || ! $disk->exists($path)) {
+                return [];
+            }
+
+            $binary = $disk->get($path);
+            if ($binary === null || $binary === '') {
+                return [];
+            }
+
+            $photos[] = 'data:image/jpeg;base64,'.base64_encode($binary);
+        }
+
+        return count($photos) === 3 ? $photos : [];
     }
 
     /**

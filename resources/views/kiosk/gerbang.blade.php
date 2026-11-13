@@ -12,6 +12,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-slate-900 text-white font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white"
+      data-kiosk-face-verify
       x-data="kioskGerbangApp()"
       x-init="initKiosk()"
       @click="focusInput()">
@@ -78,11 +79,37 @@
                         </div>
 
                         <div class="absolute top-3 left-3 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200 tracking-wide">
-                            Kamera Bukti Absen
+                            <span x-text="verifyingFace ? 'Verifikasi Wajah 1:1 (Face ID)' : 'Kamera Bukti Absen'">Kamera Bukti Absen</span>
                         </div>
                         <div x-show="cameraReady" x-cloak class="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                             <span>LIVE</span>
+                        </div>
+
+                        {{-- Panel Status Verifikasi Wajah 1:1 (muncul otomatis setelah tap kartu siswa ber-enrollment) --}}
+                        <div x-show="verifyingFace" x-cloak x-transition.opacity.duration.200ms
+                             class="absolute inset-x-3 bottom-3 sm:inset-x-6 sm:bottom-4 rounded-2xl bg-slate-950/90 border border-indigo-400/50 px-4 py-3 text-left shadow-2xl backdrop-blur">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <svg class="w-6 h-6 text-indigo-400 animate-spin shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                                    </svg>
+                                    <div class="min-w-0">
+                                        <p class="text-xs sm:text-sm font-black text-white truncate">
+                                            Verifikasi Wajah: <span class="text-indigo-300" x-text="faceVerifyStudent?.student_name || '-'"></span>
+                                            <span x-show="faceVerifyStudent?.card_label" class="font-mono text-[11px] text-emerald-300" x-text="'(' + faceVerifyStudent?.card_label + ')'"></span>
+                                        </p>
+                                        <p class="text-[11px] sm:text-xs text-slate-300 font-medium mt-0.5" x-text="faceVerifyStatus || 'Memproses landmark wajah…'"></p>
+                                    </div>
+                                </div>
+                                <span class="hidden sm:inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-200 text-[11px] font-bold shrink-0">
+                                    Pastikan wajah terkena cahaya
+                                </span>
+                            </div>
+                            <p class="sm:hidden text-[10px] text-amber-300 font-semibold mt-1.5">
+                                Pastikan wajah terkena cahaya &amp; menghadap kamera
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -223,6 +250,9 @@
                 sensorBelumAktif: false,
                 sensorTimeoutInfo: false,
                 demoLoading: false,
+                verifyingFace: false,
+                faceVerifyStudent: null,
+                faceVerifyStatus: '',
 
                 initKiosk() {
                     this.updateClock();
@@ -336,8 +366,8 @@
                 // satu panggilan boleh berjalan sampai ~25 detik (menunggu jari);
                 // jeda antar-panggilan >= 2 detik setelah response. Mock TIDAK memanggil ini.
                 async loopFingerprint() {
-                    // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk)
-                    if (this.result) {
+                    // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk) atau sedang verifikasi wajah
+                    if (this.result || this.verifyingFace) {
                         this.loopTimer = setTimeout(() => this.loopFingerprint(), 2000);
                         return;
                     }
@@ -452,7 +482,7 @@
 
                 async submitTap() {
                     const uid = this.cardUid.trim();
-                    if (!uid) return;
+                    if (!uid || this.verifyingFace) return;
 
                     this.cardUid = '';
                     const foto = this.ambilFotoBukti();
@@ -470,6 +500,12 @@
 
                         const data = await res.json();
                         this.fotoBukti = foto || '';
+
+                        if (data && data.requires_face_verify && Array.isArray(data.face_photos) && data.face_photos.length === 3) {
+                            await this.mulaiVerifikasiWajah(data, foto);
+                            return;
+                        }
+
                         this.showResult(data);
                     } catch (e) {
                         this.fotoBukti = '';
@@ -478,6 +514,113 @@
                             status: 'ERROR',
                             message: 'Gagal menghubungi server kiosk. Periksa koneksi.'
                         });
+                    }
+                },
+
+                async mulaiVerifikasiWajah(tapData, fotoAwal = null) {
+                    this.verifyingFace = true;
+                    this.faceVerifyStudent = tapData;
+                    this.faceVerifyStatus = 'Memproses landmark wajah… Pastikan wajah terkena cahaya.';
+
+                    try {
+                        if (!this.cameraReady) {
+                            await this.startCamera();
+                        }
+
+                        if (!this.cameraReady || !this.$refs.cameraPreview) {
+                            this.showResult({
+                                success: false,
+                                type: 'face_mismatch',
+                                status_label: 'Kamera Belum Siap',
+                                student_name: tapData.student_name,
+                                nis: tapData.nis,
+                                kelas: tapData.kelas,
+                                card_label: tapData.card_label,
+                                message: 'Kamera belum aktif untuk verifikasi wajah. Silakan gunakan sidik jari atau izinkan kamera.'
+                            });
+                            return;
+                        }
+
+                        let verifier = window.FaceVerification;
+                        if (!verifier) {
+                            await new Promise((resolve) => setTimeout(resolve, 400));
+                            verifier = window.FaceVerification;
+                        }
+
+                        if (!verifier || typeof verifier.verifyStudentFace1to1 !== 'function') {
+                            this.showResult({
+                                success: false,
+                                type: 'face_mismatch',
+                                status_label: 'Verifikasi Wajah Gagal',
+                                student_name: tapData.student_name,
+                                nis: tapData.nis,
+                                kelas: tapData.kelas,
+                                card_label: tapData.card_label,
+                                message: 'Modul verifikasi wajah belum siap. Silakan tap ulang atau gunakan sidik jari.'
+                            });
+                            return;
+                        }
+
+                        const hasil = await verifier.verifyStudentFace1to1({
+                            facePhotos: tapData.face_photos,
+                            video: this.$refs.cameraPreview,
+                            timeoutMs: 5000,
+                            onProgress: (info) => {
+                                if (info && info.message) {
+                                    this.faceVerifyStatus = info.message;
+                                }
+                            }
+                        });
+
+                        if (!hasil.matched) {
+                            this.showResult({
+                                success: false,
+                                type: 'face_mismatch',
+                                status_label: 'Wajah Tidak Cocok',
+                                student_name: tapData.student_name,
+                                nis: tapData.nis,
+                                kelas: tapData.kelas,
+                                card_label: tapData.card_label,
+                                message: 'Wajah tidak cocok. Pastikan wajah terkena cahaya, lalu tap ulang kartu atau gunakan sidik jari.'
+                            });
+                            return;
+                        }
+
+                        const fotoBuktiTerbaru = this.ambilFotoBukti() || fotoAwal;
+                        this.fotoBukti = fotoBuktiTerbaru || '';
+
+                        const verifyRes = await fetch("{{ route('kiosk.face.verify') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                student_id: tapData.student_id,
+                                match_score: hasil.matchScore,
+                                photo: fotoBuktiTerbaru
+                            })
+                        });
+
+                        const verifyData = await verifyRes.json();
+                        this.showResult(verifyData);
+                    } catch (err) {
+                        console.warn('[face-verify] Terjadi kendala saat verifikasi wajah:', err);
+                        this.showResult({
+                            success: false,
+                            type: 'face_mismatch',
+                            status_label: 'Verifikasi Wajah Gagal',
+                            student_name: tapData.student_name,
+                            nis: tapData.nis,
+                            kelas: tapData.kelas,
+                            card_label: tapData.card_label,
+                            message: 'Wajah tidak cocok atau gagal diverifikasi. Silakan tap ulang atau gunakan sidik jari.'
+                        });
+                    } finally {
+                        this.verifyingFace = false;
+                        this.faceVerifyStudent = null;
+                        this.faceVerifyStatus = '';
                     }
                 },
 

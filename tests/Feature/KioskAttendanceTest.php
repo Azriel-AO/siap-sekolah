@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\FaceEnrollment;
 use App\Models\RfidCard;
 use App\Models\SchoolClass;
 use App\Models\Student;
@@ -500,5 +501,115 @@ class KioskAttendanceTest extends TestCase
         $kioskPage->assertSee("data.type === 'fingerprint_unknown'", false);
         $kioskPage->assertSee('this.showResult(data);', false);
         $kioskPage->assertSee('Daftar dulu');
+    }
+
+    public function test_tap_kartu_siswa_dengan_face_enrollment_mengembalikan_3_face_photos_base64(): void
+    {
+        Storage::fake('local');
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        $path1 = "face-photos/{$student->id}/1.jpg";
+        $path2 = "face-photos/{$student->id}/2.jpg";
+        $path3 = "face-photos/{$student->id}/3.jpg";
+
+        Storage::disk('local')->put($path1, "\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
+        Storage::disk('local')->put($path2, "\xFF\xD8".str_repeat('b', 150)."\xFF\xD9");
+        Storage::disk('local')->put($path3, "\xFF\xD8".str_repeat('c', 150)."\xFF\xD9");
+
+        FaceEnrollment::create([
+            'student_id' => $student->id,
+            'photo_1_path' => $path1,
+            'photo_2_path' => $path2,
+            'photo_3_path' => $path3,
+            'consented_at' => now(),
+        ]);
+
+        $response = $this->postJson('/kiosk/tap', [
+            'card_uid' => 'CARD-TKJ-009',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'requires_face_verify' => true,
+            'type' => 'face_verification_required',
+            'student_id' => $student->id,
+            'student_name' => $student->name,
+            'nis' => '10240109',
+            'card_label' => 'X-TKJ-1-009',
+        ]);
+
+        $facePhotos = $response->json('face_photos');
+        $this->assertIsArray($facePhotos);
+        $this->assertCount(3, $facePhotos);
+        foreach ($facePhotos as $photoDataUrl) {
+            $this->assertStringStartsWith('data:image/jpeg;base64,', $photoDataUrl);
+        }
+
+        // Absen belum dicatat sebelum /kiosk/face-verify dipanggil
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $student->id,
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+        ]);
+    }
+
+    public function test_face_verify_dengan_match_score_valid_mencatat_absen(): void
+    {
+        Storage::fake('local');
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        $fotoBukti = 'data:image/jpeg;base64,'.base64_encode(
+            "\xFF\xD8\xFF\xE0".str_repeat('z', 250)."\xFF\xD9"
+        );
+
+        $response = $this->postJson('/kiosk/face-verify', [
+            'student_id' => $student->id,
+            'match_score' => 0.92,
+            'photo' => $fotoBukti,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+            'type' => 'check_in',
+            'face_verified' => true,
+            'student_name' => 'Hendra Wijaya',
+            'nis' => '10240109',
+            'card_label' => 'X-TKJ-1-009',
+            'message' => 'Halo, Hendra Wijaya (X-TKJ-1-009)',
+        ]);
+
+        $this->assertDatabaseHas('attendances', [
+            'student_id' => $student->id,
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+            'kiosk_device' => 'gerbang-kartu',
+        ]);
+    }
+
+    public function test_face_verify_dengan_match_score_rendah_ditolak_422(): void
+    {
+        $this->seedDemo();
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+
+        $response = $this->postJson('/kiosk/face-verify', [
+            'student_id' => $student->id,
+            'match_score' => 0.72,
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJson([
+            'success' => false,
+            'type' => 'face_mismatch',
+        ]);
+
+        $this->assertDatabaseMissing('attendances', [
+            'student_id' => $student->id,
+            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
+        ]);
     }
 }
