@@ -5,6 +5,8 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
+        <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
+        <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
 
         @fonts
 

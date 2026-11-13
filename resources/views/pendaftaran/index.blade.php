@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Pendaftaran Siswa Baru — E-PRESKNBI</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -13,7 +15,9 @@
 
     <header class="bg-white border-b border-gray-200">
         <div class="max-w-2xl mx-auto px-4 py-4 flex items-center space-x-3">
-            <div class="w-11 h-11 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-xl">E</div>
+            <div class="bg-white rounded-lg p-1 border border-gray-100 shadow-sm flex items-center justify-center">
+                <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-9 w-auto object-contain">
+            </div>
             <div>
                 <h1 class="text-base sm:text-lg font-extrabold text-gray-900 leading-tight">Pendaftaran Siswa Baru</h1>
                 <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI — SMK KARYA NUGRAHA</p>

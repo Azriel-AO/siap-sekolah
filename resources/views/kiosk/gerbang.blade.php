@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Absen Gerbang — E-PRESKNBI</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -17,8 +19,8 @@
     <!-- Header Kiosk -->
     <header class="p-6 sm:px-12 flex justify-between items-center border-b border-slate-800 bg-slate-900/80 backdrop-blur">
         <div class="flex items-center space-x-4">
-            <div class="w-12 h-12 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-2xl shadow-lg shadow-indigo-500/30">
-                E
+            <div class="bg-white rounded-lg p-1 flex items-center justify-center shadow-lg">
+                <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-10 w-auto object-contain">
             </div>
             <div>
                 <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">E-PRESKNBI — SMK KARYA NUGRAHA</h1>

@@ -1,7 +1,7 @@
 <x-guest-layout>
     <div class="mb-6 text-center">
-        <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white font-extrabold text-2xl shadow-sm mb-3">
-            E
+        <div class="inline-flex items-center justify-center bg-white rounded-lg p-1 shadow-sm border border-gray-100 mb-3">
+            <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-10 w-auto object-contain">
         </div>
         <h2 class="text-xl font-bold text-gray-900 tracking-tight">
             E-PRESKNBI — SMK KARYA NUGRAHA

@@ -6,8 +6,8 @@
                 <!-- Logo & Brand -->
                 <div class="shrink-0 flex items-center">
                     <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 text-indigo-700 font-bold text-lg tracking-tight hover:text-indigo-800 transition">
-                        <div class="w-9 h-9 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-xl shadow-sm">
-                            E
+                        <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-100 flex items-center justify-center">
+                            <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-9 w-auto object-contain">
                         </div>
                         <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI — SMK KARYA NUGRAHA</span>
                         <span class="2xl:hidden whitespace-nowrap">E-PRESKNBI</span>
