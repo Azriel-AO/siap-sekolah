@@ -169,3 +169,37 @@ Agar seluruh layanan menyala otomatis tanpa perlu membuka PowerShell setiap kali
 
 4. **Tampilan halaman tidak rapi / CSS tidak muncul setelah update?**
    - Jalankan `npm run build` dan `php artisan view:clear` untuk memperbarui bundel aset tampilan.
+
+---
+
+## 🛡️ PANDUAN OPERASIONAL & TROUBLESHOOTING (WAJIB BACA)
+
+Bagian ini memuat panduan penting operasional harian untuk staf IT atau admin sekolah baru:
+
+1. **3 Jalur Absensi Paralel (Tidak Ada Urutan)**:
+   - Di Kiosk Gerbang (`/kiosk`), siswa dapat melakukan absensi menggunakan **Kartu Pelajar**, **Tatap Wajah (Face ID)**, atau **Tempel Sidik Jari** secara bebas.
+   - Ketiga jalur aktif bersamaan tanpa urutan wajib (tidak perlu tap kartu terlebih dahulu sebelum scan wajah atau sidik jari). Sistem akan langsung mencatat metode absensi mana pun yang berhasil terverifikasi pertama kali (dilindungi cooldown 60 detik anti-double tap).
+
+2. **ATURAN EMAS SIDIK JARI (Paling Sering Ditanya)**:
+   - **Jika siswa baru mendaftar sidik jari tapi tidak terdeteksi di Kiosk: WAJIB restart `fingerbridge.exe`.**
+   - *Penjelasan singkat*: Aplikasi bridge menyimpan template sidik jari di dalam memori saat berjalan. Menutup dan membuka ulang `fingerbridge.exe` (atau menjalankan ulang `box\mulai-sistem.bat`) memaksa bridge membaca ulang file `templates.json` yang baru saja diperbarui dari pendaftaran siswa baru.
+
+3. **Jika Kiosk Terasa Lambat/Lag**:
+   - Jangan memasang atau menjalankan aplikasi berat di Box PC gerbang.
+   - Jalankan perintah pembersihan cache melalui terminal / PowerShell:
+     ```powershell
+     php artisan cache:clear
+     php artisan view:clear
+     ```
+   - Jika masih terasa lambat, lakukan **restart pada PC Box**. Sistem Kiosk didesain ringan, pastikan PC Box tidak dibebani proses lain di latar belakang.
+
+4. **Logika Absen "Alpa" (A) untuk Siswa Baru**:
+   - Sistem **TIDAK** akan menandai siswa sebagai "Alpa" (`A`) untuk tanggal-tanggal **sebelum** mereka terdaftar di sekolah.
+   - Hari-hari sebelum tanggal siswa terdaftar akan ditampilkan sebagai tanda strip (`-`), baik pada tabel Rekapitulasi maupun file Export Excel/PDF. **Ini adalah fitur resmi sistem, bukan bug.**
+
+5. **Backup Database Rutin**:
+   - Sebelum melakukan pembaruan sistem atau pada akhir bulan, **selalu cadangkan (backup)** file database SQLite berikut ke flashdisk atau cloud drive:
+     ```text
+     database\database.sqlite
+     ```
+   - **DILARANG KERAS** menjalankan perintah `php artisan migrate:fresh` pada lingkungan produksi karena akan menghapus seluruh data siswa, kartu, sidik jari, dan riwayat absensi sekolah.
