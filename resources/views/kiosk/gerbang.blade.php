@@ -51,7 +51,7 @@
                 <div>
                     <h2 class="text-2xl sm:text-4xl font-black text-white tracking-tight">Absen Gerbang</h2>
                     <p class="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl mx-auto">
-                        Tempelkan kartu pelajar ATAU letakkan jari pada sensor — keduanya langsung aktif, tanpa perlu berganti mode.
+                        Silakan Tap Kartu, Tatap Kamera, atau Tempelkan Jari — tiga jalur absensi aktif bersamaan.
                     </p>
                 </div>
 
@@ -79,11 +79,20 @@
                         </div>
 
                         <div class="absolute top-3 left-3 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200 tracking-wide">
-                            <span x-text="verifyingFace ? 'Verifikasi Wajah 1:1 (Face ID)' : 'Kamera Bukti Absen'">Kamera Bukti Absen</span>
+                            <span x-text="verifyingFace ? 'Verifikasi Wajah 1:1 (Face ID)' : (faceDetecting ? 'Mendeteksi Wajah…' : 'Kamera Siap')">Kamera Siap</span>
                         </div>
                         <div x-show="cameraReady" x-cloak class="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                             <span>LIVE</span>
+                        </div>
+
+                        {{-- Hint halus jika wajah terdeteksi 10 detik tanpa kecocokan template --}}
+                        <div x-show="showUnmatchedHint && !result && !verifyingFace" x-cloak x-transition.opacity.duration.300ms
+                             class="absolute bottom-3 left-3 right-auto sm:left-4 px-3.5 py-1.5 rounded-xl bg-amber-950/90 border border-amber-400/50 text-amber-200 text-xs font-semibold shadow-lg backdrop-blur flex items-center gap-2">
+                            <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>Tidak terdeteksi? Silakan Tap Kartu atau Tempelkan Jari.</span>
                         </div>
 
                         {{-- Panel Status Verifikasi Wajah 1:1 (muncul otomatis setelah tap kartu siswa ber-enrollment) --}}
@@ -114,28 +123,41 @@
                     </div>
                 </div>
 
-                {{-- Petunjuk dua kanal tepat di bawah kamera --}}
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-3xl">
-                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-center gap-3">
-                        <svg class="w-9 h-9 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {{-- Petunjuk tiga kanal paralel tepat di bawah kamera --}}
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-4xl">
+                    {{-- Kanal 1: Kartu Pelajar --}}
+                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
+                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                         </svg>
-                        <div class="text-left">
-                            <p class="text-base font-black text-white tracking-wide">Tempelkan Kartu</p>
-                            <p class="text-[11px] text-slate-400">Pelajar menempelkan kartu pada scanner</p>
+                        <div class="text-left min-w-0">
+                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tempelkan Kartu</p>
+                            <p class="text-[11px] text-slate-400 truncate">RFID reader selalu aktif</p>
                         </div>
                     </div>
 
-                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-center gap-3">
-                        <svg class="w-9 h-9 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {{-- Kanal 2: Tatap Kamera (Face ID 1:N) --}}
+                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
+                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <div class="text-left min-w-0">
+                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tatap Kamera</p>
+                            <p class="text-[11px] text-slate-400 truncate" x-text="faceDetecting ? 'Mendeteksi wajah…' : 'Face ID 1:N mandiri'"></p>
+                        </div>
+                    </div>
+
+                    {{-- Kanal 3: Sidik Jari --}}
+                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
+                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11c0-1.1.9-2 2-2s2 .9 2 2m-6.5 1.5A6.5 6.5 0 0112 5a6.5 6.5 0 014.5 11M8 14.5A3.5 3.5 0 0012 17a3.5 3.5 0 003.5-3M5.5 12H3m18 0h-2.5" />
                         </svg>
-                        <div class="text-left">
-                            <p class="text-base font-black text-white tracking-wide">Tekan Jari pada Sensor</p>
-                            {{-- Indikator status sensor (kecil) --}}
-                            <div class="flex items-center space-x-2 text-[11px]">
-                                <span class="w-2 h-2 rounded-full" :class="sensorBelumAktif ? 'bg-amber-400' : (sensorTimeoutInfo ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400')"></span>
-                                <span class="text-slate-400 font-medium" x-text="sensorBelumAktif ? 'Sensor belum aktif — hadir dengan tap kartu' : (sensorTimeoutInfo ? 'Sensor sedang menunggu jari…' : 'Sensor aktif')"></span>
+                        <div class="text-left min-w-0">
+                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tekan Jari</p>
+                            <div class="flex items-center space-x-1.5 text-[11px] truncate">
+                                <span class="w-2 h-2 rounded-full shrink-0" :class="sensorBelumAktif ? 'bg-amber-400' : (sensorTimeoutInfo ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400')"></span>
+                                <span class="text-slate-400 font-medium truncate" x-text="sensorBelumAktif ? 'Belum aktif' : (sensorTimeoutInfo ? 'Menunggu jari…' : 'Sensor aktif')"></span>
                             </div>
                         </div>
                     </div>
@@ -197,6 +219,13 @@
                     <h3 class="text-3xl sm:text-4xl font-black mt-2" x-text="result?.student_name || 'Tidak Dikenali'"></h3>
                     <p class="text-sm mt-1 opacity-75 font-mono" x-show="result?.nis" x-text="'NIS: ' + result?.nis + (result?.kelas ? '  •  ' + result?.kelas : '') + (result?.card_label ? '  •  ' + result?.card_label : '')"></p>
 
+                    <!-- Metode Absen Badge -->
+                    <div x-show="result?.method || result?.kiosk_device" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold tracking-wide">
+                        <span>Metode:</span>
+                        <span class="font-bold text-indigo-300" x-text="result?.method || (result?.kiosk_device?.includes('face') ? 'Wajah' : (result?.kiosk_device?.includes('fingerprint') ? 'Sidik Jari' : 'Kartu'))"></span>
+                        <span x-show="result?.similarity" class="text-emerald-300 font-mono text-[11px]" x-text="'(' + Math.round((result?.similarity || 0) * 100) + '%)'"></span>
+                    </div>
+
                     <!-- Pesan -->
                     <div class="mt-4 p-3 rounded-xl bg-black/20 text-sm sm:text-base font-medium"
                          x-text="result?.success && result?.card_label ? ('Halo, ' + result.student_name + ' (' + result.card_label + ')') : result?.message"></div>
@@ -253,15 +282,28 @@
                 verifyingFace: false,
                 faceVerifyStudent: null,
                 faceVerifyStatus: '',
+                faceTemplates: [],
+                faceDetecting: false,
+                faceDetectedSince: null,
+                showUnmatchedHint: false,
+                faceCheckinInFlight: false,
+                faceDetectionTimer: null,
+                _offscreenCanvas: null,
 
                 initKiosk() {
                     this.updateClock();
                     setInterval(() => this.updateClock(), 1000);
                     this.$nextTick(() => this.focusInput());
                     this.startCamera();
+                    this.muatFaceTemplates();
+                    this.loopFaceDetection();
                     window.addEventListener('beforeunload', () => {
                         this.stopCamera();
                         this.stopAutoLoop();
+                        if (this.faceDetectionTimer) {
+                            clearTimeout(this.faceDetectionTimer);
+                            this.faceDetectionTimer = null;
+                        }
                         if (this.cameraRetryTimer) {
                             clearTimeout(this.cameraRetryTimer);
                             this.cameraRetryTimer = null;
@@ -495,7 +537,7 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            body: JSON.stringify({ card_uid: uid, photo: foto })
+                            body: JSON.stringify({ card_uid: uid, photo: foto, direct: 1 })
                         });
 
                         const data = await res.json();
@@ -624,8 +666,107 @@
                     }
                 },
 
+                async muatFaceTemplates() {
+                    try {
+                        const res = await fetch("{{ route('kiosk.face.templates') }}");
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (Array.isArray(data)) {
+                                this.faceTemplates = data;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[face-1n] Gagal memuat template wajah:', e);
+                    }
+                },
+
+                async loopFaceDetection() {
+                    // Jangan jalankan matching jika ada hasil di layar, sedang verifikasi 1:1,
+                    // check-in sedang in-flight, kamera belum siap, atau belum ada template.
+                    if (this.result || this.verifyingFace || this.faceCheckinInFlight || !this.cameraReady || !this.faceTemplates.length) {
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        return;
+                    }
+
+                    const preview = this.$refs.cameraPreview;
+                    if (!preview || preview.readyState < 2 || !preview.videoWidth) {
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        return;
+                    }
+
+                    const verifier = window.FaceVerification;
+                    if (!verifier || typeof verifier.getVerifierFaceLandmarker !== 'function' || typeof verifier.findBestFaceMatch !== 'function') {
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        return;
+                    }
+
+                    try {
+                        const landmarker = await verifier.getVerifierFaceLandmarker();
+                        if (!this._offscreenCanvas) {
+                            this._offscreenCanvas = document.createElement('canvas');
+                        }
+
+                        const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas);
+
+                        if (liveVector) {
+                            this.faceDetecting = true;
+                            if (!this.faceDetectedSince) {
+                                this.faceDetectedSince = Date.now();
+                            } else if (Date.now() - this.faceDetectedSince >= 10000) {
+                                this.showUnmatchedHint = true;
+                            }
+
+                            const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
+
+                            if (match && match.matched && match.bestMatch) {
+                                this.faceDetectedSince = null;
+                                this.showUnmatchedHint = false;
+                                this.faceCheckinInFlight = true;
+
+                                const foto = this.ambilFotoBukti();
+
+                                try {
+                                    const res = await fetch("{{ route('kiosk.face.checkin') }}", {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                        },
+                                        body: JSON.stringify({
+                                            student_id: match.bestMatch.student_id,
+                                            similarity: match.bestMatch.similarity,
+                                            photo: foto
+                                        })
+                                    });
+
+                                    const data = await res.json();
+                                    this.fotoBukti = foto || '';
+                                    this.showResult(data);
+                                } catch (err) {
+                                    console.warn('[face-1n] Gagal check-in wajah:', err);
+                                } finally {
+                                    this.faceCheckinInFlight = false;
+                                }
+                            }
+                            // Bila tidak match (similarity < 0.75): DIAM, tidak spam di layar.
+                        } else {
+                            this.faceDetecting = false;
+                            this.faceDetectedSince = null;
+                            this.showUnmatchedHint = false;
+                        }
+                    } catch (err) {
+                        // Abaikan error deteksi hening
+                    }
+
+                    this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                },
+
                 showResult(data) {
                     this.result = data;
+                    this.faceDetecting = false;
+                    this.faceDetectedSince = null;
+                    this.showUnmatchedHint = false;
 
                     if (this.resetTimer) clearTimeout(this.resetTimer);
                     const resetDuration = (data?.type === 'not_found' || data?.type === 'fingerprint_not_found' || data?.type === 'fingerprint_unknown') ? 8000 : 4000;

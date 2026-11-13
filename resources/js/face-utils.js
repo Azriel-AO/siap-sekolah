@@ -153,6 +153,77 @@ export function computeEuclideanDistance(vecA, vecB) {
 }
 
 /**
+ * Hitung Cosine Similarity antara dua vektor landmark 1D (misal 1434 float).
+ * Mengembalikan nilai antara -1.0 sampai 1.0 (1.0 = identik sempurna).
+ *
+ * @param {Float32Array|Array<number>} vecA
+ * @param {Float32Array|Array<number>} vecB
+ * @returns {number}
+ */
+export function computeCosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || vecA.length === 0 || vecA.length !== vecB.length) {
+        return 0;
+    }
+
+    let dot = 0;
+    let normA = 0;
+    let normB = 0;
+    const len = vecA.length;
+
+    for (let i = 0; i < len; i += 1) {
+        const a = vecA[i];
+        const b = vecB[i];
+        dot += a * b;
+        normA += a * a;
+        normB += b * b;
+    }
+
+    if (normA <= 1e-8 || normB <= 1e-8) {
+        return 0;
+    }
+
+    const similarity = dot / (Math.sqrt(normA) * Math.sqrt(normB));
+    return Math.max(-1, Math.min(1, similarity));
+}
+
+/**
+ * Cari siswa dengan kemiripan wajah terbaik (1:N matching) dari daftar template.
+ *
+ * @param {Float32Array|Array<number>} liveVector
+ * @param {Array<{student_id: number, nama?: string, student_name?: string, card_label?: string, template: Array<number>}>} templates
+ * @param {number} [threshold=0.75]
+ * @returns {{matched: boolean, bestMatch: object|null, bestSimilarity: number}}
+ */
+export function findBestFaceMatch(liveVector, templates, threshold = 0.75) {
+    if (!liveVector || !Array.isArray(templates) || templates.length === 0) {
+        return { matched: false, bestMatch: null, bestSimilarity: 0 };
+    }
+
+    let bestItem = null;
+    let bestSim = -1;
+
+    for (const item of templates) {
+        if (!item || !Array.isArray(item.template) || item.template.length !== liveVector.length) {
+            continue;
+        }
+
+        const sim = computeCosineSimilarity(liveVector, item.template);
+        if (sim > bestSim) {
+            bestSim = sim;
+            bestItem = item;
+        }
+    }
+
+    const matched = bestSim >= threshold && bestItem !== null;
+
+    return {
+        matched,
+        bestMatch: matched ? { ...bestItem, similarity: Number(bestSim.toFixed(4)) } : null,
+        bestSimilarity: Number(bestSim.toFixed(4)),
+    };
+}
+
+/**
  * Muat data URL JPEG base64 menjadi HTMLImageElement siap deteksi.
  *
  * @param {string} dataUrl
