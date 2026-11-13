@@ -25,6 +25,10 @@ class ResetDemoProduksiCommandTest extends TestCase
     {
         Storage::fake('local');
 
+        User::factory()->create(['name' => 'Admin KNBI', 'email' => 'admin@knbi.sch.id', 'role' => 'admin']);
+        User::factory()->create(['name' => 'Bu Sari', 'email' => 'guru@knbi.sch.id', 'role' => 'guru']);
+        User::factory()->create(['name' => 'Raka Siswa', 'email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
+
         $this->seed([
             UserSeeder::class,
             DemoAttendanceSeeder::class,

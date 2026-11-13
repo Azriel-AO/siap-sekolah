@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Services\RekapExportData;
 use App\Models\User;
+use App\Services\RekapExportData;
+use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class RekapExportTest extends TestCase
@@ -14,7 +15,10 @@ class RekapExportTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        User::factory()->create(['name' => 'Admin KNBI', 'email' => 'admin@knbi.sch.id', 'role' => 'admin']);
+        User::factory()->create(['name' => 'Bu Sari', 'email' => 'guru@knbi.sch.id', 'role' => 'guru']);
+        User::factory()->create(['name' => 'Raka Siswa', 'email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function admin(): User
@@ -66,7 +70,7 @@ class RekapExportTest extends TestCase
     {
         $this->seedDemo();
 
-        $tanggal = \Carbon\Carbon::now('Asia/Jakarta')->toDateString();
+        $tanggal = Carbon::now('Asia/Jakarta')->toDateString();
         $data = (new RekapExportData)->build($tanggal, 'X-TKJ-1');
 
         $this->assertSame(RekapExportData::HEADER, $data['rows'][0]);

@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -22,6 +23,9 @@ class KioskAttendanceTest extends TestCase
      */
     protected function seedDemo(): void
     {
+        User::factory()->create(['name' => 'Admin KNBI', 'email' => 'admin@knbi.sch.id', 'role' => 'admin']);
+        User::factory()->create(['name' => 'Bu Sari', 'email' => 'guru@knbi.sch.id', 'role' => 'guru']);
+        User::factory()->create(['name' => 'Raka Siswa', 'email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
         $this->seed(DatabaseSeeder::class);
     }
 
@@ -351,6 +355,7 @@ class KioskAttendanceTest extends TestCase
         ]);
         $this->assertStringContainsString('Sensor sidik jari', $response->json('message'));
     }
+
     public function test_kiosk_200_dan_link_daftar_dulu_tetap_ada(): void
     {
         $this->seedDemo();
@@ -398,9 +403,9 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        \Illuminate\Support\Facades\Http::fake(fn ($request) => match (true) {
-            str_contains($request->url(), '/identificar') => \Illuminate\Support\Facades\Http::response(['ok' => true, 'huellaId' => 'BRIDGE-HUELLA-1'], 200),
-            default => \Illuminate\Support\Facades\Http::response(['message' => 'not found'], 404),
+        Http::fake(fn ($request) => match (true) {
+            str_contains($request->url(), '/identificar') => Http::response(['ok' => true, 'huellaId' => 'BRIDGE-HUELLA-1'], 200),
+            default => Http::response(['message' => 'not found'], 404),
         });
 
         Student::where('nis', '10240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);

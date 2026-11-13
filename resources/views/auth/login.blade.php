@@ -72,25 +72,4 @@
             Halaman khusus admin sekolah.
         </p>
     </form>
-
-    <!-- Kredensial Akun Contoh (Seed) untuk Pengujian -->
-    <div class="mt-6 pt-5 border-t border-gray-200">
-        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 text-center">
-            Akun Contoh Pengujian (Kata Sandi: <code class="font-mono bg-gray-100 px-1 py-0.5 rounded text-gray-800">password</code>)
-        </p>
-        <div class="space-y-1.5 text-xs text-gray-600 bg-gray-50 p-3 rounded-lg border border-gray-200">
-            <div class="flex justify-between items-center">
-                <span>🛡️ <strong>Admin:</strong> admin@knbi.sch.id</span>
-                <button type="button" onclick="document.getElementById('email').value='admin@knbi.sch.id'; document.getElementById('password').value='password';" class="text-indigo-600 hover:text-indigo-800 font-medium underline text-[11px]">Gunakan</button>
-            </div>
-            <div class="flex justify-between items-center">
-                <span>👨‍🏫 <strong>Guru:</strong> guru@knbi.sch.id</span>
-                <button type="button" onclick="document.getElementById('email').value='guru@knbi.sch.id'; document.getElementById('password').value='password';" class="text-indigo-600 hover:text-indigo-800 font-medium underline text-[11px]">Gunakan</button>
-            </div>
-            <div class="flex justify-between items-center">
-                <span>🎓 <strong>Siswa:</strong> siswa@knbi.sch.id</span>
-                <button type="button" onclick="document.getElementById('email').value='siswa@knbi.sch.id'; document.getElementById('password').value='password';" class="text-indigo-600 hover:text-indigo-800 font-medium underline text-[11px]">Gunakan</button>
-            </div>
-        </div>
-    </div>
 </x-guest-layout>

@@ -48,7 +48,7 @@
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Lengkap <span class="text-rose-500">*</span></label>
-                            <input type="text" x-model="form.name" required maxlength="100" placeholder="Contoh: Intan Permata"
+                            <input type="text" x-model="form.name" required maxlength="100" placeholder="Masukkan nama lengkap sesuai ijazah"
                                    class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
                         <div>
@@ -75,7 +75,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1.5">NISN <span class="text-rose-500">*</span></label>
-                            <input type="text" x-model="form.nisn" required inputmode="numeric" maxlength="20" placeholder="Contoh: 0098765432"
+                            <input type="text" x-model="form.nisn" required inputmode="numeric" maxlength="20" placeholder="Masukkan 10 digit angka NISN"
                                    class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
                             <p class="text-[11px] text-gray-400 mt-1">Nomor Induk Siswa Nasional Anda (hanya angka).</p>
                         </div>

@@ -1,4 +1,4 @@
-<nav x-data="{ open: false, placeholderNotice: '' }" class="bg-white border-b border-gray-200 shadow-sm">
+<nav x-data="{ open: false }" class="bg-white border-b border-gray-200 shadow-sm">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16 gap-4">
@@ -56,15 +56,7 @@
                            @if($aktif('admin.status-sistem')) aria-current="page" @endif>
                             Status Sistem
                         </a>
-                    @else
-                        <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
-                            Data Siswa
-                        </button>
                     @endif
-
-                    <button type="button" @click="placeholderNotice = 'Fitur Jadwal Kelas segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
-                        Jadwal Kelas
-                    </button>
 
                     <a href="{{ route('kiosk.gerbang') }}" target="_blank"
                        class="inline-flex items-center px-3 py-1.5 border-b-2 text-sm transition {{ $aktif('kiosk.gerbang') ? 'border-indigo-600 text-indigo-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium' }}"
@@ -89,10 +81,6 @@
                            @if($aktif('siswa.wajah')) aria-current="page" @endif>
                             Pendaftaran Wajah
                         </a>
-                    @else
-                        <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
-                            Laporan
-                        </button>
                     @endif
                 </div>
             </div>
@@ -141,17 +129,6 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Toast Notification for Placeholder Features -->
-    <div x-show="placeholderNotice" x-transition x-cloak class="bg-indigo-50 border-t border-b border-indigo-200 px-4 py-2 text-sm text-indigo-800 flex justify-between items-center max-w-7xl mx-auto">
-        <div class="flex items-center space-x-2">
-            <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-            </svg>
-            <span x-text="placeholderNotice"></span>
-        </div>
-        <button @click="placeholderNotice = ''" class="text-indigo-600 hover:text-indigo-900 font-bold px-2 py-0.5 rounded text-xs hover:bg-indigo-100">Tutup</button>
     </div>
 
     <!-- Responsive Navigation Menu (Mobile) -->
@@ -208,14 +185,7 @@
                    @if(request()->routeIs('admin.status-sistem')) aria-current="page" @endif>
                     Status Sistem
                 </a>
-            @else
-                <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
-                    Data Siswa
-                </button>
             @endif
-            <button type="button" @click="placeholderNotice = 'Fitur Jadwal Kelas segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
-                Jadwal Kelas
-            </button>
             <a href="{{ route('kiosk.gerbang') }}" target="_blank" onclick="open = false"
                class="w-full text-left block ps-3 pe-4 py-2 border-l-4 text-base font-medium {{ request()->routeIs('kiosk.gerbang') ? 'border-indigo-600 text-indigo-700 font-semibold bg-indigo-50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100' }}"
                @if(request()->routeIs('kiosk.gerbang')) aria-current="page" @endif>
@@ -238,10 +208,6 @@
                    @if(request()->routeIs('siswa.wajah')) aria-current="page" @endif>
                     Pendaftaran Wajah
                 </a>
-            @else
-                <button type="button" @click="placeholderNotice = 'Fitur Laporan segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">
-                    Laporan
-                </button>
             @endif
         </div>
 

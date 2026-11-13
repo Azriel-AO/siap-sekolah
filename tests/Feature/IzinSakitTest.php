@@ -2,15 +2,14 @@
 
 namespace Tests\Feature;
 
-use App\Models\Attendance;
 use App\Models\IzinSakit;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\RekapExportData;
 use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class IzinSakitTest extends TestCase
@@ -19,22 +18,25 @@ class IzinSakitTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function admin(): User
     {
-        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'admin@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
     }
 
     private function guru(): User
     {
-        return User::where('email', 'guru@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'guru@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'guru@knbi.sch.id', 'role' => 'guru']);
     }
 
     private function siswa(): User
     {
-        return User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'siswa@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
     }
 
     private function hariIni(): string
@@ -193,7 +195,7 @@ class IzinSakitTest extends TestCase
 
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
 
-        $response = $this->actingAs($this->admin())->put('/admin/data-kelas/' . $kelas->id, [
+        $response = $this->actingAs($this->admin())->put('/admin/data-kelas/'.$kelas->id, [
             'name' => $kelas->name,
             'slug' => $kelas->slug,
             'department' => $kelas->department,
@@ -212,7 +214,7 @@ class IzinSakitTest extends TestCase
 
         $student = Student::where('nis', '10240101')->firstOrFail();
 
-        $response = $this->actingAs($this->admin())->put('/admin/data-siswa/' . $student->id, [
+        $response = $this->actingAs($this->admin())->put('/admin/data-siswa/'.$student->id, [
             'name' => $student->name,
             'nis' => $student->nis,
             'induk' => '0075384110',

@@ -4,11 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Attendance;
 use App\Models\SchoolClass;
-use App\Models\Setting;
 use App\Models\Student;
 use App\Models\User;
 use App\Services\RekapExportData;
 use Carbon\Carbon;
+use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,22 +18,25 @@ class RekapPeriodeTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DatabaseSeeder::class);
     }
 
     private function admin(): User
     {
-        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'admin@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
     }
 
     private function guru(): User
     {
-        return User::where('email', 'guru@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'guru@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'guru@knbi.sch.id', 'role' => 'guru']);
     }
 
     private function siswa(): User
     {
-        return User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'siswa@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
     }
 
     private function hadir(Student $student, string $tanggal, string $status, string $jam = '06:50:00'): Attendance
@@ -44,7 +47,7 @@ class RekapPeriodeTest extends TestCase
             'date' => $tanggal,
             'check_in_at' => $jam,
             'status' => $status,
-            'last_tap_at' => Carbon::parse($tanggal . ' ' . $jam, 'Asia/Jakarta'),
+            'last_tap_at' => Carbon::parse($tanggal.' '.$jam, 'Asia/Jakarta'),
             'kiosk_device' => 'gerbang-kartu',
         ]);
     }

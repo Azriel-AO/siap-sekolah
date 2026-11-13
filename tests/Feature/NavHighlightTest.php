@@ -18,7 +18,8 @@ class NavHighlightTest extends TestCase
 
     private function admin(): User
     {
-        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'admin@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
     }
 
     private function assertLinkAktif($response, string $label): void
@@ -86,8 +87,8 @@ class NavHighlightTest extends TestCase
 
     public function test_navbar_desktop_tidak_menimpa_blok_user_dan_hamburger_aktif_sebelum_overlap(): void
     {
-        $this->seed(DatabaseSeeder::class);
-        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        $this->seedDemo();
+        $admin = $this->admin();
 
         $html = $this->actingAs($admin)->get(route('dashboard'))->assertOk()->getContent();
 

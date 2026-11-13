@@ -19,17 +19,20 @@ class AdminStatusSistemTest extends TestCase
 
     private function admin(): User
     {
-        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'admin@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
     }
 
     private function guru(): User
     {
-        return User::where('email', 'guru@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'guru@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'guru@knbi.sch.id', 'role' => 'guru']);
     }
 
     private function siswa(): User
     {
-        return User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'siswa@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
     }
 
     public function test_halaman_status_sistem_hanya_bisa_diakses_admin(): void

@@ -28,7 +28,7 @@
         </div>
     </x-slot>
 
-    <div class="py-8" x-data="{ alertMsg: '' }">
+    <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
             {{-- Banner pengingat pendaftaran wajah (khusus siswa yang belum terdaftar) --}}
@@ -47,17 +47,6 @@
                     </a>
                 </div>
             @endif
-
-            <!-- Toast / Modal Pemberitahuan Placeholder -->
-            <div x-show="alertMsg" x-transition x-cloak class="rounded-md bg-blue-50 p-4 border border-blue-200 shadow-sm flex items-start justify-between">
-                <div class="flex items-center">
-                    <svg class="h-5 w-5 text-blue-600 me-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    <p class="text-sm font-medium text-blue-800" x-text="alertMsg"></p>
-                </div>
-                <button @click="alertMsg = ''" class="text-blue-500 hover:text-blue-700 text-xs font-bold px-2 py-1 rounded">Tutup</button>
-            </div>
 
             <!-- Kartu Sambutan & Ringkasan Peran -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-100 p-6 sm:p-8">
@@ -111,18 +100,17 @@
                 </div>
             @endif
 
-            <!-- Menu Navigasi Placeholder (4 Menu Utama dari PRD) -->
+            <!-- Menu Layanan Sekolah -->
             <div>
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-bold text-gray-900">
                         Menu Layanan Sekolah
                     </h3>
-                    <span class="text-xs text-gray-500">Tahap Fondasi (Milestone 0)</span>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                     <!-- Kartu 1: Data Siswa -->
-                    <button type="button" @click="alertMsg = 'Menu Data Siswa segera hadir pada tahap berikutnya (Pengelolaan Siswa & Kartu RFID).'" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition group">
+                    <a href="{{ route('admin.siswa.index') }}" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition group">
                         <div class="w-12 h-12 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
@@ -130,28 +118,28 @@
                         </div>
                         <div class="flex items-center justify-between">
                             <h4 class="font-bold text-gray-900 group-hover:text-indigo-600 transition">Data Siswa</h4>
-                            <span class="text-xs bg-gray-100 text-gray-600 font-medium px-2 py-0.5 rounded">Segera Hadir</span>
+                            <span class="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded">Aktif</span>
                         </div>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                            Master data siswa kelas X–XII jurusan TKJ, TKR, TBO, dan penerbitan kartu RFID.
+                            Master data siswa seluruh kelas, pencarian cepat, dan pengelolaan kartu RFID serta biometrik.
                         </p>
-                    </button>
+                    </a>
 
-                    <!-- Kartu 2: Jadwal Kelas -->
-                    <button type="button" @click="alertMsg = 'Menu Jadwal Kelas segera hadir pada tahap berikutnya (Jadwal pulang per jurusan & kalender libur).'" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition group">
+                    <!-- Kartu 2: Data Kelas -->
+                    <a href="{{ route('admin.kelas.index') }}" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-emerald-400 hover:shadow-md transition group">
                         <div class="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
                         <div class="flex items-center justify-between">
-                            <h4 class="font-bold text-gray-900 group-hover:text-emerald-600 transition">Jadwal Kelas</h4>
-                            <span class="text-xs bg-gray-100 text-gray-600 font-medium px-2 py-0.5 rounded">Segera Hadir</span>
+                            <h4 class="font-bold text-gray-900 group-hover:text-emerald-600 transition">Data Kelas</h4>
+                            <span class="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded">Aktif</span>
                         </div>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                            Pengaturan jadwal masuk dan pulang bertingkat per jurusan serta dispensasi hari khusus.
+                            Pengelolaan daftar kelas, wali kelas, serta pengaturan jam masuk dan pulang.
                         </p>
-                    </button>
+                    </a>
 
                     <!-- Kartu 3: Absen Gerbang (aktif — layar kiosk gerbang tunggal) -->
                     <a href="{{ route('kiosk.gerbang') }}" target="_blank" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-amber-400 hover:shadow-md transition group">
@@ -169,7 +157,7 @@
                         </p>
                     </a>
 
-                    <!-- Kartu 4: Laporan / Rekap / Riwayat (menyesuaikan peran) -->
+                    <!-- Kartu 4: Rekapitulasi / Riwayat (menyesuaikan peran) -->
                     @if($user->role === 'guru')
                         <a href="{{ route('guru.rekap') }}" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-purple-400 hover:shadow-md transition group">
                             <div class="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
@@ -201,20 +189,20 @@
                             </p>
                         </a>
                     @else
-                        <button type="button" @click="alertMsg = 'Menu Laporan segera hadir pada tahap berikutnya (Rekap harian, bulanan, ekspor Excel/PDF).'" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-indigo-400 hover:shadow-md transition group">
+                        <a href="{{ route('admin.daftar-hadir') }}" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-purple-400 hover:shadow-md transition group">
                             <div class="w-12 h-12 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
                             </div>
                             <div class="flex items-center justify-between">
-                                <h4 class="font-bold text-gray-900 group-hover:text-purple-600 transition">Laporan</h4>
-                                <span class="text-xs bg-gray-100 text-gray-600 font-medium px-2 py-0.5 rounded">Segera Hadir</span>
+                                <h4 class="font-bold text-gray-900 group-hover:text-purple-600 transition">Daftar Hadir</h4>
+                                <span class="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded">Aktif</span>
                             </div>
                             <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                                Rekap kehadiran bulanan per kelas, statistik keterlambatan, dan ekspor data resmi TU.
+                                Matriks daftar hadir bulanan per kelas dan unduh file Excel resmi wali kelas.
                             </p>
-                        </button>
+                        </a>
                     @endif
 
                     <!-- Kartu 5: Pendaftaran Wajah (khusus siswa) -->
@@ -237,11 +225,11 @@
                 </div>
             </div>
 
-            <!-- Info Bar Fondasi Milestone 0 -->
+            <!-- Info Bar Status Sistem -->
             <div class="bg-gray-50 rounded-xl p-5 border border-gray-200 text-xs text-gray-500 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div class="flex items-center space-x-2">
                     <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                    <span><strong>Milestone 0:</strong> Fondasi Autentikasi 3 Peran (Admin, Guru, Siswa) & SQLite Database Aktif.</span>
+                    <span><strong>Sistem Aktif:</strong> Layanan E-PRESKNBI & Database SQLite Siap.</span>
                 </div>
                 <div class="flex items-center space-x-4">
                     <span>SMK Karya Nugraha (KNBI)</span>

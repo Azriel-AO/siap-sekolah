@@ -45,7 +45,11 @@ class AuthenticationTest extends TestCase
 
     public function test_admin_can_login_and_see_admin_dashboard(): void
     {
-        $this->seed(UserSeeder::class);
+        User::factory()->create([
+            'name' => 'Admin KNBI',
+            'email' => 'admin@knbi.sch.id',
+            'role' => 'admin',
+        ]);
 
         $response = $this->post('/login', [
             'email' => 'admin@knbi.sch.id',
@@ -61,14 +65,38 @@ class AuthenticationTest extends TestCase
         $dashboardResponse->assertSee('Administrator');
         $dashboardResponse->assertSee('E-PRESKNBI — SMK KARYA NUGRAHA');
         $dashboardResponse->assertSee('Data Siswa');
-        $dashboardResponse->assertSee('Jadwal Kelas');
+        $dashboardResponse->assertSee('Data Kelas');
         $dashboardResponse->assertSee('Kiosk Absen');
-        $dashboardResponse->assertSee('Laporan');
+        $dashboardResponse->assertSee('Daftar Hadir');
+        $dashboardResponse->assertDontSee('Laporan');
+        $dashboardResponse->assertDontSee('Jadwal Kelas');
+        $dashboardResponse->assertDontSee('Milestone 0');
+    }
+
+    public function test_halaman_login_tidak_memuat_email_dan_banner_akun_demo(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Akun Contoh Pengujian');
+        $response->assertDontSee('admin@knbi.sch.id');
+        $response->assertDontSee('guru@knbi.sch.id');
+        $response->assertDontSee('siswa@knbi.sch.id');
+    }
+
+    public function test_user_seeder_tidak_membuat_user_demo(): void
+    {
+        $this->seed(UserSeeder::class);
+
+        $this->assertSame(0, User::count());
     }
 
     public function test_guru_login_ditolak_dan_tidak_ada_session(): void
     {
-        $this->seed(UserSeeder::class);
+        User::factory()->create([
+            'email' => 'guru@knbi.sch.id',
+            'role' => 'guru',
+        ]);
 
         $response = $this->post('/login', [
             'email' => 'guru@knbi.sch.id',
@@ -83,7 +111,10 @@ class AuthenticationTest extends TestCase
 
     public function test_siswa_login_ditolak_dan_tidak_ada_session(): void
     {
-        $this->seed(UserSeeder::class);
+        User::factory()->create([
+            'email' => 'siswa@knbi.sch.id',
+            'role' => 'siswa',
+        ]);
 
         $response = $this->post('/login', [
             'email' => 'siswa@knbi.sch.id',
@@ -98,10 +129,8 @@ class AuthenticationTest extends TestCase
 
     public function test_guru_dan_siswa_dilarang_mengakses_dashboard(): void
     {
-        $this->seed(UserSeeder::class);
-
-        $guru = User::where('email', 'guru@knbi.sch.id')->firstOrFail();
-        $siswa = User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+        $guru = User::factory()->create(['role' => 'guru']);
+        $siswa = User::factory()->create(['role' => 'siswa']);
 
         $this->actingAs($guru)->get('/dashboard')->assertStatus(403);
         $this->actingAs($siswa)->get('/dashboard')->assertStatus(403);

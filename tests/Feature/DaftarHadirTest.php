@@ -25,17 +25,20 @@ class DaftarHadirTest extends TestCase
 
     private function admin(): User
     {
-        return User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'admin@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
     }
 
     private function guru(): User
     {
-        return User::where('email', 'guru@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'guru@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'guru@knbi.sch.id', 'role' => 'guru']);
     }
 
     private function siswa(): User
     {
-        return User::where('email', 'siswa@knbi.sch.id')->firstOrFail();
+        return User::where('email', 'siswa@knbi.sch.id')->first()
+            ?? User::factory()->create(['email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
     }
 
     public function test_halaman_daftar_hadir_admin_buka_dan_lainnya_ditolak(): void

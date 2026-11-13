@@ -19,7 +19,7 @@ class BrandingTest extends TestCase
     public function test_login_dashboard_dan_kiosk_memakai_brand_e_presknbi_tanpa_siap(): void
     {
         $this->seed(DatabaseSeeder::class);
-        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        $admin = User::factory()->create(['email' => 'admin@knbi.sch.id', 'role' => 'admin']);
 
         $login = $this->get(route('login'))->assertOk();
         $login->assertSee('<title>E-PRESKNBI</title>', false);

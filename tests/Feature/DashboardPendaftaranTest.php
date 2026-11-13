@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Database\Seeders\UserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,9 +12,10 @@ class DashboardPendaftaranTest extends TestCase
 
     public function test_dashboard_admin_menampilkan_tombol_terminal_pendaftaran_di_tab_baru(): void
     {
-        $this->seed(UserSeeder::class);
-
-        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        $admin = User::factory()->create([
+            'email' => 'admin@knbi.sch.id',
+            'role' => 'admin',
+        ]);
 
         $response = $this->actingAs($admin)->get(route('dashboard'));
 
