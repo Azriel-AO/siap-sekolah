@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
+use App\Models\Student;
 use App\Services\RekapPeriodeHelper;
 use App\Services\RekapRingkasanPeriode;
 use Carbon\Carbon;
@@ -13,15 +14,20 @@ use Illuminate\View\View;
 class AdminRekapitulasiController extends Controller
 {
     /**
-     * Halaman admin "Rekapitulasi": bar chart per kelas.
+     * Halaman admin "Rekapitulasi": bar chart sesuai filter kelas & periode.
      */
     public function index(Request $request): View
     {
         $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
         $tanggal = $this->tanggalDipilih($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
+        $classes = SchoolClass::orderBy('name')->get();
+        $kelasDipilih = $this->kelasDipilih($request);
 
         return view('admin.rekapitulasi', [
+            'classes' => $classes,
+            'kelas' => $kelasDipilih?->slug ?? 'semua',
+            'kelasLabel' => $kelasDipilih?->name ?? 'Semua Kelas',
             'periode' => $periode,
             'periodeLabel' => $rentang['label_periode'],
             'rentangLabel' => $rentang['label_rentang'],
@@ -33,21 +39,27 @@ class AdminRekapitulasiController extends Controller
     }
 
     /**
-     * Endpoint JSON grafik: per kelas, hitung Hadir / Terlambat / Tidak Hadir
-     * dari catatan kehadiran dalam rentang periode yang dipilih.
+     * Endpoint JSON grafik: hitung Hadir / Terlambat / Izin / Sakit / Alpa
+     * dari catatan kehadiran dalam rentang periode dan filter kelas yang dipilih.
      *
-     * Definisi (mengikuti logika yang sudah ada):
-     * - Hadir/Terlambat = status yang tercatat di attendances dalam rentang.
-     * - Tidak Hadir = total siswa kelas x hari sekolah (Senin–Jumat) − Hadir − Terlambat.
+     * - kelas=semua (default) -> 1 objek aggregasi total seluruh kelas.
+     * - kelas=<slug>          -> 1 objek khusus kelas tersebut.
      */
     public function grafik(Request $request): JsonResponse
     {
         $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
         $tanggal = $this->tanggalDipilih($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
+        $kelasDipilih = $this->kelasDipilih($request);
 
-        $classes = SchoolClass::withCount('students')->orderBy('name')->get();
-        $students = \App\Models\Student::whereIn('school_class_id', $classes->pluck('id'))->get();
+        $studentsQuery = Student::query();
+        if ($kelasDipilih !== null) {
+            $studentsQuery->where('school_class_id', $kelasDipilih->id);
+        } else {
+            $studentsQuery->whereIn('school_class_id', SchoolClass::pluck('id'));
+        }
+
+        $students = $studentsQuery->get();
         $perSiswa = RekapRingkasanPeriode::hitungPerSiswa(
             $students,
             $rentang['start_date'],
@@ -55,31 +67,25 @@ class AdminRekapitulasiController extends Controller
             $rentang['hari_sekolah']
         );
 
-        $labels = [];
-        $hadir = [];
-        $terlambat = [];
-        $izin = [];
-        $sakit = [];
-        $alpa = [];
+        $h = 0;
+        $t = 0;
+        $i = 0;
+        $s = 0;
+        $a = 0;
 
-        foreach ($classes as $kelas) {
-            $kelasSiswaIds = $students->where('school_class_id', $kelas->id)->pluck('id');
-            $h = 0; $t = 0; $i = 0; $s = 0; $a = 0;
-            foreach ($kelasSiswaIds as $id) {
-                $h += $perSiswa[$id]['hadir'];
-                $t += $perSiswa[$id]['terlambat'];
-                $i += $perSiswa[$id]['izin'];
-                $s += $perSiswa[$id]['sakit'];
-                $a += $perSiswa[$id]['alpa'];
+        foreach ($students as $siswa) {
+            $ringkasan = $perSiswa[$siswa->id] ?? null;
+            if (! $ringkasan) {
+                continue;
             }
-
-            $labels[] = $kelas->name;
-            $hadir[] = $h;
-            $terlambat[] = $t;
-            $izin[] = $i;
-            $sakit[] = $s;
-            $alpa[] = $a;
+            $h += $ringkasan['hadir'];
+            $t += $ringkasan['terlambat'];
+            $i += $ringkasan['izin'];
+            $s += $ringkasan['sakit'];
+            $a += $ringkasan['alpa'];
         }
+
+        $label = $kelasDipilih ? $kelasDipilih->name : 'Semua Kelas';
 
         return response()->json([
             'tanggal' => $rentang['tanggal'],
@@ -87,13 +93,25 @@ class AdminRekapitulasiController extends Controller
             'periode_label' => $rentang['label_periode'],
             'rentang_label' => $rentang['label_rentang'],
             'hari_sekolah' => $rentang['hari_sekolah'],
-            'labels' => $labels,
-            'hadir' => $hadir,
-            'terlambat' => $terlambat,
-            'izin' => $izin,
-            'sakit' => $sakit,
-            'alpa' => $alpa,
+            'kelas' => $kelasDipilih?->slug ?? 'semua',
+            'kelas_label' => $label,
+            'labels' => [$label],
+            'hadir' => [$h],
+            'terlambat' => [$t],
+            'izin' => [$i],
+            'sakit' => [$s],
+            'alpa' => [$a],
         ]);
+    }
+
+    private function kelasDipilih(Request $request): ?SchoolClass
+    {
+        $slug = trim((string) $request->query('kelas', 'semua'));
+        if ($slug === '' || $slug === 'semua') {
+            return null;
+        }
+
+        return SchoolClass::where('slug', $slug)->first();
     }
 
     private function tanggalDipilih(Request $request): string
