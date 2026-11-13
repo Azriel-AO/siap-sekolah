@@ -13,3 +13,16 @@ if (document.querySelector('canvas[data-face-overlay]')) {
         .then(({ initFaceOverlays }) => initFaceOverlays())
         .catch((error) => console.warn('[face-overlay] Modul overlay gagal dimuat.', error));
 }
+
+// Modul auto-capture + liveness (FaceLandmarker + blendshapes) untuk pendaftaran wajah.
+if (document.querySelector('[data-face-autocapture]')) {
+    import('./face-autocapture.js')
+        .then((mod) => {
+            window.FaceAutoCapture = mod;
+            window.dispatchEvent(new CustomEvent('face-autocapture:ready'));
+        })
+        .catch((error) => {
+            console.warn('[face-autocapture] Modul gagal dimuat; fallback ke mode manual.', error);
+            window.dispatchEvent(new CustomEvent('face-autocapture:failed'));
+        });
+}

@@ -92,7 +92,7 @@
             </div>
 
             <template x-if="mode === 'form'">
-                <div class="space-y-6">
+                <div class="space-y-6" data-face-autocapture>
 
                     {{-- Kartu pernyataan izin orang tua/wali (FR-012) --}}
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -115,8 +115,37 @@
 
                     {{-- Area kamera (gagal-aman) --}}
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                        <h2 class="text-lg font-bold text-gray-900">Kamera Wajah</h2>
-                        <p class="text-xs text-gray-500 mt-1">Kamera menyala setelah Anda mencentang pernyataan izin di atas.</p>
+                        <div class="flex items-center justify-between gap-2">
+                            <h2 class="text-lg font-bold text-gray-900">Kamera Wajah</h2>
+                            <span x-show="consent && !kameraGagal" x-cloak
+                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                                  :class="manualMode ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'"
+                                  x-text="manualMode ? 'Mode Manual (Fallback)' : 'Auto-Capture + Liveness'"></span>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-1">Kamera menyala setelah Anda mencentang pernyataan izin di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
+
+                        {{-- Indikator 4 langkah otomatis --}}
+                        <div x-show="consent && !kameraGagal && !manualMode" x-cloak class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
+                            <div class="grid grid-cols-4 gap-2 text-xs font-bold text-center">
+                                <div class="px-2 py-1.5 rounded-lg border transition"
+                                     :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                    1. Hadap Lurus
+                                </div>
+                                <div class="px-2 py-1.5 rounded-lg border transition"
+                                     :class="autoStep > 1 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 1 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                    2. Tengok Kanan
+                                </div>
+                                <div class="px-2 py-1.5 rounded-lg border transition"
+                                     :class="autoStep > 2 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 2 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                    3. Tengok Kiri
+                                </div>
+                                <div class="px-2 py-1.5 rounded-lg border transition"
+                                     :class="autoStep > 3 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 3 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                    4. Kedip Mata
+                                </div>
+                            </div>
+                            <p class="mt-2 text-center text-xs font-bold text-indigo-900" x-text="autoHint"></p>
+                        </div>
 
                         {{-- Pesan gagal-aman: tanpa kamera / izin ditolak / browser tidak mendukung --}}
                         <div x-show="consent && kameraGagal" x-cloak class="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
@@ -134,6 +163,10 @@
                         <div x-show="consent && !kameraGagal" class="mt-4 relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
                             <video x-ref="cameraPreview" autoplay muted playsinline
                                    class="w-full h-full object-cover scale-x-[-1]"></video>
+                            <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
+                            <div x-show="!kameraGagal && !manualMode" x-cloak class="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
+                                <p class="rounded-full bg-slate-900/75 px-3.5 py-1 text-xs font-extrabold text-emerald-300 shadow" x-text="autoHint"></p>
+                            </div>
 
                             {{-- Overlay hitungan mundur --}}
                             <div x-show="countdown !== null" x-cloak
@@ -146,7 +179,7 @@
                     {{-- 3 Slot Foto --}}
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                         <h2 class="text-lg font-bold text-gray-900">3 Foto Wajah</h2>
-                        <p class="text-xs text-gray-500 mt-1">Tekan "Ambil Foto" — ada hitungan mundur 3 detik sebelum foto diambil. Ulangi foto mana pun yang kurang bagus sebelum menyimpan.</p>
+                        <p class="text-xs text-gray-500 mt-1">Foto diambil otomatis saat Anda mengikuti panduan gerakan wajah (atau tekan "Ambil Foto" pada mode manual). Ulangi foto mana pun yang kurang bagus sebelum menyimpan.</p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                             <template x-for="(foto, index) in photos" :key="index">
@@ -160,7 +193,7 @@
                                         </div>
                                     </div>
                                     <div class="p-2 flex items-center justify-between bg-white border-t border-gray-100">
-                                        <span class="text-xs font-bold text-gray-600" x-text="'Foto ' + (index + 1)"></span>
+                                        <span class="text-xs font-bold text-gray-600" x-text="photoLabels[index] || ('Foto ' + (index + 1))"></span>
                                         <button type="button" x-show="foto" @click="ulangFoto(index)"
                                                 class="text-xs font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2 py-1 rounded transition">
                                             Ulangi
@@ -171,7 +204,7 @@
                         </div>
 
                         <div class="flex flex-col sm:flex-row items-center gap-3 mt-6">
-                            <button type="button" @click="ambilFoto()"
+                            <button type="button" x-show="manualMode" @click="ambilFoto()"
                                     :disabled="!consent || kameraGagal || countdown !== null || saving || photos.every(p => p)"
                                     class="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
                                 <svg class="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,6 +218,11 @@
                                     :disabled="saving || photos.some(p => !p)"
                                     class="inline-flex items-center px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
                                 <span x-text="saving ? 'Menyimpan...' : 'Simpan Pendaftaran'"></span>
+                            </button>
+
+                            <button type="button" x-show="consent && !kameraGagal && !manualMode && !photos.every(p => p)" @click="aktifManualFallback()"
+                                    class="text-xs font-semibold text-gray-500 hover:text-gray-800 underline">
+                                Gunakan tombol ambil foto manual
                             </button>
                         </div>
                         <p class="text-xs text-gray-400 mt-2" x-show="photos.some(p => !p)">
@@ -203,7 +241,12 @@
                 kameraGagal: false,
                 cameraStream: null,
                 photos: [null, null, null],
+                photoLabels: ['Foto 1 (Depan)', 'Foto 2 (Kanan)', 'Foto 3 (Kiri)'],
                 countdown: null,
+                manualMode: false,
+                autoStep: 0,
+                autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
+                autoSession: null,
                 saving: false,
                 message: '',
                 messageOk: true,
@@ -216,6 +259,14 @@
 
                 init() {
                     window.addEventListener('beforeunload', () => this.stopCamera());
+                    window.addEventListener('face-autocapture:ready', () => {
+                        if (this.consent && this.cameraStream && !this.manualMode && !this.autoSession) {
+                            this.startAutoCapture();
+                        }
+                    });
+                    window.addEventListener('face-autocapture:failed', () => {
+                        this.aktifManualFallback();
+                    });
                 },
 
                 onConsentChange() {
@@ -227,6 +278,10 @@
                 },
 
                 stopCamera() {
+                    if (this.autoSession) {
+                        this.autoSession.stop();
+                        this.autoSession = null;
+                    }
                     if (this.cameraStream) {
                         this.cameraStream.getTracks().forEach(track => track.stop());
                         this.cameraStream = null;
@@ -240,6 +295,7 @@
                     try {
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                             this.kameraGagal = true;
+                            this.manualMode = true;
                             return;
                         }
 
@@ -250,12 +306,64 @@
 
                         this.$nextTick(() => {
                             const video = this.$refs.cameraPreview;
-                            if (video) video.srcObject = this.cameraStream;
+                            if (video) {
+                                video.srcObject = this.cameraStream;
+                                if (!this.manualMode) {
+                                    this.startAutoCapture();
+                                }
+                            }
                         });
                     } catch (e) {
                         this.cameraStream = null;
                         this.kameraGagal = true;
+                        this.manualMode = true;
                     }
+                },
+
+                startAutoCapture() {
+                    if (this.manualMode || !this.$refs.cameraPreview) return;
+                    if (!window.FaceAutoCapture || !window.FaceAutoCapture.FaceAutoCaptureSession) {
+                        return;
+                    }
+                    if (this.autoSession) {
+                        this.autoSession.stop();
+                    }
+                    const firstEmpty = this.photos.findIndex(p => !p);
+                    const startStep = firstEmpty === -1 ? 3 : firstEmpty;
+
+                    this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
+                        video: this.$refs.cameraPreview,
+                        onStateChange: ({ stepIndex, hint }) => {
+                            this.autoStep = stepIndex;
+                            this.autoHint = hint;
+                        },
+                        onPhotoCaptured: (slotIndex, jpegDataUrl) => {
+                            if (slotIndex >= 0 && slotIndex < 3) {
+                                this.photos[slotIndex] = jpegDataUrl;
+                            }
+                        },
+                        onComplete: () => {
+                            this.autoStep = 4;
+                            this.autoHint = 'Selesai! 3 foto wajah & kedipan mata terverifikasi.';
+                            this.stopCamera();
+                        },
+                        onFallback: () => {
+                            this.aktifManualFallback();
+                        },
+                    });
+                    this.autoSession.start().then(() => {
+                        if (this.autoSession && startStep > 0) {
+                            this.autoSession.resetToStep(startStep);
+                        }
+                    });
+                },
+
+                aktifManualFallback() {
+                    if (this.autoSession) {
+                        this.autoSession.stop();
+                        this.autoSession = null;
+                    }
+                    this.manualMode = true;
                 },
 
                 // Hitung mundur 3 → 2 → 1, lalu tangkap frame ke slot kosong pertama
@@ -313,9 +421,12 @@
 
                 ulangFoto(index) {
                     this.photos[index] = null;
+                    this.autoStep = index;
                     // Kamera dinyalakan lagi bila sebelumnya dimatikan karena 3 slot penuh
                     if (this.consent && !this.cameraStream) {
                         this.startCamera();
+                    } else if (this.autoSession && !this.manualMode) {
+                        this.autoSession.resetToStep(index);
                     }
                 },
 

@@ -32,7 +32,16 @@ class FaceOverlayTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('data-face-overlay', false);
+        $response->assertSee('data-face-autocapture', false);
         $response->assertSee('aria-hidden="true"', false);
         $response->assertSee('pointer-events-none', false);
+        $response->assertSee('1. Hadap Lurus');
+        $response->assertSee('2. Tengok Kanan');
+        $response->assertSee('3. Tengok Kiri');
+        $response->assertSee('4. Kedip Mata');
+        $response->assertSee('Ambil Foto');
+
+        $this->assertFileExists(public_path('vendor/mediapipe/models/face_landmarker.task'));
+        $this->assertGreaterThan(1000000, filesize(public_path('vendor/mediapipe/models/face_landmarker.task')));
     }
 }
