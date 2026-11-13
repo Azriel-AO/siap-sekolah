@@ -56,9 +56,9 @@
             <div class="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                 <span>Simbol:</span>
                 <span><b class="text-emerald-700">√</b> = Hadir (termasuk terlambat)</span>
-                <span><b class="text-indigo-700">I</b> = Izin</span>
-                <span><b class="text-sky-700">S</b> = Sakit</span>
-                <span><b class="text-rose-700">A</b> = Alpa (hari sekolah lampau, tidak tap &amp; tidak izin)</span>
+                <span><b class="text-amber-600">I</b> = Izin</span>
+                <span><b class="text-blue-600">S</b> = Sakit</span>
+                <span><b class="text-red-600">A</b> = Alpa (hari sekolah lampau, tidak tap &amp; tidak izin)</span>
                 <span>Kosong = bukan hari sekolah / belum lewat / hari ini belum tap</span>
             </div>
 
@@ -76,7 +76,16 @@
                             @foreach(array_slice($preview['rows'], 0, 18) as $i => $row)
                                 <tr>
                                     @foreach($row as $cell)
-                                        <td @if(in_array($i, [0,1,2,3,4,5,6])) class="font-bold text-gray-900 px-2 py-0.5" @else class="border border-gray-200 px-2 py-0.5 text-center {{ $i >= 7 ? 'bg-gray-50 font-bold' : '' }}" @endif>{{ $cell }}</td>
+                                        @php
+                                            $warnaSimbol = match ((string) $cell) {
+                                                '√' => 'text-[#008000] font-bold',
+                                                'I' => 'text-[#FFA500] font-bold',
+                                                'A' => 'text-[#FF0000] font-bold',
+                                                'S' => 'text-[#2563EB] font-bold',
+                                                default => '',
+                                            };
+                                        @endphp
+                                        <td @if(in_array($i, [0,1,2])) class="font-bold text-gray-900 px-2 py-0.5 text-center" @elseif(in_array($i, [3,4,5,6])) class="font-bold text-gray-900 px-2 py-0.5" @else class="border border-gray-200 px-2 py-0.5 text-center {{ $i === 7 || $i === 8 ? 'bg-gray-50 font-bold' : $warnaSimbol }}" @endif>{{ $cell }}</td>
                                     @endforeach
                                 </tr>
                             @endforeach

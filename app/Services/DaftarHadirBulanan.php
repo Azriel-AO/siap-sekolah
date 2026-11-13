@@ -53,6 +53,19 @@ class DaftarHadirBulanan
     public const KOLOM_NILAI_KANAN = 24;
 
     /**
+     * Baris kop laporan di kolom tengah (kolom 19 / indeks 18 = S), tetangga kosong.
+     *
+     * @return array<int, string>
+     */
+    public static function barisKopTengah(string $teks): array
+    {
+        $baris = array_fill(0, self::JUMLAH_KOLOM, '');
+        $baris[self::KOLOM_KOP_TENGAH] = $teks;
+
+        return $baris;
+    }
+
+    /**
      * Baris label + nilai di area kanan (label kolom 18, nilai kolom 25).
      *
      * @return array<int, string>
@@ -164,9 +177,9 @@ class DaftarHadirBulanan
         $hariIni = Carbon::now('Asia/Jakarta')->startOfDay();
 
         $rows = [
-            ['DAFTAR HADIR SISWA SEMESTER '.strtoupper($pengaturan['laporan_semester'])],
-            [$pengaturan['laporan_nama_sekolah']],
-            ['TAHUN PELAJARAN '.$pengaturan['laporan_tahun_pelajaran']],
+            self::barisKopTengah('DAFTAR HADIR SISWA SEMESTER '.strtoupper($pengaturan['laporan_semester'])),
+            self::barisKopTengah($pengaturan['laporan_nama_sekolah']),
+            self::barisKopTengah('TAHUN PELAJARAN '.$pengaturan['laporan_tahun_pelajaran']),
             self::barisBlokKanan('BULAN  :', $namaBulan),
             self::barisBlokKanan('KELAS  :', $kelas->name),
             self::barisBlokKanan('WALI KELAS :', $kelas->wali_kelas ?: '-'),
@@ -176,7 +189,7 @@ class DaftarHadirBulanan
         ];
 
         foreach ($alunos as $index => $siswa) {
-            $baris = [$index + 1, $siswa->nisn ?? '', $siswa->induk ?? '', $siswa->name];
+            $baris = [$index + 1, (string) ($siswa->nisn ?? ''), (string) ($siswa->induk ?? ''), (string) $siswa->name];
 
             for ($d = 1; $d <= self::JUMLAH_KOLOM_TANGGAL; $d++) {
                 // Tanggal di luar jumlah hari bulan ini ? sel kosong

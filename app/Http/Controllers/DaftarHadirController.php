@@ -76,6 +76,8 @@ class DaftarHadirController extends Controller
         );
 
         $thin = (new Style)->setBorder($borderThin);
+        $centerThin = (new Style)->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin);
+        $textThin = (new Style)->setFormat('@')->setBorder($borderThin);
         $boldThin = (new Style)->setFontBold()->setBorder($borderThin);
         $boldGrayThin = (new Style)->setFontBold()->setBackgroundColor('E5E7EB')->setBorder($borderThin);
         $boldCenterThin = (new Style)->setFontBold()->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin);
@@ -87,6 +89,13 @@ class DaftarHadirController extends Controller
             'I' => (new Style)->setFontBold()->setFontColor('FFA500')->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin),
             'A' => (new Style)->setFontBold()->setFontColor('FF0000')->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin),
             'S' => (new Style)->setFontBold()->setFontColor('2563EB')->setCellAlignment(CellAlignment::CENTER)->setBorder($borderThin),
+        ];
+
+        $symbolWeekendStyles = [
+            '√' => (new Style)->setFontBold()->setFontColor('008000')->setCellAlignment(CellAlignment::CENTER)->setBackgroundColor('E5E7EB')->setBorder($borderThin),
+            'I' => (new Style)->setFontBold()->setFontColor('FFA500')->setCellAlignment(CellAlignment::CENTER)->setBackgroundColor('E5E7EB')->setBorder($borderThin),
+            'A' => (new Style)->setFontBold()->setFontColor('FF0000')->setCellAlignment(CellAlignment::CENTER)->setBackgroundColor('E5E7EB')->setBorder($borderThin),
+            'S' => (new Style)->setFontBold()->setFontColor('2563EB')->setCellAlignment(CellAlignment::CENTER)->setBackgroundColor('E5E7EB')->setBorder($borderThin),
         ];
 
         $right = (new Style)->setCellAlignment(CellAlignment::RIGHT);
@@ -120,7 +129,7 @@ class DaftarHadirController extends Controller
                 // Baris judul (0,1,2) di kolom tengah (kolom 19 / indeks 18 = S), ditebalkan & rata tengah, tanpa border
                 if ($i === 0 || $i === 1 || $i === 2) {
                     $kopRow = array_fill(0, DaftarHadirBulanan::JUMLAH_KOLOM, '');
-                    $kopRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] = (string) ($row[0] ?? ($row[DaftarHadirBulanan::KOLOM_KOP_TENGAH] ?? ''));
+                    $kopRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] = (string) ($row[DaftarHadirBulanan::KOLOM_KOP_TENGAH] ?? ($row[0] ?? ''));
                     $writer->addRow(Row::fromValues($kopRow, $boldCenter));
                 } elseif ($i >= 3 && $i <= 5) {
                     // BULAN / KELAS / WALI KELAS: label kolom 18, nilai kolom 25 (area kanan), tanpa border
@@ -131,11 +140,11 @@ class DaftarHadirController extends Controller
                     // Header kolom NO/NISN/INDUK/NAMA/TANGGAL ditebalkan + border tipis matrix + Sabtu/Minggu abu-abu
                     $headerStyles = [];
                     for ($c = 0; $c <= 3; $c++) {
-                        $headerStyles[$c] = $boldThin;
+                        $headerStyles[$c] = $boldCenterThin;
                     }
                     for ($d = 1; $d <= DaftarHadirBulanan::JUMLAH_KOLOM_TANGGAL; $d++) {
                         $weekend = $d <= $hariDalamBulan && Carbon::create($tahun, $bulan, $d)->isWeekend();
-                        $headerStyles[4 + $d - 1] = $weekend ? $boldGrayThin : $boldThin;
+                        $headerStyles[4 + $d - 1] = $weekend ? $boldCenterGrayThin : $boldCenterThin;
                     }
                     $headerRow = array_pad($row, DaftarHadirBulanan::JUMLAH_KOLOM, '');
                     $writer->addRow(Row::fromValuesWithStyles($headerRow, null, $headerStyles));
@@ -152,18 +161,20 @@ class DaftarHadirController extends Controller
                     }
                     $writer->addRow(Row::fromValuesWithStyles($row, null, $dayStyles));
                 } elseif ($i >= 9 && $i < count($rows) - 5) {
-                    // Baris siswa: border tipis + hari weekend abu-abu + warna simbol (√ hijau, I oranye, A merah, S biru)
-                    $cellStyles = [];
-                    for ($c = 0; $c <= 3; $c++) {
-                        $cellStyles[$c] = $thin;
-                    }
+                    // Baris siswa: border tipis + NISN/INDUK format teks '@' + hari weekend abu-abu + warna simbol (√ hijau, I oranye, A merah, S biru)
+                    $cellStyles = [
+                        0 => $centerThin,
+                        1 => $textThin,
+                        2 => $textThin,
+                        3 => $thin,
+                    ];
                     for ($d = 1; $d <= DaftarHadirBulanan::JUMLAH_KOLOM_TANGGAL; $d++) {
                         $colIdx = 4 + $d - 1;
                         $val = (string) ($row[$colIdx] ?? '');
                         $weekend = $d <= $hariDalamBulan && Carbon::create($tahun, $bulan, $d)->isWeekend();
 
                         if (isset($symbolStyles[$val])) {
-                            $cellStyles[$colIdx] = $symbolStyles[$val];
+                            $cellStyles[$colIdx] = $weekend ? $symbolWeekendStyles[$val] : $symbolStyles[$val];
                         } else {
                             $cellStyles[$colIdx] = $weekend ? $grayThin : $thin;
                         }

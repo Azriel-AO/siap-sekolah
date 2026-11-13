@@ -151,9 +151,12 @@ class DaftarHadirTest extends TestCase
         $data = (new DaftarHadirBulanan)->buildRows($kelas, 1, 2026, DaftarHadirBulanan::pengaturan());
         $rows = $data['rows'];
 
-        $this->assertSame('DAFTAR HADIR SISWA SEMESTER GENAP', $rows[0][0]);
-        $this->assertSame('SMK UJI COBA BOYOLALI', $rows[1][0]);
-        $this->assertSame('TAHUN PELAJARAN 2025/2026', $rows[2][0]);
+        $this->assertSame('DAFTAR HADIR SISWA SEMESTER GENAP', $rows[0][DaftarHadirBulanan::KOLOM_KOP_TENGAH]);
+        $this->assertSame('SMK UJI COBA BOYOLALI', $rows[1][DaftarHadirBulanan::KOLOM_KOP_TENGAH]);
+        $this->assertSame('TAHUN PELAJARAN 2025/2026', $rows[2][DaftarHadirBulanan::KOLOM_KOP_TENGAH]);
+        $this->assertSame('', $rows[0][0]);
+        $this->assertSame('', $rows[1][0]);
+        $this->assertSame('', $rows[2][0]);
         $this->assertSame('BULAN  :', $rows[3][17]);
         $this->assertSame('Januari', $rows[3][24]);
         $this->assertSame('KELAS  :', $rows[4][17]);
@@ -369,6 +372,16 @@ class DaftarHadirTest extends TestCase
         $this->assertStringContainsString('r="AI9"', $sheetXml);
         $this->assertStringContainsString('r="A10"', $sheetXml);
         $this->assertStringContainsString('r="AI10"', $sheetXml);
+
+        // 5. Area non-matrix (kop baris 1-3, blok kanan baris 4-6, pemisah, footer) TIDAK menulis sel kosong berborder di kolom A
+        $this->assertStringNotContainsString('r="A4"', $sheetXml);
+        $this->assertStringNotContainsString('r="A5"', $sheetXml);
+        $this->assertStringNotContainsString('r="A6"', $sheetXml);
+        $this->assertStringContainsString('r="R4"', $sheetXml); // Kolom 18 (R) = BULAN :
+        $this->assertStringContainsString('r="Y4"', $sheetXml); // Kolom 25 (Y) = November
+
+        // 6. Format teks '@' (numFmtId="49") terdaftar di styles.xml untuk menjaga nol-depan NISN & INDUK
+        $this->assertStringContainsString('numFmtId="49"', $stylesXml);
 
         $zip->close();
         unlink($tmp);
