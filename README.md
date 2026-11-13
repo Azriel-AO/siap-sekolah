@@ -600,6 +600,39 @@ Lalu `php artisan config:clear` dan **restart** `php artisan serve`. Dengan `bri
 
 **4. Pendaftaran jari**
 Bridge mewajibkan **sentuhan baru**: jari yang masih menempel / sisa capture lama / template kosong ditolak dengan pesan ramah, dan tidak ada ID yang dibuat. Siswa yang dulu terdaftar saat driver masih `mock` punya ID berawalan `MOCK-` dan tidak akan pernah dikenali sensor asli — daftarkan ulang jarinya.
+
+---
+
+## 🖥️ Panduan Orang Awam (Box PC)
+
+Bagian ini ditujukan bagi guru piket, staf TU, atau petugas sekolah untuk menyalakan dan mengecek Box PC gerbang **tanpa membuka PowerShell atau terminal**.
+
+### 1. Apa yang Di-Double-Click Saat Pertama Kali Deploy (Sekali Saja)
+Buka File Explorer ke folder aplikasi `box\`, lalu **klik dua kali (double-click)** file:
+👉 **`box\pasang-autostart.bat`**
+
+Skrip ini akan memasang dua shortcut otomatis (`E-PRESKNBI-Mulai-Sistem.lnk` dan `E-PRESKNBI-Watchdog.lnk`) ke dalam folder Startup Windows (`shell:startup`) dan menampilkan pesan berhasil.
+
+### 2. Apa yang Menyala Otomatis Setelah PC Di-Restart (Reboot)
+Setiap kali Box PC dinyalakan atau di-restart (dan masuk ke desktop Windows):
+- **Server Web Laravel** (`port 8000`) menyala otomatis di latar belakang (tanpa jendela hitam).
+- **Layanan Sensor Sidik Jari (`fingerbridge.exe`)** (`port 8787`) menyala otomatis di latar belakang.
+- **Layar Chrome Kiosk** langsung terbuka penuh ke `http://localhost:8000/kiosk`.
+- **Watchdog Pemantau (`box\watchdog.bat`)** memeriksa setiap ±20 detik; jika server web (8000) atau bridge sidik jari (8787) mati, otomatis dinyalakan kembali.
+
+### 3. Cara Cek Kesehatan Sistem Lewat Browser (`/admin/status-sistem`)
+1. Masuk sebagai Admin (`admin@knbi.sch.id`) lalu klik menu **Status Sistem** di navigasi atas (atau buka `http://localhost:8000/admin/status-sistem`).
+2. Pastikan ketiga kartu berwarna hijau/aktif:
+   - **Server & Database**: `Aktif`
+   - **Driver Sidik Jari**: `BRIDGE` (Mode Produksi)
+   - **Sensor / Bridge**: `Terhubung` (`ZK9500`)
+3. Gunakan tombol **Muat ulang** di pojok kanan atas untuk menyegarkan status terbaru.
+
+### 4. Troubleshooting Cepat (3 Langkah Bila Status Merah)
+1. **Cabut-colok kabel USB** sensor sidik jari ZK9500 di Box PC, tunggu ±20 detik, lalu klik **Muat ulang** di halaman `/admin/status-sistem`.
+2. **Klik dua kali `box\mulai-sistem.bat`** di folder aplikasi untuk menyalakan ulang layanan yang berhenti tanpa membuka terminal.
+3. **Restart Box PC** lewat menu Start Windows bila layar atau sensor masih belum merespons — seluruh sistem akan menyala kembali secara otomatis.
+
 ## 🛠️ Mengatasi Masalah Umum (Troubleshooting)
 
 - **Port 8000 sudah dipakai aplikasi lain?**

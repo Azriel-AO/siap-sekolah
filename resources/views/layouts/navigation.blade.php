@@ -51,6 +51,11 @@
                            @if($aktif('admin.daftar-hadir.*')) aria-current="page" @endif>
                             Daftar Hadir
                         </a>
+                        <a href="{{ route('admin.status-sistem') }}"
+                           class="inline-flex items-center px-3 py-1.5 border-b-2 text-sm transition {{ $aktif('admin.status-sistem') ? 'border-indigo-600 text-indigo-700 font-semibold' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-medium' }}"
+                           @if($aktif('admin.status-sistem')) aria-current="page" @endif>
+                            Status Sistem
+                        </a>
                     @else
                         <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'" class="inline-flex items-center px-3 py-1.5 border-b-2 border-transparent text-sm font-medium text-gray-500 hover:text-gray-700 hover:border-gray-300 transition">
                             Data Siswa
@@ -197,6 +202,11 @@
                    class="w-full text-left block ps-3 pe-4 py-2 border-l-4 text-base font-medium {{ request()->routeIs('admin.daftar-hadir.*') ? 'border-indigo-600 text-indigo-700 font-semibold bg-indigo-50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100' }}"
                    @if(request()->routeIs('admin.daftar-hadir.*')) aria-current="page" @endif>
                     Daftar Hadir
+                </a>
+                <a href="{{ route('admin.status-sistem') }}" onclick="open = false"
+                   class="w-full text-left block ps-3 pe-4 py-2 border-l-4 text-base font-medium {{ request()->routeIs('admin.status-sistem') ? 'border-indigo-600 text-indigo-700 font-semibold bg-indigo-50' : 'border-transparent text-gray-600 hover:text-gray-800 hover:bg-gray-100' }}"
+                   @if(request()->routeIs('admin.status-sistem')) aria-current="page" @endif>
+                    Status Sistem
                 </a>
             @else
                 <button type="button" @click="placeholderNotice = 'Fitur Data Siswa segera hadir pada tahap berikutnya.'; open = false" class="w-full text-left block ps-3 pe-4 py-2 border-l-4 border-transparent text-base font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100">

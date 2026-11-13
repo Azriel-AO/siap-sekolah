@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminClassController;
 use App\Http\Controllers\AdminRekapExportController;
 use App\Http\Controllers\AdminRekapitulasiController;
+use App\Http\Controllers\AdminStatusSistemController;
 use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\DaftarHadirController;
 use App\Http\Controllers\DashboardController;
@@ -90,6 +91,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::get('/admin/data-siswa/{student}/edit', [AdminStudentController::class, 'edit'])->name('admin.siswa.edit');
         Route::put('/admin/data-siswa/{student}', [AdminStudentController::class, 'update'])->name('admin.siswa.update');
         Route::delete('/admin/data-siswa/{student}', [AdminStudentController::class, 'destroy'])->name('admin.siswa.destroy');
+
+        // Admin: Status Sistem (GUI kesehatan box PC, read-only)
+        Route::get('/admin/status-sistem', [AdminStatusSistemController::class, 'index'])->name('admin.status-sistem');
     });
 
     // Pendaftaran Wajah Mandiri Siswa (US-10 tahap 1, PRD F3) — tanpa pengenalan wajah
