@@ -34,7 +34,7 @@ class AdminStudentController extends Controller
         }
 
         $students = $kelasDipilih
-            ? $kelasDipilih->students()->with(['rfidCard', 'user', 'faceEnrollment'])->withCount('attendances')->orderBy('name')->get()
+            ? $kelasDipilih->students()->with(['rfidCard', 'user', 'faceEnrollment', 'schoolClass'])->withCount('attendances')->orderBy('name')->get()
             : collect();
 
         return view('admin.students.index', [

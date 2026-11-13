@@ -144,7 +144,7 @@
                                 <th class="py-3.5 px-4 text-center w-12">No</th>
                                 <th class="py-3.5 px-4">NISN</th>
                                 <th class="py-3.5 px-4">Nama Siswa</th>
-                                <th class="py-3.5 px-4">UID Kartu</th>
+                                <th class="py-3.5 px-4">Kartu</th>
                                 <th class="py-3.5 px-4 text-center">Foto Bukti</th>
                                 <th class="py-3.5 px-4 text-center">Jam Masuk</th>
                                 <th class="py-3.5 px-4 text-center">Jam Pulang</th>
@@ -160,7 +160,11 @@
                                     <td class="py-3 px-4 text-center text-xs text-gray-400 font-mono" x-text="index + 1"></td>
                                     <td class="py-3 px-4 font-mono font-medium text-gray-700" x-text="s.nisn"></td>
                                     <td class="py-3 px-4 font-semibold text-gray-900" x-text="s.name"></td>
-                                    <td class="py-3 px-4 font-mono text-xs text-gray-500" x-text="s.card_uid"></td>
+                                    <td class="py-3 px-4 font-mono text-xs text-gray-500">
+                                        <span :title="s.card_uid && s.card_uid !== '-' ? ('UID: ' + s.card_uid) : ''"
+                                              :class="s.card_label && s.card_label !== '-' ? 'cursor-help font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200' : 'text-gray-400'"
+                                              x-text="(s.card_label && s.card_label !== '-') ? s.card_label : (s.card_uid || '-')"></span>
+                                    </td>
                                     <td class="py-3 px-4">
                                         <div class="flex items-center justify-center gap-1.5">
                                             <img x-show="s.photo_in" :src="s.photo_in" @click="lightbox = s.photo_in"

@@ -168,10 +168,11 @@
                     <!-- Judul Status -->
                     <div class="text-xs uppercase tracking-widest font-extrabold opacity-80" x-text="result?.status_label || (result?.success ? 'Berhasil' : 'Peringatan')"></div>
                     <h3 class="text-3xl sm:text-4xl font-black mt-2" x-text="result?.student_name || 'Tidak Dikenali'"></h3>
-                    <p class="text-sm mt-1 opacity-75 font-mono" x-show="result?.nis" x-text="'NIS: ' + result?.nis + (result?.kelas ? '  •  ' + result?.kelas : '')"></p>
+                    <p class="text-sm mt-1 opacity-75 font-mono" x-show="result?.nis" x-text="'NIS: ' + result?.nis + (result?.kelas ? '  •  ' + result?.kelas : '') + (result?.card_label ? '  •  ' + result?.card_label : '')"></p>
 
                     <!-- Pesan -->
-                    <div class="mt-4 p-3 rounded-xl bg-black/20 text-sm sm:text-base font-medium" x-text="result?.message"></div>
+                    <div class="mt-4 p-3 rounded-xl bg-black/20 text-sm sm:text-base font-medium"
+                         x-text="result?.success && result?.card_label ? ('Halo, ' + result.student_name + ' (' + result.card_label + ')') : result?.message"></div>
 
                     <!-- Tombol Daftar Mandiri untuk Kartu / Sidik Jari Tidak Dikenal -->
                     <template x-if="result && (result.registration_url || result.type === 'not_found' || result.type === 'fingerprint_not_found' || result.type === 'fingerprint_unknown')">

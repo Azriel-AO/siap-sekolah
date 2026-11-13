@@ -59,7 +59,7 @@
                                     <th class="py-3.5 px-4">NIS</th>
                                     <th class="py-3.5 px-4">Nama Siswa</th>
                                     <th class="py-3.5 px-4 text-center">L/P</th>
-                                    <th class="py-3.5 px-4">UID Kartu</th>
+                                    <th class="py-3.5 px-4">Kartu</th>
                                     <th class="py-3.5 px-4">Akun Login</th>
                                     <th class="py-3.5 px-4 text-center">Aksi</th>
                                 </tr>
@@ -71,7 +71,15 @@
                                         <td class="py-3 px-4 font-mono font-medium text-gray-700">{{ $siswa->nis }}</td>
                                         <td class="py-3 px-4 font-semibold text-gray-900">{{ $siswa->name }}</td>
                                         <td class="py-3 px-4 text-center text-gray-600">{{ $siswa->gender }}</td>
-                                        <td class="py-3 px-4 font-mono text-xs text-gray-500">{{ $siswa->rfidCard?->card_uid ?? '-' }}</td>
+                                        <td class="py-3 px-4 font-mono text-xs text-gray-600">
+                                            @if($siswa->rfidCard)
+                                                <span title="UID: {{ $siswa->rfidCard->card_uid }}" class="cursor-help font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                                                    {{ $siswa->card_label }}
+                                                </span>
+                                            @else
+                                                <span class="text-gray-400">-</span>
+                                            @endif
+                                        </td>
                                         <td class="py-3 px-4 text-xs">
                                             @if($siswa->user)
                                                 <span class="font-mono text-gray-700">{{ $siswa->user->email }}</span>
@@ -92,6 +100,7 @@
                                                             'attendances_count' => $siswa->attendances_count ?? 0,
                                                             'has_card' => (bool)$siswa->rfidCard,
                                                             'card_uid' => $siswa->rfidCard?->card_uid,
+                                                            'card_label' => $siswa->card_label,
                                                             'face_photos_count' => $siswa->faceEnrollment ? collect([$siswa->faceEnrollment->photo_1_path, $siswa->faceEnrollment->photo_2_path, $siswa->faceEnrollment->photo_3_path])->filter()->count() : 0,
                                                             'user_email' => $siswa->user?->email,
                                                         ]) }}; actionUrl = '{{ route('admin.siswa.destroy', $siswa) }}'; modalHapus = true;"
@@ -146,7 +155,7 @@
                                 <strong x-text="targetSiswa?.attendances_count"></strong> catatan absensi
                             </li>
                             <li x-show="targetSiswa?.has_card" x-cloak>
-                                <strong>1 kartu</strong> RFID (UID: <span class="font-mono" x-text="targetSiswa?.card_uid"></span>)
+                                <strong>1 kartu</strong> RFID (<span class="font-mono" x-text="targetSiswa?.card_label || targetSiswa?.card_uid" :title="'UID: ' + (targetSiswa?.card_uid || '')"></span>)
                             </li>
                             <li x-show="!targetSiswa?.has_card" x-cloak class="opacity-75">
                                 Tidak ada kartu RFID

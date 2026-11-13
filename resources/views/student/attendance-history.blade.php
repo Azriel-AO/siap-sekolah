@@ -33,7 +33,7 @@
                             <span>•</span>
                             <span>Kelas: <strong class="text-indigo-600 font-semibold">{{ $student->schoolClass->name }}</strong></span>
                             <span>•</span>
-                            <span>Kartu: <strong class="font-mono text-gray-700">{{ $student->rfidCard?->card_uid ?? '-' }}</strong></span>
+                            <span>Kartu: <strong class="font-mono text-gray-700" title="UID: {{ $student->rfidCard?->card_uid ?? '-' }}">{{ $student->card_label ?? $student->rfidCard?->card_uid ?? '-' }}</strong></span>
                         </div>
                     </div>
                 </div>

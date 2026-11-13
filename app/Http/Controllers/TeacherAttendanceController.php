@@ -86,7 +86,7 @@ class TeacherAttendanceController extends Controller
         $students = $schoolClass->students()
             ->with(['attendances' => function ($query) use ($today) {
                 $query->where('date', $today);
-            }, 'rfidCard', 'faceEnrollment'])
+            }, 'rfidCard', 'faceEnrollment', 'schoolClass'])
             ->orderBy('name')
             ->get();
 
@@ -108,6 +108,7 @@ class TeacherAttendanceController extends Controller
                 'name' => $student->name,
                 'gender' => $student->gender,
                 'card_uid' => $student->rfidCard?->card_uid ?? '-',
+                'card_label' => $student->card_label ?? '-',
                 'status' => $status,
                 'status_label' => match ($status) {
                     'HADIR' => 'Hadir',

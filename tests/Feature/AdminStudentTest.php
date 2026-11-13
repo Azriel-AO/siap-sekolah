@@ -224,4 +224,55 @@ class AdminStudentTest extends TestCase
         $this->assertNotNull($siswaBaru);
         $this->assertSame('Siswa Pendaftar Baru', $siswaBaru->name);
     }
+
+    public function test_accessor_card_label_dan_tampilan_kartu_cantik_di_ui_serta_kiosk(): void
+    {
+        $this->seedDemo();
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+
+        $kelas = SchoolClass::create([
+            'name' => '10 TKJ 1',
+            'slug' => '10-TKJ-1',
+            'grade' => 10,
+            'department' => 'Teknik Komputer dan Jaringan',
+            'entry_time' => '07:00:00',
+            'exit_time' => '15:00:00',
+        ]);
+
+        $s1 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109901', 'name' => 'Siswa Satu', 'gender' => 'L']);
+        $s2 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109902', 'name' => 'Siswa Dua', 'gender' => 'P']);
+        $s3 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109903', 'name' => 'Siswa Tiga', 'gender' => 'L']);
+
+        // Belum punya kartu -> card_label null
+        $this->assertNull($s3->card_label);
+
+        RfidCard::create(['student_id' => $s1->id, 'card_uid' => '0009747961', 'is_active' => true]);
+        RfidCard::create(['student_id' => $s3->id, 'card_uid' => '0009747963', 'is_active' => true]);
+
+        $this->assertSame('10-TKJ-1-001', $s1->fresh()->card_label);
+        $this->assertNull($s2->fresh()->card_label);
+        $this->assertSame('10-TKJ-1-003', $s3->fresh()->card_label);
+
+        // UID fisik mentah di database tidak berubah
+        $this->assertDatabaseHas('rfid_cards', [
+            'student_id' => $s3->id,
+            'card_uid' => '0009747963',
+        ]);
+
+        // Halaman Data Siswa menampilkan label cantik dan menyimpan UID mentah di tooltip
+        $page = $this->actingAs($admin)->get('/admin/data-siswa?kelas=10-TKJ-1');
+        $page->assertOk();
+        $page->assertSee('10-TKJ-1-001');
+        $page->assertSee('10-TKJ-1-003');
+        $page->assertSee('title="UID: 0009747963"', false);
+
+        // Tap kartu di Kiosk mengembalikan card_label dan pesan "Halo, {nama} ({card_label})"
+        $tap = $this->postJson('/kiosk/tap', ['card_uid' => '0009747963']);
+        $tap->assertOk();
+        $tap->assertJson([
+            'success' => true,
+            'card_label' => '10-TKJ-1-003',
+            'message' => 'Halo, Siswa Tiga (10-TKJ-1-003)',
+        ]);
+    }
 }

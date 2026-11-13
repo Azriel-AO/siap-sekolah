@@ -54,7 +54,19 @@ class KioskController extends Controller
             ], 404);
         }
 
-        return $this->prosesAbsensi($card->student, $request->input('photo'), 'gerbang-kartu');
+        $response = $this->prosesAbsensi($card->student, $request->input('photo'), 'gerbang-kartu');
+        $data = $response->getData(true);
+        $cardLabel = $card->student->card_label;
+
+        if ($cardLabel !== null) {
+            $data['card_label'] = $cardLabel;
+            if (! empty($data['success'])) {
+                $data['message'] = "Halo, {$card->student->name} ({$cardLabel})";
+            }
+            $response->setData($data);
+        }
+
+        return $response;
     }
 
     /**
