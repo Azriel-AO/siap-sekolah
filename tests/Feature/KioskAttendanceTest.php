@@ -640,7 +640,7 @@ class KioskAttendanceTest extends TestCase
         $first = $data[0];
         $this->assertEquals($student->id, $first['student_id']);
         $this->assertEquals($student->name, $first['nama']);
-        $this->assertEquals('X-TKJ-1-009', $first['card_label']);
+        $this->assertArrayNotHasKey('card_label', $first);
         $this->assertIsArray($first['template']);
         $this->assertCount(1434, $first['template']);
 

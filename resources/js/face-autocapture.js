@@ -234,7 +234,6 @@ export class FaceAutoCaptureSession {
             });
             this.rafId = requestAnimationFrame(this.loop);
         } catch (error) {
-            console.warn('[face-autocapture] FaceLandmarker gagal dimuat; beralih ke mode manual.', error);
             if (!this.stopped) {
                 this.onFallback(error);
             }
@@ -379,15 +378,6 @@ export class FaceAutoCaptureSession {
             return;
         }
         this.lastDebugLogAt = now;
-        console.debug('[face-autocapture]', {
-            step: this.stepIndex + 1,
-            hasFace: pose.hasFace,
-            inGuideBox: Boolean(pose.inGuideBox),
-            yawRatio: pose.yawRatio ?? 0,
-            faceSize: pose.faceSize ?? 0,
-            blinkScore: pose.blinkScore ?? 0,
-            stabilityCounter: `${this.holdCount}/${HOLD_FRAMES_POSE}`,
-        });
     }
 
     loop(now) {
@@ -431,7 +421,6 @@ export class FaceAutoCaptureSession {
         try {
             result = this.landmarker.detectForVideo(this.video, this.lastTimestampMs);
         } catch (error) {
-            console.warn('[face-autocapture] Deteksi runtime gagal; beralih ke mode manual.', error);
             this.stop();
             this.onFallback(error);
 

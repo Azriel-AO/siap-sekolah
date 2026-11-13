@@ -4,7 +4,6 @@ const WASM_PATH = '/vendor/mediapipe/wasm';
 const LANDMARKER_MODEL_PATH = '/vendor/mediapipe/models/face_landmarker.task';
 
 export const FACE_LANDMARK_COUNT = 478;
-export const FACE_VECTOR_LENGTH = FACE_LANDMARK_COUNT * 3; // 1434 floats
 export const FACE_DISTANCE_THRESHOLD = 0.15;
 export const FACE_VERIFY_TIMEOUT_MS = 5000;
 export const FACE_VERIFY_INTERVAL_MS = 180;
@@ -246,16 +245,20 @@ function loadImageFromDataUrl(dataUrl) {
  * @returns {Promise<Float32Array|null>}
  */
 export async function extractVectorFromDataUrl(landmarker, dataUrl) {
-    const img = await loadImageFromDataUrl(dataUrl);
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || img.width || 320;
-    canvas.height = img.naturalHeight || img.height || 240;
-    canvas.getContext('2d').drawImage(img, 0, 0);
+    try {
+        const img = await loadImageFromDataUrl(dataUrl);
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width || 320;
+        canvas.height = img.naturalHeight || img.height || 240;
+        canvas.getContext('2d').drawImage(img, 0, 0);
 
-    const result = landmarker.detect(canvas);
-    const landmarks = result?.faceLandmarks?.[0];
+        const result = landmarker.detect(canvas);
+        const landmarks = result?.faceLandmarks?.[0];
 
-    return flattenAndNormalizeLandmarks(landmarks);
+        return flattenAndNormalizeLandmarks(landmarks);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -271,15 +274,19 @@ export function extractVectorFromVideo(landmarker, video, sharedCanvas = null) {
         return null;
     }
 
-    const canvas = sharedCanvas || document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
+    try {
+        const canvas = sharedCanvas || document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
 
-    const result = landmarker.detect(canvas);
-    const landmarks = result?.faceLandmarks?.[0];
+        const result = landmarker.detect(canvas);
+        const landmarks = result?.faceLandmarks?.[0];
 
-    return flattenAndNormalizeLandmarks(landmarks);
+        return flattenAndNormalizeLandmarks(landmarks);
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -308,8 +315,8 @@ export async function verifyStudentFace1to1({
             if (vec) {
                 refVectors.push(vec);
             }
-        } catch (err) {
-            console.warn('[face-verify] Gagal membaca salah satu foto referensi:', err);
+        } catch {
+            // Abaikan kesalahan pembacaan foto referensi individual
         }
     }
 

@@ -296,7 +296,8 @@
                     this.$nextTick(() => this.focusInput());
                     this.startCamera();
                     this.muatFaceTemplates();
-                    this.loopFaceDetection();
+                    // Mulai deteksi wajah secara non-blocking setelah render awal
+                    this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 900);
                     window.addEventListener('beforeunload', () => {
                         this.stopCamera();
                         this.stopAutoLoop();
@@ -648,7 +649,6 @@
                         const verifyData = await verifyRes.json();
                         this.showResult(verifyData);
                     } catch (err) {
-                        console.warn('[face-verify] Terjadi kendala saat verifikasi wajah:', err);
                         this.showResult({
                             success: false,
                             type: 'face_mismatch',
@@ -675,28 +675,31 @@
                                 this.faceTemplates = data;
                             }
                         }
-                    } catch (e) {
-                        console.warn('[face-1n] Gagal memuat template wajah:', e);
+                    } catch {
+                        // Gagal memuat template ditangani hening agar kiosk tetap jalan
                     }
                 },
 
                 async loopFaceDetection() {
+                    // Loop rekursif via setTimeout (900ms) untuk mencegah penumpukan task di main thread.
                     // Jangan jalankan matching jika ada hasil di layar, sedang verifikasi 1:1,
                     // check-in sedang in-flight, kamera belum siap, atau belum ada template.
+                    const FACE_LOOP_DELAY_MS = 900;
+
                     if (this.result || this.verifyingFace || this.faceCheckinInFlight || !this.cameraReady || !this.faceTemplates.length) {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
 
                     const preview = this.$refs.cameraPreview;
                     if (!preview || preview.readyState < 2 || !preview.videoWidth) {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
 
                     const verifier = window.FaceVerification;
                     if (!verifier || typeof verifier.getVerifierFaceLandmarker !== 'function' || typeof verifier.findBestFaceMatch !== 'function') {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
 
@@ -743,8 +746,8 @@
                                     const data = await res.json();
                                     this.fotoBukti = foto || '';
                                     this.showResult(data);
-                                } catch (err) {
-                                    console.warn('[face-1n] Gagal check-in wajah:', err);
+                                } catch {
+                                    // Gagal checkin ditangani hening
                                 } finally {
                                     this.faceCheckinInFlight = false;
                                 }
@@ -755,11 +758,11 @@
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
                         }
-                    } catch (err) {
-                        // Abaikan error deteksi hening
+                    } catch {
+                        // Abaikan error deteksi hening agar loop tetap stabil
+                    } finally {
+                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                     }
-
-                    this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 500);
                 },
 
                 showResult(data) {

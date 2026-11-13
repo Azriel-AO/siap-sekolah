@@ -41,7 +41,7 @@ class KioskController extends Controller
 
         $cardUid = trim($request->input('card_uid'));
 
-        $card = RfidCard::with(['student.schoolClass', 'student.faceEnrollment'])
+        $card = RfidCard::with(['student.schoolClass', 'student.faceEnrollment', 'student.rfidCard'])
             ->where('card_uid', $cardUid)
             ->where('is_active', true)
             ->first();
@@ -134,10 +134,10 @@ class KioskController extends Controller
         }
 
         $templates = Cache::remember($cacheKey, 300, function () {
-            $students = Student::with(['schoolClass', 'rfidCard', 'faceEnrollment'])
+            $students = Student::with('faceEnrollment')
                 ->has('faceEnrollment')
                 ->orderBy('name')
-                ->get();
+                ->get(['id', 'name']);
 
             $list = [];
             $disk = Storage::disk('local');
@@ -170,10 +170,6 @@ class KioskController extends Controller
                 $list[] = [
                     'student_id' => $student->id,
                     'nama' => $student->name,
-                    'student_name' => $student->name,
-                    'nis' => $student->nis,
-                    'kelas' => $student->schoolClass?->name,
-                    'card_label' => $student->card_label,
                     'template' => $template,
                 ];
             }
@@ -403,7 +399,7 @@ class KioskController extends Controller
             ], 200);
         }
 
-        $student = Student::with('schoolClass')->where('fingerprint_id', $huellaId)->first();
+        $student = Student::with(['schoolClass', 'rfidCard'])->where('fingerprint_id', $huellaId)->first();
 
         if (! $student) {
             return response()->json([
@@ -441,6 +437,10 @@ class KioskController extends Controller
      */
     private function prosesAbsensi(Student $student, ?string $photo, string $device): JsonResponse
     {
+        if (! $student->relationLoaded('schoolClass')) {
+            $student->load('schoolClass');
+        }
+
         $schoolClass = $student->schoolClass;
 
         // Waktu Server Mutlak (PRD R7 & Konstitusi II)
