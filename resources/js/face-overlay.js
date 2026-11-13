@@ -360,6 +360,9 @@ class FaceOverlay {
 
 export function initFaceOverlays() {
     document.querySelectorAll('canvas[data-face-overlay]').forEach((canvas) => {
+        if (canvas.closest('[data-face-autocapture]')) {
+            return;
+        }
         if (canvas.dataset.faceOverlayStarted === '1') {
             return;
         }

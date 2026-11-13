@@ -123,7 +123,31 @@
                                 4. Kedip Mata
                             </div>
                         </div>
-                        <p class="mt-2 text-center text-xs font-bold text-indigo-900" x-text="autoHint"></p>
+                        <div class="mt-2 flex flex-col items-center gap-1 text-center">
+                            <p class="text-xs font-bold text-indigo-900" x-text="autoHint"></p>
+                            <span x-show="stabilityText" x-cloak
+                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold"
+                                  x-text="stabilityText"></span>
+                        </div>
+                    </div>
+
+                    {{-- Banner peringatan bila timeout 10 detik per step tercapai --}}
+                    <div x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" x-cloak
+                         class="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <p class="font-extrabold">Wajah tidak terdeteksi dengan baik</p>
+                            <p class="text-[11px] text-amber-800 mt-0.5">Pastikan pencahayaan cukup dan wajah berada di dalam kotak panduan, atau beralih ke mode manual.</p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button type="button" @click="cobaLagiStep()"
+                                    class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm transition">
+                                Coba lagi
+                            </button>
+                            <button type="button" @click="aktifManualFallback()"
+                                    class="px-3 py-1.5 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-amber-900 text-xs font-bold transition">
+                                Mode Manual
+                            </button>
+                        </div>
                     </div>
 
                     <div x-show="form.setuju && kameraGagal" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-3">
@@ -131,15 +155,36 @@
                     </div>
 
                     <div x-show="form.setuju" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
-                        <video x-ref="cameraPreview" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                        <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
-                        <div x-show="!kameraGagal && !manualMode" x-cloak class="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
-                            <p class="rounded-full bg-slate-900/75 px-3.5 py-1 text-xs font-extrabold text-emerald-300 shadow" x-text="autoHint"></p>
+                        <video x-ref="cameraPreview" autoplay muted playsinline class="w-full h-full object-cover relative z-0"></video>
+
+                        {{-- Overlay Panduan Posisi Wajah Statis (tengah kamera, ~70% tinggi container, z-10 di atas video & di bawah canvas overlay) --}}
+                        <div data-face-position-guide
+                             aria-hidden="true"
+                             class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
+                            <div class="h-[70%] aspect-[3/4] rounded-3xl transition-all duration-150"
+                                 :class="faceInGuide
+                                     ? 'border-[3px] border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.45)] bg-emerald-500/5'
+                                     : (faceDetected ? 'border-2 border-rose-400/90 bg-rose-500/5' : 'border-2 border-white/70 bg-transparent')">
+                            </div>
+                            <p class="mt-1.5 rounded-full bg-slate-900/80 px-3 py-0.5 text-[11px] font-bold shadow transition-colors"
+                               :class="faceInGuide ? 'text-emerald-300' : 'text-gray-200'"
+                               x-text="faceInGuide ? 'Bagus, tahan posisi...' : 'Posisikan wajah di dalam kotak'">
+                                Posisikan wajah di dalam kotak
+                            </p>
                         </div>
-                        <div x-show="kameraGagal" x-cloak class="pointer-events-none absolute inset-x-0 top-2 flex justify-center px-3">
+
+                        <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 z-20 h-full w-full"></canvas>
+
+                        <div x-show="!kameraGagal && !manualMode" x-cloak class="pointer-events-none absolute inset-x-0 top-2 z-30 flex flex-col items-center gap-1 px-3">
+                            <p class="rounded-full bg-slate-900/80 px-3.5 py-1 text-xs font-extrabold text-emerald-300 shadow" x-text="autoHint"></p>
+                            <span x-show="stabilityText" x-cloak
+                                  class="rounded-full bg-emerald-600/95 px-3 py-0.5 text-[11px] font-black text-white shadow"
+                                  x-text="stabilityText"></span>
+                        </div>
+                        <div x-show="kameraGagal" x-cloak class="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-3">
                             <p class="rounded-lg bg-black/70 px-3 py-1 text-[11px] font-bold text-amber-300">Kamera tidak tersedia — panduan framing tetap tampil</p>
                         </div>
-                        <div x-show="countdown !== null" x-cloak class="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div x-show="countdown !== null" x-cloak class="absolute inset-0 z-30 flex items-center justify-center bg-black/40">
                             <div class="text-7xl font-black text-white drop-shadow-lg" x-text="countdown"></div>
                         </div>
                     </div>
@@ -160,16 +205,22 @@
                     </div>
 
                     <div class="mt-3 flex items-center justify-between gap-3 flex-wrap">
-                        <button type="button" x-show="manualMode" @click="ambilFoto()"
-                                :disabled="!form.setuju || kameraGagal || countdown !== null || photos.every(p => p)"
-                                class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white text-xs font-semibold transition">
-                            <span x-text="countdown !== null ? 'Bersiap… ' + countdown : 'Ambil Foto'"></span>
-                        </button>
-                        <button type="button" x-show="form.setuju && !kameraGagal && !manualMode && !photos.every(p => p)" @click="aktifManualFallback()"
-                                class="text-[11px] font-semibold text-gray-500 hover:text-gray-800 underline">
-                            Gunakan tombol ambil foto manual
-                        </button>
-                        <button type="button" x-show="form.setuju && !kameraGagal && (photos.some(p => p) || autoStep > 0)" @click="ulangSemuaWajah()"
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <button type="button" x-show="manualMode" @click="ambilFoto()"
+                                    :disabled="!form.setuju || kameraGagal || countdown !== null || photos.every(p => p)"
+                                    class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white text-xs font-semibold transition">
+                                <span x-text="countdown !== null ? 'Bersiap… ' + countdown : 'Ambil Foto'"></span>
+                            </button>
+                            <button type="button" x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" @click="cobaLagiStep()"
+                                    class="inline-flex items-center px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition">
+                                Coba lagi
+                            </button>
+                            <button type="button" x-show="!manualMode && !photos.every(p => p)" @click="aktifManualFallback()"
+                                    class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline">
+                                Gunakan tombol ambil foto manual
+                            </button>
+                        </div>
+                        <button type="button" x-show="form.setuju && !kameraGagal && (photos.some(p => p) || autoStep > 0 || stepTimedOut)" @click="ulangSemuaWajah()"
                                 class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 underline">
                             Ulangi panduan dari awal
                         </button>
@@ -244,6 +295,10 @@
                 manualMode: false,
                 autoStep: 0,
                 autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
+                faceDetected: false,
+                faceInGuide: false,
+                stabilityText: '',
+                stepTimedOut: false,
                 autoSession: null,
                 enrollStatus: 'idle', // idle | loading | ok | gagal
                 enrollMessage: '',
@@ -276,10 +331,13 @@
                         this.cameraStream.getTracks().forEach(t => t.stop());
                         this.cameraStream = null;
                     }
+                    this.faceDetected = false;
+                    this.faceInGuide = false;
                 },
 
                 async startCamera() {
                     this.kameraGagal = false;
+                    this.stepTimedOut = false;
                     try {
                         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                             this.kameraGagal = true;
@@ -293,6 +351,10 @@
                         this.$nextTick(() => {
                             if (this.$refs.cameraPreview) {
                                 this.$refs.cameraPreview.srcObject = this.cameraStream;
+                                const playPromise = this.$refs.cameraPreview.play?.();
+                                if (playPromise && typeof playPromise.catch === 'function') {
+                                    playPromise.catch(() => {});
+                                }
                                 if (!this.manualMode) {
                                     this.startAutoCapture();
                                 }
@@ -318,18 +380,24 @@
 
                     this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
                         video: this.$refs.cameraPreview,
-                        onStateChange: ({ stepIndex, hint }) => {
+                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, stabilityText, timedOut }) => {
                             this.autoStep = stepIndex;
                             this.autoHint = hint;
+                            this.faceDetected = Boolean(faceDetected);
+                            this.faceInGuide = Boolean(inGuideBox);
+                            this.stabilityText = stabilityText || '';
+                            this.stepTimedOut = Boolean(timedOut);
                         },
                         onPhotoCaptured: (slotIndex, jpegDataUrl) => {
                             if (slotIndex >= 0 && slotIndex < 3) {
-                                this.photos[slotIndex] = jpegDataUrl;
+                                this.photos.splice(slotIndex, 1, jpegDataUrl);
                             }
                         },
                         onComplete: () => {
                             this.autoStep = 4;
                             this.autoHint = 'Selesai! 3 foto wajah & kedipan mata terverifikasi.';
+                            this.stabilityText = '';
+                            this.stepTimedOut = false;
                             this.stopCamera();
                         },
                         onFallback: () => {
@@ -343,11 +411,25 @@
                     });
                 },
 
+                cobaLagiStep() {
+                    this.stepTimedOut = false;
+                    this.stabilityText = '';
+                    if (!this.cameraStream && this.form.setuju) {
+                        this.startCamera();
+                    } else if (this.autoSession && !this.manualMode) {
+                        this.autoSession.retryCurrentStep();
+                    } else if (!this.manualMode) {
+                        this.startAutoCapture();
+                    }
+                },
+
                 aktifManualFallback() {
                     if (this.autoSession) {
                         this.autoSession.stop();
                         this.autoSession = null;
                     }
+                    this.stepTimedOut = false;
+                    this.stabilityText = '';
                     this.manualMode = true;
                 },
 
@@ -355,6 +437,8 @@
                     this.photos = [null, null, null];
                     this.autoStep = 0;
                     this.autoHint = 'Langkah 1/4: Hadap lurus ke tengah kamera';
+                    this.stabilityText = '';
+                    this.stepTimedOut = false;
                     if (!this.cameraStream && this.form.setuju) {
                         this.startCamera();
                     } else if (this.autoSession) {
@@ -388,13 +472,15 @@
                     canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
                     const slot = this.photos.findIndex(p => !p);
-                    if (slot !== -1) this.photos[slot] = canvas.toDataURL('image/jpeg', 0.7);
+                    if (slot !== -1) this.photos.splice(slot, 1, canvas.toDataURL('image/jpeg', 0.7));
                     if (this.photos.every(p => p)) this.stopCamera();
                 },
 
                 ulangFoto(i) {
-                    this.photos[i] = null;
+                    this.photos.splice(i, 1, null);
                     this.autoStep = i;
+                    this.stepTimedOut = false;
+                    this.stabilityText = '';
                     if (this.form.setuju && !this.cameraStream) {
                         this.startCamera();
                     } else if (this.autoSession && !this.manualMode) {
