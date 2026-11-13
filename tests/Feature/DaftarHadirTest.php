@@ -10,7 +10,7 @@ use App\Models\Student;
 use App\Models\User;
 use App\Services\DaftarHadirBulanan;
 use Carbon\Carbon;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,7 +20,7 @@ class DaftarHadirTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoAttendanceSeeder::class);
     }
 
     private function admin(): User

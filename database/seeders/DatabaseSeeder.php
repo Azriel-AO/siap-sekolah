@@ -10,13 +10,14 @@ class DatabaseSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Seed the application's database.
+     * Seed the application's database for production.
+     * Menghasilkan 1 User Admin default dan 33 Kelas asli SMK Karya Nugraha Boyolali, tanpa siswa demo.
      */
     public function run(): void
     {
         $this->call([
             UserSeeder::class,
-            DemoAttendanceSeeder::class,
+            SchoolClassSeeder::class,
         ]);
     }
 }

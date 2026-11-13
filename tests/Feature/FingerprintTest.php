@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Services\FingerprintService;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -17,7 +17,7 @@ class FingerprintTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoAttendanceSeeder::class);
     }
 
     private function fakeJpegDataUrl(string $seed = 'a'): string

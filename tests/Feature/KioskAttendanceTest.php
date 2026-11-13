@@ -9,7 +9,7 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Carbon\Carbon;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -28,7 +28,7 @@ class KioskAttendanceTest extends TestCase
         User::factory()->create(['name' => 'Admin KNBI', 'email' => 'admin@knbi.sch.id', 'role' => 'admin']);
         User::factory()->create(['name' => 'Bu Sari', 'email' => 'guru@knbi.sch.id', 'role' => 'guru']);
         User::factory()->create(['name' => 'Raka Siswa', 'email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
-        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoAttendanceSeeder::class);
     }
 
     public function test_halaman_kiosk_gerbang_dapat_dibuka(): void

@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Services\RekapExportData;
 use Carbon\Carbon;
-use Database\Seeders\DatabaseSeeder;
+use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +18,7 @@ class RekapExportTest extends TestCase
         User::factory()->create(['name' => 'Admin KNBI', 'email' => 'admin@knbi.sch.id', 'role' => 'admin']);
         User::factory()->create(['name' => 'Bu Sari', 'email' => 'guru@knbi.sch.id', 'role' => 'guru']);
         User::factory()->create(['name' => 'Raka Siswa', 'email' => 'siswa@knbi.sch.id', 'role' => 'siswa']);
-        $this->seed(DatabaseSeeder::class);
+        $this->seed(DemoAttendanceSeeder::class);
     }
 
     private function admin(): User

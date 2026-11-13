@@ -4,8 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\FaceEnrollment;
 use App\Models\RfidCard;
+use App\Models\SchoolClass;
 use App\Models\Student;
-use App\Models\User;
+use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -16,19 +17,19 @@ class PendaftaranTest extends TestCase
 
     protected function seedDemo(): void
     {
-        $this->seed(\Database\Seeders\DatabaseSeeder::class);
+        $this->seed(DemoAttendanceSeeder::class);
     }
 
     private function fakeJpegDataUrl(string $seed = 'a'): string
     {
-        $binary = "\xFF\xD8" . str_repeat($seed, 150) . "\xFF\xD9";
+        $binary = "\xFF\xD8".str_repeat($seed, 150)."\xFF\xD9";
 
-        return 'data:image/jpeg;base64,' . base64_encode($binary);
+        return 'data:image/jpeg;base64,'.base64_encode($binary);
     }
 
     private function dataValid(array $override = []): array
     {
-        $kelas = \App\Models\SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
 
         return array_merge([
             'name' => 'Siswa Baru Uji Coba',
