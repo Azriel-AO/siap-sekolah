@@ -128,6 +128,31 @@ class DaftarHadirTest extends TestCase
         $rowHendra = $findRow('Hendra Wijaya');
         $this->assertSame('A', $rowHendra[$kolomHari(9)], 'Hendra hari sekolah lampau tanpa data → A');
 
+        // Uji aturan Task 38: Hari sekolah lampau SEBELUM siswa terdaftar (created_at) bernilai '-' bukan 'A'
+        $siswaBaru = Student::create([
+            'school_class_id' => $kelas->id,
+            'nis' => '10249876',
+            'name' => 'Siswa Baru Terdaftar',
+            'gender' => 'L',
+        ]);
+        // Set created_at pada 10 November 2026 (Selasa)
+        $siswaBaru->timestamps = false;
+        $siswaBaru->created_at = Carbon::parse('2026-11-10 08:00:00');
+        $siswaBaru->save();
+        $siswaBaru->timestamps = true;
+
+        $dataBaru = (new DaftarHadirBulanan)->buildRows($kelas, 11, 2026, DaftarHadirBulanan::defaultPengaturan());
+        $rowSiswaBaru = null;
+        foreach ($dataBaru['rows'] as $r) {
+            if (($r[3] ?? null) === 'Siswa Baru Terdaftar') {
+                $rowSiswaBaru = $r;
+                break;
+            }
+        }
+        $this->assertNotNull($rowSiswaBaru);
+        // Tanggal 9 Nov (Senin) adalah sebelum created_at (10 Nov) -> harus '-'
+        $this->assertSame('-', $rowSiswaBaru[$kolomHari(9)], 'Hari lampau sebelum created_at harus "-"');
+
         // Minggu 2026-11-15 tidak hari sekolah → kosong
         $this->assertSame('', $rowRaka[$kolomHari(15)], 'Minggu kosong (bukan hari sekolah)');
         $this->assertSame('', $rowHendra[$kolomHari(15)], 'Minggu kosong (bukan hari sekolah)');

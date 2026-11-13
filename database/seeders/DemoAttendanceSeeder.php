@@ -47,6 +47,7 @@ class DemoAttendanceSeeder extends Seeder
         ];
 
         $today = Carbon::now('Asia/Jakarta')->toDateString();
+        $baseCreatedAt = Carbon::parse('2026-11-01 00:00:00', 'Asia/Jakarta');
 
         foreach ($studentsData as $idx => $s) {
             $student = Student::updateOrCreate(
@@ -58,6 +59,14 @@ class DemoAttendanceSeeder extends Seeder
                     'gender' => $s['gender'],
                 ]
             );
+
+            // Set created_at awal bulan agar data demo memiliki riwayat pendaftaran valid
+            if ($student->created_at && $student->created_at->gt($baseCreatedAt)) {
+                $student->timestamps = false;
+                $student->created_at = $baseCreatedAt;
+                $student->save();
+                $student->timestamps = true;
+            }
 
             RfidCard::updateOrCreate(
                 ['student_id' => $student->id],

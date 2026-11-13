@@ -75,6 +75,25 @@ class RekapPeriodeTest extends TestCase
         $this->assertSame(0, $row['alpa']);       // hari sekolah lewat (9 Nov saja) − hadir(1) = 0
         $this->assertSame(20, $row['persentase']); // 1/5 (pembagi: 5 hari sekolah − 0 izin − 0 sakit)
 
+        // Uji aturan Task 38: Siswa baru yang created_at hari ini (10 Nov) tidak dihitung alpa untuk hari kemarin (9 Nov)
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+        $siswaBaru = Student::create([
+            'school_class_id' => $kelas->id,
+            'nis' => '10249877',
+            'name' => 'Siswa Baru Periode',
+            'gender' => 'P',
+        ]);
+        $siswaBaru->timestamps = false;
+        $siswaBaru->created_at = Carbon::parse('2026-11-10 09:00:00');
+        $siswaBaru->save();
+        $siswaBaru->timestamps = true;
+
+        $res2 = $this->actingAs($this->admin())
+            ->getJson('/guru/rekap-harian/data?periode=minggu&kelas=X-TKJ-1');
+        $rowBaru = collect($res2->json('students'))->firstWhere('name', 'Siswa Baru Periode');
+        $this->assertNotNull($rowBaru);
+        $this->assertSame(0, $rowBaru['alpa'], 'Siswa baru tidak boleh alpa untuk hari sebelum created_at');
+
         Carbon::setTestNow();
     }
 

@@ -223,6 +223,13 @@ class DaftarHadirBulanan
                     continue;
                 }
 
+                // Abaikan hari sebelum siswa terdaftar (created_at) -> kosong ("-")
+                if ($siswa->created_at && $dateStr < $siswa->created_at->toDateString()) {
+                    $baris[] = '-';
+
+                    continue;
+                }
+
                 // Alpa hanya untuk hari sekolah yang sudah LEWAT (tanggal < hari ini)
                 $baris[] = $date->lt($hariIni) ? 'A' : '';
             }

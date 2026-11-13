@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Attendance;
 use App\Models\IzinSakit;
+use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,7 +25,7 @@ use Illuminate\Support\Collection;
 class RekapRingkasanPeriode
 {
     /**
-     * @param  Collection<int, \App\Models\Student>  $students
+     * @param  Collection<int, Student>  $students
      * @return array<int, array{hadir:int, terlambat:int, izin:int, sakit:int, alpa:int, persentase:?int}> di-key oleh student_id
      */
     public static function hitungPerSiswa(Collection $students, Carbon $start, Carbon $end, int $hariSekolah): array
@@ -50,20 +51,27 @@ class RekapRingkasanPeriode
         // Hari sekolah yang sudah LEWAT (tanggal < hari ini) — untuk ALPA.
         $hariIni = Carbon::now('Asia/Jakarta')->startOfDay();
         $batasLewat = $end->copy()->startOfDay()->min($hariIni->copy()->subDay());
-        $hariSekolahLewat = self::hitungHariSekolahLewat($start, $batasLewat);
 
         $hasil = [];
         foreach ($students as $siswa) {
             $att = $attendCache[$siswa->id] ?? collect();
             $izinSakit = $izinCache[$siswa->id] ?? collect();
 
+            // Abaikan hari sekolah sebelum siswa terdaftar (created_at)
+            $startSiswa = $siswa->created_at
+                ? $start->copy()->max($siswa->created_at->copy()->startOfDay())
+                : $start;
+
+            $hariSekolahSiswa = self::hitungHariSekolahLewat($startSiswa, $end);
+            $hariSekolahLewatSiswa = self::hitungHariSekolahLewat($startSiswa, $batasLewat);
+
             $hadir = (int) ($att['HADIR'] ?? 0);
             $terlambat = (int) ($att['TERLAMBAT'] ?? 0);
             $izin = (int) ($izinSakit['izin'] ?? 0);
             $sakit = (int) ($izinSakit['sakit'] ?? 0);
-            $alpa = max(0, $hariSekolahLewat - $hadir - $terlambat - $izin - $sakit);
+            $alpa = max(0, $hariSekolahLewatSiswa - $hadir - $terlambat - $izin - $sakit);
 
-            $pembagi = $hariSekolah - $izin - $sakit;
+            $pembagi = $hariSekolahSiswa - $izin - $sakit;
             $persentase = $pembagi > 0 ? (int) round(($hadir + $terlambat) / $pembagi * 100) : null;
 
             $hasil[$siswa->id] = [
