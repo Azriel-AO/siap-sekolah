@@ -6,7 +6,6 @@ use App\Models\SchoolClass;
 use App\Models\Student;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -160,5 +159,49 @@ class FingerprintTest extends TestCase
 
         $response->assertStatus(503);
         $this->assertStringContainsString('Sensor sidik jari tidak tersedia', $response->json('message'));
+    }
+
+    public function test_bridge_enrolar_tanpa_jari_ditolak_dan_tidak_membuat_huella_id(): void
+    {
+        $this->seedDemo();
+
+        // Bridge produksi menjawab 200 + ok:false (tanpa huellaId) bila tidak ada jari / template kosong.
+        Http::fake(fn () => Http::response(['ok' => false, 'error' => 'Tidak ada jari terdeteksi. Letakkan jari pada sensor.'], 200));
+
+        $response = $this->withDriver('bridge', fn () => $this->postJson('/pendaftaran/fingerprint/enrolar'));
+
+        $response->assertStatus(503);
+        $response->assertJson(['ok' => false]);
+        $this->assertNull($response->json('huellaId'));
+    }
+
+    public function test_bridge_enrolar_sukses_hanya_bila_bridge_memberi_huella_id(): void
+    {
+        $this->seedDemo();
+
+        Http::fake(fn () => Http::response(['ok' => true, 'huellaId' => 'BRIDGE-GUID-ASLI', 'template' => 'AAAA'], 200));
+
+        $response = $this->withDriver('bridge', fn () => $this->postJson('/pendaftaran/fingerprint/enrolar'));
+
+        $response->assertOk();
+        $response->assertJson(['ok' => true, 'huellaId' => 'BRIDGE-GUID-ASLI']);
+    }
+
+    public function test_kiosk_driver_bridge_tanpa_tombol_demo_dan_loop_aktif(): void
+    {
+        $bridge = $this->withDriver('bridge', fn () => $this->get(route('kiosk.gerbang')));
+
+        $bridge->assertOk();
+        $bridge->assertDontSee('DEMO — Simulasi jari');
+        $bridge->assertSee('isMockFingerprint: false', false);
+    }
+
+    public function test_kiosk_driver_mock_menampilkan_tombol_demo_untuk_presentasi(): void
+    {
+        $mock = $this->withDriver('mock', fn () => $this->get(route('kiosk.gerbang')));
+
+        $mock->assertOk();
+        $mock->assertSee('DEMO — Simulasi jari');
+        $mock->assertSee('isMockFingerprint: true', false);
     }
 }

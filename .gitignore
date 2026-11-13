@@ -32,3 +32,5 @@ Thumbs.db
 /bridge/libzkfpcsharp.dll
 /bridge/ZKFPSensors/
 templates.json
+/bridge/fingerbridge.log
+/bridge/fingerbridge.config

@@ -36,9 +36,14 @@ namespace FingerBridge
         private const int TemplateBufferSize = 2048;
         private const int EnrolWaitMs = 8000;     // < FINGERPRINT_TIMEOUT Laravel (10 dtk)
         private const int IdentifyWaitMs = 3000;  // kiosk memanggil berulang (loop otomatis)
-        private const int MatchMinScore = 40;
+        private const int DefaultMatchThreshold = 40;
+        private const int MinTemplateBytes = 32;  // template lebih kecil dari ini dianggap kosong/rusak
+        private const string ThresholdKey = "FINGERPRINT_MATCH_THRESHOLD";
 
         private static readonly object DeviceLock = new object();
+        private static string thresholdSource = "bawaan";
+        private static readonly int MatchThreshold = LoadMatchThreshold();
+        private static int enrolWaiting = 0;      // >0: ada pendaftaran menunggu -> identify mengalah
         private static readonly JavaScriptSerializer Json = new JavaScriptSerializer();
         private static readonly string TemplatesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "templates.json");
 
@@ -56,6 +61,7 @@ namespace FingerBridge
         private static int Main(string[] args)
         {
             Console.WriteLine("FingerBridge (ZKFinger SDK) — mendengarkan di " + Prefix);
+            Console.WriteLine("Ambang kecocokan: " + MatchThreshold + " (sumber: " + thresholdSource + ")");
 
             lock (DeviceLock)
             {
@@ -171,6 +177,20 @@ namespace FingerBridge
 
         private static string Enrolar()
         {
+            // Beri tahu loop identify kiosk agar mengalah: jari untuk pendaftaran tidak boleh "dimakan" kiosk.
+            Interlocked.Increment(ref enrolWaiting);
+            try
+            {
+                return EnrolarLocked();
+            }
+            finally
+            {
+                Interlocked.Decrement(ref enrolWaiting);
+            }
+        }
+
+        private static string EnrolarLocked()
+        {
             lock (DeviceLock)
             {
                 if (!EnsureDevice())
@@ -178,10 +198,21 @@ namespace FingerBridge
                     return Fail("Sensor belum terdeteksi: " + lastError);
                 }
 
+                // WAJIB sentuhan BARU: jari yang masih menempel / sisa capture lama tidak boleh terdaftar.
+                if (!WaitForFingerLifted(2000))
+                {
+                    return Fail(lastError.Length > 0 ? lastError : "Angkat jari dari sensor, lalu letakkan lagi untuk mendaftar.");
+                }
+
                 byte[] sample = CaptureTemplate(EnrolWaitMs);
                 if (sample == null)
                 {
                     return Fail(lastError.Length > 0 ? lastError : "Tidak ada jari terdeteksi. Letakkan jari pada sensor.");
+                }
+
+                if (!IsUsableTemplate(sample))
+                {
+                    return Fail("Sidik jari tidak terbaca jelas (template kosong). Letakkan jari lagi dengan mantap.");
                 }
 
                 // Template pendaftaran: gabungkan 3 sampel (identik) bila SDK mau; kalau tidak, pakai sampel mentah.
@@ -210,6 +241,12 @@ namespace FingerBridge
 
         private static string Identificar()
         {
+            // Pendaftaran sedang menunggu jari: jangan rebut sensor.
+            if (Thread.VolatileRead(ref enrolWaiting) > 0)
+            {
+                return "{\"ok\":false}";
+            }
+
             lock (DeviceLock)
             {
                 if (!EnsureDevice())
@@ -218,7 +255,7 @@ namespace FingerBridge
                 }
 
                 byte[] sample = CaptureTemplate(IdentifyWaitMs);
-                if (sample == null)
+                if (sample == null || !IsUsableTemplate(sample))
                 {
                     return "{\"ok\":false}";
                 }
@@ -227,7 +264,7 @@ namespace FingerBridge
                 int score = 0;
                 int result = zkfp2.DBIdentify(dbHandle, sample, ref fid, ref score);
                 string huellaId;
-                if (result == 0 && score >= MatchMinScore && FidToHuella.TryGetValue(fid, out huellaId))
+                if (result == 0 && score >= MatchThreshold && FidToHuella.TryGetValue(fid, out huellaId))
                 {
                     return "{\"ok\":true,\"huellaId\":" + Json.Serialize(huellaId) + "}";
                 }
@@ -328,6 +365,122 @@ namespace FingerBridge
             }
 
             return value;
+        }
+
+        private static bool IsUsableTemplate(byte[] template)
+        {
+            if (template == null || template.Length < MinTemplateBytes)
+            {
+                return false;
+            }
+
+            foreach (byte b in template)
+            {
+                if (b != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false; // semua byte nol = template kosong
+        }
+
+        /// <summary>
+        /// Pastikan sensor SEPI (tidak ada jari menempel). true bila sudah sepi;
+        /// false bila jari masih menempel sampai batas waktu (lastError terisi).
+        /// </summary>
+        private static bool WaitForFingerLifted(int waitMs)
+        {
+            int imageSize = Math.Max(imageWidth * imageHeight, 640 * 480);
+            byte[] image = new byte[imageSize];
+            DateTime deadline = DateTime.UtcNow.AddMilliseconds(waitMs);
+            lastError = "";
+
+            while (DateTime.UtcNow < deadline)
+            {
+                byte[] template = new byte[TemplateBufferSize];
+                int size = TemplateBufferSize;
+                int result = zkfp2.AcquireFingerprint(devHandle, image, template, ref size);
+
+                if (result == -8) // tidak ada jari
+                {
+                    return true;
+                }
+
+                if (result != 0)
+                {
+                    lastError = "Gagal membaca sensor (kode " + result + ")";
+                    if (result == -3 || result == -7 || result == -23 || result == -24)
+                    {
+                        CloseDevice();
+                    }
+
+                    return false;
+                }
+
+                Thread.Sleep(150); // masih ada jari: tunggu diangkat
+            }
+
+            lastError = "Angkat jari dari sensor, lalu letakkan lagi untuk mendaftar.";
+
+            return false;
+        }
+
+        /// <summary>
+        /// Ambang kecocokan: env var FINGERPRINT_MATCH_THRESHOLD, lalu fingerbridge.config
+        /// (samping exe), lalu file .env Laravel (samping exe / folder induk), lalu bawaan 40.
+        /// </summary>
+        private static int LoadMatchThreshold()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string[] candidates =
+            {
+                null, // env var
+                Path.Combine(baseDir, "fingerbridge.config"),
+                Path.Combine(baseDir, ".env"),
+                Path.Combine(baseDir, "..", ".env")
+            };
+
+            foreach (string path in candidates)
+            {
+                string raw = path == null ? Environment.GetEnvironmentVariable(ThresholdKey) : ReadKeyFromFile(path, ThresholdKey);
+                int value;
+                if (!string.IsNullOrEmpty(raw) && int.TryParse(raw.Trim(), out value) && value >= 1 && value <= 1000)
+                {
+                    thresholdSource = path == null ? "environment variable" : Path.GetFullPath(path);
+
+                    return value;
+                }
+            }
+
+            return DefaultMatchThreshold;
+        }
+
+        private static string ReadKeyFromFile(string path, string key)
+        {
+            try
+            {
+                if (!File.Exists(path))
+                {
+                    return null;
+                }
+
+                foreach (string line in File.ReadAllLines(path))
+                {
+                    string trimmed = line.Trim();
+                    if (trimmed.StartsWith("#") || !trimmed.StartsWith(key + "=", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    return trimmed.Substring(key.Length + 1).Trim().Trim('"', '\'');
+                }
+            }
+            catch (Exception)
+            {
+            }
+
+            return null;
         }
 
         /// <summary>Tunggu jari lalu ambil template. null bila timeout / error (lastError terisi untuk error).</summary>

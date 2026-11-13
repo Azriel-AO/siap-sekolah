@@ -564,6 +564,42 @@ Bila tidak ada `FingerBridge.exe` jadi, bangun sendiri dari source di `bridge/Fi
 6. Daftar jari lewat `/pendaftaran` (letakkan jari saat diminta, ±8 detik), lalu tap jari di `/kiosk`.
 
 Catatan: `fingerbridge.exe`, DLL SDK, dan `templates.json` (template sidik jari = data biometrik) sudah di `.gitignore`. Bridge hanya mendengarkan `127.0.0.1:8787`. Kontrak: `GET /estado`, `POST /enrolar`, `GET /identificar`.
+## 🚀 Produksi (bridge asli, tanpa mock)
+
+Di produksi sidik jari **selalu** memakai bridge ZK9500 asli. Driver `mock` hanya untuk test otomatis (sudah dikunci di `phpunit.xml`) dan presentasi tanpa alat — jangan dipakai di server sungguhan.
+
+**1. `.env` produksi**
+```
+FINGERPRINT_DRIVER=bridge
+FINGERPRINT_BASE_URL=http://127.0.0.1:8787
+FINGERPRINT_TIMEOUT=15
+FINGERPRINT_MATCH_THRESHOLD=40
+```
+Lalu `php artisan config:clear` dan **restart** `php artisan serve`. Dengan `bridge`, tombol "DEMO — Simulasi jari" di `/kiosk` otomatis tidak muncul dan loop identifikasi sidik jari berjalan sendiri.
+
+**2. Bridge menyala otomatis (Startup folder — paling sederhana, tanpa admin)**
+- `bridge\start-fingerbridge.vbs` menjalankan `bridge\fingerbridge-watchdog.bat` tanpa jendela. Watchdog menjalankan `fingerbridge.exe` dan menyalakannya lagi 5 detik setelah berhenti/crash. Skrip aman dipanggil berulang (tidak membuat watchdog ganda).
+- Pasang shortcut ke folder Startup (jalankan sekali dari folder proyek, PowerShell biasa):
+  ```powershell
+  $t = (Resolve-Path bridge\start-fingerbridge.vbs).Path
+  $s = (New-Object -ComObject WScript.Shell).CreateShortcut("$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\FingerBridge.lnk")
+  $s.TargetPath = $t; $s.WorkingDirectory = (Split-Path $t); $s.Save()
+  ```
+  (Atau manual: tekan `Win+R` → `shell:startup` → buat shortcut ke `start-fingerbridge.vbs`.)
+- Bridge menyala saat Windows login, jadi PC box sebaiknya diatur **auto-login** ke akun Windows yang dipakai kiosk.
+- Cek: restart PC → buka `http://127.0.0.1:8787/estado` → `{"conectado":true,"modelo":"ZK9500"}`. Log ada di `bridge\fingerbridge.log`.
+- Menghentikan/rebuild bridge: matikan watchdog **dulu**, baru exe:
+  ```powershell
+  Get-CimInstance Win32_Process -Filter "Name='cmd.exe'" | ? { $_.CommandLine -like '*fingerbridge-watchdog*' } | % { Stop-Process -Id $_.ProcessId -Force }
+  Stop-Process -Name fingerbridge -Force
+  ```
+  (Mematikan exe saja akan dinyalakan lagi oleh watchdog.)
+
+**3. Ambang kecocokan**
+`FINGERPRINT_MATCH_THRESHOLD` (bawaan 40) dibaca bridge saat start — urutan: variabel lingkungan → `bridge\fingerbridge.config` (baris `FINGERPRINT_MATCH_THRESHOLD=40`) → `.env` proyek (folder induk `bridge\`) → 40. Banner start bridge menampilkan nilai dan sumbernya. Naikkan bila salah-kenal, turunkan bila jari sah sering tidak dikenali; restart bridge setelah mengubah.
+
+**4. Pendaftaran jari**
+Bridge mewajibkan **sentuhan baru**: jari yang masih menempel / sisa capture lama / template kosong ditolak dengan pesan ramah, dan tidak ada ID yang dibuat. Siswa yang dulu terdaftar saat driver masih `mock` punya ID berawalan `MOCK-` dan tidak akan pernah dikenali sensor asli — daftarkan ulang jarinya.
 ## 🛠️ Mengatasi Masalah Umum (Troubleshooting)
 
 - **Port 8000 sudah dipakai aplikasi lain?**
