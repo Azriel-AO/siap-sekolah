@@ -6,9 +6,9 @@ window.Alpine = Alpine;
 
 Alpine.start();
 
-// Overlay deteksi posisi wajah hanya dimuat di halaman kamera (kiosk & pendaftaran).
-// Dynamic import menjaga bundle halaman admin tetap ringan.
-if (document.querySelector('canvas[data-face-overlay]')) {
+// Overlay deteksi posisi wajah hanya dimuat di halaman pendaftaran wajah ([data-face-autocapture]).
+// Kiosk tidak memakai face matching maupun face overlay.
+if (document.querySelector('[data-face-autocapture] canvas[data-face-overlay]')) {
     import('./face-overlay.js')
         .then(({ initFaceOverlays }) => initFaceOverlays())
         .catch((error) => console.warn('[face-overlay] Modul overlay gagal dimuat.', error));

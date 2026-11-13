@@ -10,18 +10,18 @@ class FaceOverlayTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_halaman_kiosk_memuat_overlay_wajah_tanpa_pencuri_fokus(): void
+    public function test_halaman_kiosk_tanpa_face_guide_dan_input_wedge_memakai_aria_label(): void
     {
         $response = $this->get(route('kiosk.gerbang'));
 
         $response->assertOk();
-        $response->assertSee('data-face-overlay', false);
-        $response->assertSee('aria-hidden="true"', false);
-        $response->assertSee('pointer-events-none', false);
-
-        $this->assertFileExists(public_path('vendor/mediapipe/wasm/vision_wasm_internal.wasm'));
-        $this->assertFileExists(public_path('vendor/mediapipe/models/blaze_face_short_range.tflite'));
-        $this->assertGreaterThan(0, filesize(public_path('vendor/mediapipe/models/blaze_face_short_range.tflite')));
+        $response->assertDontSee('data-face-overlay', false);
+        $response->assertDontSee('data-face-position-guide', false);
+        $response->assertDontSee('Posisikan wajah di tengah');
+        $response->assertSee('aria-label="Tempelkan kartu pelajar"', false);
+        $response->assertDontSee('aria-hidden="true" tabindex="-1"', false);
+        $response->assertSee('Kamera belum terdeteksi');
+        $response->assertSee('Absen kartu &amp; jari tetap aktif', false);
     }
 
     public function test_halaman_pendaftaran_memuat_overlay_wajah_tanpa_pencuri_fokus(): void

@@ -359,8 +359,11 @@ class FaceOverlay {
 }
 
 export function initFaceOverlays() {
-    document.querySelectorAll('canvas[data-face-overlay]').forEach((canvas) => {
-        if (canvas.closest('[data-face-autocapture]')) {
+    document.querySelectorAll('[data-face-autocapture] canvas[data-face-overlay]').forEach((canvas) => {
+        if (!canvas.closest('[data-face-autocapture]')) {
+            return;
+        }
+        if (canvas.parentElement?.querySelector('[data-face-position-guide]')) {
             return;
         }
         if (canvas.dataset.faceOverlayStarted === '1') {

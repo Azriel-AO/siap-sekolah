@@ -56,7 +56,7 @@
 
                 {{-- Input tersembunyi untuk pembaca kartu (wedge capture): UID diketik reader + Enter --}}
                 <input type="text" x-ref="cardInput" x-model="cardUid" @keydown.enter.prevent="submitTap()"
-                       class="sr-only" autocomplete="off" aria-hidden="true" tabindex="-1" />
+                       class="sr-only" autocomplete="off" aria-label="Tempelkan kartu pelajar" tabindex="-1" />
 
                 {{-- Kamera utama: pusat layar, rasio tetap, video mengisi penuh container --}}
                 <div x-ref="cameraBox" x-cloak class="w-full select-none">
@@ -64,7 +64,6 @@
                          style="max-width: min(48rem, calc(40vh * 16 / 9));">
                         <video x-ref="cameraPreview" autoplay muted playsinline x-show="cameraReady"
                                class="absolute inset-0 h-full w-full object-cover object-center block bg-slate-900"></video>
-                        <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
 
                         {{-- Fallback ramah: kamera tidak ada / izin ditolak. Kartu & sidik jari tetap aktif. --}}
                         <div x-show="!cameraReady" x-cloak class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
