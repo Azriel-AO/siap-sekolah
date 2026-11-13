@@ -2,7 +2,9 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -11,6 +13,13 @@ class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Dikosongkan untuk produksi — tidak membuat akun demo.
+        User::updateOrCreate(
+            ['email' => 'admin@knbi.sch.id'],
+            [
+                'name' => 'Admin KNBI',
+                'password' => Hash::make('password'),
+                'role' => 'admin',
+            ]
+        );
     }
 }

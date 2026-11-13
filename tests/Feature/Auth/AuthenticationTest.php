@@ -45,11 +45,7 @@ class AuthenticationTest extends TestCase
 
     public function test_admin_can_login_and_see_admin_dashboard(): void
     {
-        User::factory()->create([
-            'name' => 'Admin KNBI',
-            'email' => 'admin@knbi.sch.id',
-            'role' => 'admin',
-        ]);
+        $this->seed(UserSeeder::class);
 
         $response = $this->post('/login', [
             'email' => 'admin@knbi.sch.id',
@@ -84,11 +80,14 @@ class AuthenticationTest extends TestCase
         $response->assertDontSee('siswa@knbi.sch.id');
     }
 
-    public function test_user_seeder_tidak_membuat_user_demo(): void
+    public function test_user_seeder_hanya_membuat_admin_tanpa_user_demo(): void
     {
         $this->seed(UserSeeder::class);
+        $this->seed(UserSeeder::class);
 
-        $this->assertSame(0, User::count());
+        $this->assertSame(1, User::count());
+        $this->assertSame(1, User::where('email', 'admin@knbi.sch.id')->where('role', 'admin')->count());
+        $this->assertSame(0, User::whereIn('role', ['guru', 'siswa'])->count());
     }
 
     public function test_guru_login_ditolak_dan_tidak_ada_session(): void
