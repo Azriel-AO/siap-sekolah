@@ -95,6 +95,14 @@ class KioskController extends Controller
             ], 200);
         }
 
+        if ($hasil['status'] === 'sensor_idle') {
+            return response()->json([
+                'success' => false,
+                'type' => 'sensor_idle',
+                'message' => 'Menunggu sidik jari ditempelkan pada sensor.',
+            ], 200);
+        }
+
         $huellaId = $hasil['huellaId'];
 
         if ($hasil['status'] === 'fingerprint_unknown' || $huellaId === null) {

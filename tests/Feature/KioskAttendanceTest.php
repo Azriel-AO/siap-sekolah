@@ -380,8 +380,7 @@ class KioskAttendanceTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson([
             'success' => false,
-            'type' => 'fingerprint_unknown',
-            'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
+            'type' => 'sensor_idle',
         ]);
         $this->assertArrayNotHasKey('student_name', $response->json());
     }
@@ -427,7 +426,7 @@ class KioskAttendanceTest extends TestCase
         ]);
     }
 
-    public function test_kiosk_fingerprint_membedakan_sensor_timeout_bridge_mati_dan_fingerprint_unknown(): void
+    public function test_kiosk_fingerprint_membedakan_sensor_timeout_bridge_mati_sensor_idle_dan_fingerprint_unknown(): void
     {
         $this->seedDemo();
 
@@ -440,8 +439,11 @@ class KioskAttendanceTest extends TestCase
             if ($skenario === 'sensor_timeout') {
                 throw new ConnectionException('cURL error 28: Operation timed out after 25000 milliseconds');
             }
+            if ($skenario === 'sensor_idle') {
+                return Http::response(['ok' => false, 'reason' => 'no_finger'], 200);
+            }
 
-            return Http::response(['ok' => false], 200);
+            return Http::response(['ok' => false, 'reason' => 'not_matched'], 200);
         });
 
         config(['fingerprint.driver' => 'bridge']);
@@ -449,6 +451,8 @@ class KioskAttendanceTest extends TestCase
             $resBridgeMati = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
             $skenario = 'sensor_timeout';
             $resTimeout = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+            $skenario = 'sensor_idle';
+            $resIdle = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
             $skenario = 'fingerprint_unknown';
             $resUnknown = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
         } finally {
@@ -469,17 +473,32 @@ class KioskAttendanceTest extends TestCase
             'message' => 'Sensor sedang menunggu jari — coba tempelkan jari lebih lama',
         ]);
 
+        $resIdle->assertStatus(200);
+        $resIdle->assertJson([
+            'success' => false,
+            'type' => 'sensor_idle',
+        ]);
+
         $resUnknown->assertStatus(200);
         $resUnknown->assertJson([
             'success' => false,
             'type' => 'fingerprint_unknown',
             'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
+            'registration_url' => route('pendaftaran.index'),
         ]);
 
-        $this->assertCount(3, array_unique([
+        $this->assertCount(4, array_unique([
             $resBridgeMati->json('type'),
             $resTimeout->json('type'),
+            $resIdle->json('type'),
             $resUnknown->json('type'),
         ]));
+
+        // Pastikan halaman kiosk merender handler banner untuk fingerprint_unknown + tombol Daftar dulu
+        $kioskPage = $this->get(route('kiosk.gerbang'));
+        $kioskPage->assertOk();
+        $kioskPage->assertSee("data.type === 'fingerprint_unknown'", false);
+        $kioskPage->assertSee('this.showResult(data);', false);
+        $kioskPage->assertSee('Daftar dulu');
     }
 }

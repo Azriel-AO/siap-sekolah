@@ -108,8 +108,8 @@
                             <p class="text-base font-black text-white tracking-wide">Tekan Jari pada Sensor</p>
                             {{-- Indikator status sensor (kecil) --}}
                             <div class="flex items-center space-x-2 text-[11px]">
-                                <span class="w-2 h-2 rounded-full" :class="sensorBelumAktif ? 'bg-amber-400' : 'bg-emerald-400'"></span>
-                                <span class="text-slate-400 font-medium" x-text="sensorBelumAktif ? 'Sensor belum aktif — hadir dengan tap kartu' : 'Sensor aktif'"></span>
+                                <span class="w-2 h-2 rounded-full" :class="sensorBelumAktif ? 'bg-amber-400' : (sensorTimeoutInfo ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400')"></span>
+                                <span class="text-slate-400 font-medium" x-text="sensorBelumAktif ? 'Sensor belum aktif — hadir dengan tap kartu' : (sensorTimeoutInfo ? 'Sensor sedang menunggu jari…' : 'Sensor aktif')"></span>
                             </div>
                         </div>
                     </div>
@@ -221,6 +221,7 @@
                 cameraStarting: false,
                 loopTimer: null,
                 sensorBelumAktif: false,
+                sensorTimeoutInfo: false,
                 demoLoading: false,
 
                 initKiosk() {
@@ -359,32 +360,45 @@
                         // JANGAN di-poll cepat (cukup tiap ~15 detik)
                         if (res.status === 503 || data.type === 'bridge_mati') {
                             this.sensorBelumAktif = true;
+                            this.sensorTimeoutInfo = false;
                             this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
                             return;
                         }
 
                         this.sensorBelumAktif = false;
 
-                        // Timeout menunggu jari -> tunda retry 5 detik agar siswa leluasa menempel jari
+                        // Timeout menunggu jari -> pesan halus "Sensor sedang menunggu jari…", retry 5 detik
                         if (data.type === 'sensor_timeout') {
+                            this.sensorTimeoutInfo = true;
                             this.loopTimer = setTimeout(() => this.loopFingerprint(), 5000);
                             return;
                         }
 
-                        // Hasil tampil (sukses / cooldown / sudah lengkap) -> pause loop sejenak
-                        if (data.success || data.type === 'cooldown' || data.type === 'already_completed' || (res.status === 404 && data.type === 'fingerprint_not_found')) {
+                        this.sensorTimeoutInfo = false;
+
+                        // Jari ditempel tapi tidak dikenali -> tampilkan banner pesan + link "Daftar dulu",
+                        // auto-hide 8 detik, pause loop 8 detik
+                        if (data.type === 'fingerprint_unknown' || data.type === 'fingerprint_not_found') {
                             this.fotoBukti = foto || '';
                             this.showResult(data);
-                            const jeda = (data.type === 'fingerprint_not_found') ? 8500 : 4500;
-                            this.loopTimer = setTimeout(() => this.loopFingerprint(), jeda);
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), 8000);
                             return;
                         }
 
-                        // Jeda antar-panggilan >= 2 detik setelah response (jangan spam)
-                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 2500);
+                        // Hasil tampil (sukses / cooldown / sudah lengkap) -> pause loop sejenak
+                        if (data.success || data.type === 'cooldown' || data.type === 'already_completed') {
+                            this.fotoBukti = foto || '';
+                            this.showResult(data);
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), 4500);
+                            return;
+                        }
+
+                        // sensor_idle (tidak ada jari saat window tunggu) -> DIAM, panggil lagi ~1,5 detik
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 1500);
                     } catch (e) {
                         // Network error / bridge mati -> pesan tenang, coba ~15 detik lagi
                         this.sensorBelumAktif = true;
+                        this.sensorTimeoutInfo = false;
                         this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
                     }
                 },

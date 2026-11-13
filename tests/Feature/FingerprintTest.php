@@ -174,6 +174,34 @@ class FingerprintTest extends TestCase
         $response->assertSee('/pendaftaran');
     }
 
+    public function test_bridge_identify_mapping_reason_no_finger_not_matched_dan_tanpa_reason(): void
+    {
+        $this->seedDemo();
+
+        $payload = ['ok' => false, 'reason' => 'no_finger'];
+        Http::fake(function () use (&$payload) {
+            return Http::response($payload, 200);
+        });
+
+        $this->withDriver('bridge', function () use (&$payload) {
+            $service = FingerprintService::dariConfig();
+
+            // 1. reason = no_finger -> sensor_idle
+            $this->assertSame('sensor_idle', $service->identifyDetailed()['status']);
+            $this->assertNull($service->identify());
+
+            // 2. reason = not_matched -> fingerprint_unknown
+            $payload = ['ok' => false, 'reason' => 'not_matched'];
+            $this->assertSame('fingerprint_unknown', $service->identifyDetailed()['status']);
+            $this->assertNull($service->identify());
+
+            // 3. Tanpa field reason (bridge lama / backward compatible) -> sensor_idle
+            $payload = ['ok' => false];
+            $this->assertSame('sensor_idle', $service->identifyDetailed()['status']);
+            $this->assertNull($service->identify());
+        });
+    }
+
     public function test_bridge_enrolar_gagal_pesan_ramah_tanpa_crash_500(): void
     {
         $this->seedDemo();

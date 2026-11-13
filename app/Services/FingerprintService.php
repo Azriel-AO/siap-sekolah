@@ -72,15 +72,19 @@ class FingerprintService
 
     /**
      * Identifikasi sidik jari dengan rincian status kegagalan agar kiosk dapat
-     * membedakan bridge mati vs timeout menunggu jari vs sidik jari tidak dikenali.
+     * membedakan bridge mati vs timeout vs sensor idle (tanpa jari) vs sidik jari tidak dikenali.
      *
-     * @return array{status: 'ok'|'bridge_mati'|'sensor_timeout'|'fingerprint_unknown', huellaId: ?string}
+     * Kontrak reason dari bridge /identificar saat ok:false:
+     * - reason="not_matched" -> 'fingerprint_unknown' (jari ditempel tapi tidak cocok)
+     * - reason="no_finger" atau reason tidak ada (bridge lama) -> 'sensor_idle'
+     *
+     * @return array{status: 'ok'|'bridge_mati'|'sensor_timeout'|'sensor_idle'|'fingerprint_unknown', huellaId: ?string}
      */
     public function identifyDetailed(bool $auto = false): array
     {
         if ($this->driver !== 'bridge') {
             if ($auto) {
-                return ['status' => 'fingerprint_unknown', 'huellaId' => null];
+                return ['status' => 'sensor_idle', 'huellaId' => null];
             }
 
             $huellaId = $this->mockIdentify();
@@ -118,7 +122,13 @@ class FingerprintService
                 return ['status' => 'bridge_mati', 'huellaId' => null];
             }
 
-            return ['status' => 'fingerprint_unknown', 'huellaId' => null];
+            $reason = $res->json('reason');
+            if ($reason === 'not_matched') {
+                return ['status' => 'fingerprint_unknown', 'huellaId' => null];
+            }
+
+            // reason === 'no_finger' ATAU tidak ada field reason (kompatibel bridge lama)
+            return ['status' => 'sensor_idle', 'huellaId' => null];
         } catch (\Throwable $e) {
             if ($this->isTimeoutException($e)) {
                 return ['status' => 'sensor_timeout', 'huellaId' => null];

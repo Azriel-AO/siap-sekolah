@@ -6,7 +6,7 @@
 // Kontrak HTTP (dipanggil server Laravel — FingerprintService):
 //   GET  /estado      -> {"conectado":bool,"modelo":"ZK9500"}
 //   POST /enrolar     -> {"ok":true,"huellaId":"<GUID>","template":"<base64>"}
-//   GET  /identificar -> {"ok":true,"huellaId":"<GUID>"}  |  {"ok":false}
+//   GET  /identificar -> {"ok":true,"huellaId":"<GUID>"}  |  {"ok":false,"reason":"no_finger"|"not_matched"}
 //
 // Bind HANYA 127.0.0.1:8787. Template disimpan di templates.json (samping exe) —
 // itu data biometrik: JANGAN di-commit.
@@ -244,7 +244,7 @@ namespace FingerBridge
             // Pendaftaran sedang menunggu jari: jangan rebut sensor.
             if (Thread.VolatileRead(ref enrolWaiting) > 0)
             {
-                return "{\"ok\":false}";
+                return "{\"ok\":false,\"reason\":\"no_finger\"}";
             }
 
             lock (DeviceLock)
@@ -257,7 +257,7 @@ namespace FingerBridge
                 byte[] sample = CaptureTemplate(IdentifyWaitMs);
                 if (sample == null || !IsUsableTemplate(sample))
                 {
-                    return "{\"ok\":false}";
+                    return "{\"ok\":false,\"reason\":\"no_finger\"}";
                 }
 
                 int fid = 0;
@@ -269,7 +269,7 @@ namespace FingerBridge
                     return "{\"ok\":true,\"huellaId\":" + Json.Serialize(huellaId) + "}";
                 }
 
-                return "{\"ok\":false}";
+                return "{\"ok\":false,\"reason\":\"not_matched\"}";
             }
         }
 
