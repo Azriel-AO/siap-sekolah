@@ -175,7 +175,7 @@
                     <div class="mt-4 p-3 rounded-xl bg-black/20 text-sm sm:text-base font-medium" x-text="result?.message"></div>
 
                     <!-- Tombol Daftar Mandiri untuk Kartu / Sidik Jari Tidak Dikenal -->
-                    <template x-if="result && (result.registration_url || result.type === 'not_found' || result.type === 'fingerprint_not_found')">
+                    <template x-if="result && (result.registration_url || result.type === 'not_found' || result.type === 'fingerprint_not_found' || result.type === 'fingerprint_unknown')">
                         <div class="mt-4">
                             <a :href="result?.registration_url || '{{ route('pendaftaran.index') }}'"
                                class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base shadow-xl shadow-indigo-600/40 border border-indigo-400/30 transition transform hover:scale-105">
@@ -332,12 +332,12 @@
                 },
 
                 // Loop identify otomatis (bridge): panggil terus-menerus;
-                // satu panggilan boleh berjalan sampai ~10 detik (menunggu jari);
-                // jeda antar-panggilan <= 1 detik. Mock TIDAK memanggil ini.
+                // satu panggilan boleh berjalan sampai ~25 detik (menunggu jari);
+                // jeda antar-panggilan >= 2 detik setelah response. Mock TIDAK memanggil ini.
                 async loopFingerprint() {
                     // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk)
                     if (this.result) {
-                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 1000);
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 2000);
                         return;
                     }
 
@@ -355,9 +355,9 @@
 
                         const data = await res.json();
 
-                        // Bridge mati / sensor belum siap (503) -> tampil pesan,
+                        // Bridge mati / sensor belum siap (503 / bridge_mati) -> tampil pesan,
                         // JANGAN di-poll cepat (cukup tiap ~15 detik)
-                        if (res.status === 503) {
+                        if (res.status === 503 || data.type === 'bridge_mati') {
                             this.sensorBelumAktif = true;
                             this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
                             return;
@@ -365,7 +365,13 @@
 
                         this.sensorBelumAktif = false;
 
-                        // Hasil tampil (sukses / cooldown / tidak dikenal) -> pause loop sejenak
+                        // Timeout menunggu jari -> tunda retry 5 detik agar siswa leluasa menempel jari
+                        if (data.type === 'sensor_timeout') {
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), 5000);
+                            return;
+                        }
+
+                        // Hasil tampil (sukses / cooldown / sudah lengkap) -> pause loop sejenak
                         if (data.success || data.type === 'cooldown' || data.type === 'already_completed' || (res.status === 404 && data.type === 'fingerprint_not_found')) {
                             this.fotoBukti = foto || '';
                             this.showResult(data);
@@ -374,8 +380,8 @@
                             return;
                         }
 
-                        // Tidak ada jari di sensor (bridge timeout) -> coba lagi segera (<= 1 detik jeda)
-                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 700);
+                        // Jeda antar-panggilan >= 2 detik setelah response (jangan spam)
+                        this.loopTimer = setTimeout(() => this.loopFingerprint(), 2500);
                     } catch (e) {
                         // Network error / bridge mati -> pesan tenang, coba ~15 detik lagi
                         this.sensorBelumAktif = true;
@@ -465,7 +471,7 @@
                     this.result = data;
 
                     if (this.resetTimer) clearTimeout(this.resetTimer);
-                    const resetDuration = (data?.type === 'not_found' || data?.type === 'fingerprint_not_found') ? 8000 : 4000;
+                    const resetDuration = (data?.type === 'not_found' || data?.type === 'fingerprint_not_found' || data?.type === 'fingerprint_unknown') ? 8000 : 4000;
                     this.resetTimer = setTimeout(() => {
                         this.result = null;
                         this.fotoBukti = '';

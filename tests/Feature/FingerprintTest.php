@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Services\FingerprintService;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
@@ -123,9 +124,33 @@ class FingerprintTest extends TestCase
         $response->assertStatus(503);
         $response->assertJson([
             'success' => false,
-            'type' => 'fingerprint_unavailable',
+            'type' => 'bridge_mati',
+            'message' => 'Sensor belum aktif — hadir dengan tap kartu',
         ]);
-        $this->assertStringContainsString('Sensor sidik jari tidak tersedia', $response->json('message'));
+    }
+
+    public function test_bridge_timeout_mengembalikan_null_dan_pesan_ramah_tanpa_500(): void
+    {
+        $this->seedDemo();
+
+        $this->assertSame(25, config('fingerprint.timeout'));
+
+        Http::fake(fn () => throw new ConnectionException('cURL error 28: Operation timed out after 25000 milliseconds'));
+
+        $this->withDriver('bridge', function () {
+            $service = FingerprintService::dariConfig();
+            $this->assertNull($service->identify());
+            $this->assertSame('sensor_timeout', $service->identifyDetailed()['status']);
+
+            $response = $this->postJson('/kiosk/fingerprint/identificar', []);
+
+            $response->assertStatus(200);
+            $response->assertJson([
+                'success' => false,
+                'type' => 'sensor_timeout',
+                'message' => 'Sensor sedang menunggu jari — coba tempelkan jari lebih lama',
+            ]);
+        });
     }
 
     public function test_bridge_huella_tidak_terdaftar_dijawab_tidak_dikenali(): void
@@ -140,11 +165,11 @@ class FingerprintTest extends TestCase
 
         $response = $this->withDriver('bridge', fn () => $this->postJson('/kiosk/fingerprint/identificar', []));
 
-        $response->assertStatus(404);
+        $response->assertStatus(200);
         $response->assertJson([
             'success' => false,
-            'type' => 'fingerprint_not_found',
-            'message' => 'Sidik jari tidak terdaftar. Silakan daftar dulu.',
+            'type' => 'fingerprint_unknown',
+            'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
         ]);
         $response->assertSee('/pendaftaran');
     }

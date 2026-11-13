@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Http;
  * Konfigurasi (config/fingerprint.php / .env):
  *   FINGERPRINT_DRIVER=mock|bridge
  *   FINGERPRINT_BASE_URL=http://127.0.0.1:8787
- *   FINGERPRINT_TIMEOUT=10
+ *   FINGERPRINT_TIMEOUT=25
  *
  * Semua pemanggilan dilakukan SERVER-SIDE lewat Http facade —
  * browser TIDAK PERNAH memanggil bridge langsung (hindari CORS).
@@ -22,7 +22,7 @@ class FingerprintService
     public function __construct(
         private readonly string $driver = 'mock',
         private readonly string $baseUrl = 'http://127.0.0.1:8787',
-        private readonly int $timeout = 10,
+        private readonly int $timeout = 25,
     ) {}
 
     public static function dariConfig(): self
@@ -30,7 +30,7 @@ class FingerprintService
         return new self(
             (string) config('fingerprint.driver', 'mock'),
             (string) config('fingerprint.base_url', 'http://127.0.0.1:8787'),
-            (int) config('fingerprint.timeout', 10),
+            (int) config('fingerprint.timeout', 25),
         );
     }
 
@@ -61,27 +61,83 @@ class FingerprintService
      * Identifikasi sidik jari yang sedang diletakkan pada sensor.
      *
      * @param  bool  $auto  true bila dipanggil loop otomatis kiosk.
-     *                     Di driver mock + auto=1, identify SELALU null (anti spam absen).
-     *                     Di driver bridge, auto=1 diperlakukan identik dengan pemanggilan biasa.
-     * @return string|null huellaId siswa, null bila tidak dikenali / sensor error
+     *                      Di driver mock + auto=1, identify SELALU null (anti spam absen).
+     *                      Di driver bridge, auto=1 diperlakukan identik dengan pemanggilan biasa.
+     * @return string|null huellaId siswa, null bila tidak dikenali / sensor error / timeout
      */
     public function identify(bool $auto = false): ?string
     {
+        return $this->identifyDetailed($auto)['huellaId'];
+    }
+
+    /**
+     * Identifikasi sidik jari dengan rincian status kegagalan agar kiosk dapat
+     * membedakan bridge mati vs timeout menunggu jari vs sidik jari tidak dikenali.
+     *
+     * @return array{status: 'ok'|'bridge_mati'|'sensor_timeout'|'fingerprint_unknown', huellaId: ?string}
+     */
+    public function identifyDetailed(bool $auto = false): array
+    {
         if ($this->driver !== 'bridge') {
-            return $auto ? null : $this->mockIdentify();
+            if ($auto) {
+                return ['status' => 'fingerprint_unknown', 'huellaId' => null];
+            }
+
+            $huellaId = $this->mockIdentify();
+
+            return is_string($huellaId) && $huellaId !== ''
+                ? ['status' => 'ok', 'huellaId' => $huellaId]
+                : ['status' => 'fingerprint_unknown', 'huellaId' => null];
         }
 
         try {
             $res = Http::timeout($this->timeout)->get($this->baseUrl.'/identificar');
-            if (! $res->successful()) {
-                return null;
+            if ($res->status() === 408 || $res->status() === 504) {
+                return ['status' => 'sensor_timeout', 'huellaId' => null];
             }
-            $huellaId = $res->json('huellaId');
+            if (! $res->successful()) {
+                return ['status' => 'bridge_mati', 'huellaId' => null];
+            }
 
-            return is_string($huellaId) && $huellaId !== '' ? $huellaId : null;
-        } catch (\Throwable) {
-            return null;
+            $huellaId = $res->json('huellaId');
+            if (is_string($huellaId) && $huellaId !== '') {
+                return ['status' => 'ok', 'huellaId' => $huellaId];
+            }
+
+            if ($res->json('timeout') === true) {
+                return ['status' => 'sensor_timeout', 'huellaId' => null];
+            }
+
+            $error = $res->json('error');
+            if (is_string($error) && $error !== '') {
+                $errorLower = strtolower($error);
+                if (str_contains($errorLower, 'timeout') || str_contains($errorLower, 'timed out')) {
+                    return ['status' => 'sensor_timeout', 'huellaId' => null];
+                }
+
+                return ['status' => 'bridge_mati', 'huellaId' => null];
+            }
+
+            return ['status' => 'fingerprint_unknown', 'huellaId' => null];
+        } catch (\Throwable $e) {
+            if ($this->isTimeoutException($e)) {
+                return ['status' => 'sensor_timeout', 'huellaId' => null];
+            }
+
+            return ['status' => 'bridge_mati', 'huellaId' => null];
         }
+    }
+
+    /**
+     * Deteksi apakah exception HTTP berasal dari batas waktu tunggu (timeout).
+     */
+    private function isTimeoutException(\Throwable $e): bool
+    {
+        $pesan = strtolower($e->getMessage());
+
+        return str_contains($pesan, 'timed out')
+            || str_contains($pesan, 'timeout')
+            || str_contains($pesan, 'curl error 28');
     }
 
     /**

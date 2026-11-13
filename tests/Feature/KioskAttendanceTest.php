@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -348,12 +349,12 @@ class KioskAttendanceTest extends TestCase
         // Tidak ada siswa yang punya fingerprint_id -> mock tidak mengenali siapa pun
         $response = $this->postJson('/kiosk/fingerprint/identificar', []);
 
-        $response->assertStatus(503);
+        $response->assertStatus(200);
         $response->assertJson([
             'success' => false,
-            'type' => 'fingerprint_unavailable',
+            'type' => 'fingerprint_unknown',
+            'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
         ]);
-        $this->assertStringContainsString('Sensor sidik jari', $response->json('message'));
     }
 
     public function test_kiosk_200_dan_link_daftar_dulu_tetap_ada(): void
@@ -376,10 +377,11 @@ class KioskAttendanceTest extends TestCase
         // auto=1 (loop otomatis kiosk): mock TIDAK BOLEH mengembalikan siswa
         $response = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
 
-        $response->assertStatus(503);
+        $response->assertStatus(200);
         $response->assertJson([
             'success' => false,
-            'type' => 'fingerprint_unavailable',
+            'type' => 'fingerprint_unknown',
+            'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
         ]);
         $this->assertArrayNotHasKey('student_name', $response->json());
     }
@@ -423,5 +425,61 @@ class KioskAttendanceTest extends TestCase
             'type' => 'check_in',
             'student_name' => 'Hendra Wijaya',
         ]);
+    }
+
+    public function test_kiosk_fingerprint_membedakan_sensor_timeout_bridge_mati_dan_fingerprint_unknown(): void
+    {
+        $this->seedDemo();
+
+        $skenario = 'bridge_mati';
+
+        Http::fake(function () use (&$skenario) {
+            if ($skenario === 'bridge_mati') {
+                throw new ConnectionException('Connection refused');
+            }
+            if ($skenario === 'sensor_timeout') {
+                throw new ConnectionException('cURL error 28: Operation timed out after 25000 milliseconds');
+            }
+
+            return Http::response(['ok' => false], 200);
+        });
+
+        config(['fingerprint.driver' => 'bridge']);
+        try {
+            $resBridgeMati = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+            $skenario = 'sensor_timeout';
+            $resTimeout = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+            $skenario = 'fingerprint_unknown';
+            $resUnknown = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
+        } finally {
+            config(['fingerprint.driver' => 'mock']);
+        }
+
+        $resBridgeMati->assertStatus(503);
+        $resBridgeMati->assertJson([
+            'success' => false,
+            'type' => 'bridge_mati',
+            'message' => 'Sensor belum aktif — hadir dengan tap kartu',
+        ]);
+
+        $resTimeout->assertStatus(200);
+        $resTimeout->assertJson([
+            'success' => false,
+            'type' => 'sensor_timeout',
+            'message' => 'Sensor sedang menunggu jari — coba tempelkan jari lebih lama',
+        ]);
+
+        $resUnknown->assertStatus(200);
+        $resUnknown->assertJson([
+            'success' => false,
+            'type' => 'fingerprint_unknown',
+            'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
+        ]);
+
+        $this->assertCount(3, array_unique([
+            $resBridgeMati->json('type'),
+            $resTimeout->json('type'),
+            $resUnknown->json('type'),
+        ]));
     }
 }

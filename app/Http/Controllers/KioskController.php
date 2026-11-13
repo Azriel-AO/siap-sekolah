@@ -77,14 +77,33 @@ class KioskController extends Controller
         $auto = filter_var($request->input('auto'), FILTER_VALIDATE_BOOLEAN);
 
         $fingerprint = FingerprintService::dariConfig();
-        $huellaId = $fingerprint->identify($auto);
+        $hasil = $fingerprint->identifyDetailed($auto);
 
-        if ($huellaId === null) {
+        if ($hasil['status'] === 'bridge_mati') {
             return response()->json([
                 'success' => false,
-                'type' => 'fingerprint_unavailable',
-                'message' => 'Sensor sidik jari tidak tersedia atau sidik jari tidak dikenali. Coba lagi atau gunakan kartu.',
+                'type' => 'bridge_mati',
+                'message' => 'Sensor belum aktif — hadir dengan tap kartu',
             ], 503);
+        }
+
+        if ($hasil['status'] === 'sensor_timeout') {
+            return response()->json([
+                'success' => false,
+                'type' => 'sensor_timeout',
+                'message' => 'Sensor sedang menunggu jari — coba tempelkan jari lebih lama',
+            ], 200);
+        }
+
+        $huellaId = $hasil['huellaId'];
+
+        if ($hasil['status'] === 'fingerprint_unknown' || $huellaId === null) {
+            return response()->json([
+                'success' => false,
+                'type' => 'fingerprint_unknown',
+                'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
+                'registration_url' => route('pendaftaran.index'),
+            ], 200);
         }
 
         $student = Student::with('schoolClass')->where('fingerprint_id', $huellaId)->first();
@@ -92,10 +111,10 @@ class KioskController extends Controller
         if (! $student) {
             return response()->json([
                 'success' => false,
-                'type' => 'fingerprint_not_found',
-                'message' => 'Sidik jari tidak terdaftar. Silakan daftar dulu.',
+                'type' => 'fingerprint_unknown',
+                'message' => 'Sidik jari tidak dikenali. Daftar dulu bila belum terdaftar.',
                 'registration_url' => route('pendaftaran.index'),
-            ], 404);
+            ], 200);
         }
 
         return $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-fingerprint');

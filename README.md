@@ -74,9 +74,11 @@ DB_CONNECTION=sqlite
 
 FINGERPRINT_DRIVER=bridge
 FINGERPRINT_BASE_URL=http://127.0.0.1:8787
-FINGERPRINT_TIMEOUT=15
+FINGERPRINT_TIMEOUT=25
 FINGERPRINT_MATCH_THRESHOLD=40
 ```
+
+> **Penting (Perubahan `.env`)**: Setiap kali Anda mengubah nilai di file `.env` (seperti `FINGERPRINT_DRIVER` atau `FINGERPRINT_TIMEOUT`), Anda **WAJIB** menjalankan `php artisan config:clear` lalu **RESTART** proses `php artisan serve` (tekan `Ctrl+C` lalu jalankan kembali, atau klik ulang `box\mulai-sistem.bat`) agar konfigurasi baru terbaca oleh server.
 
 ### 3. Migrasi Database & Pembuatan Akun Admin
 Pastikan file `database\database.sqlite` tersedia (buat file kosong jika belum ada), lalu jalankan migrasi dan seeder:
