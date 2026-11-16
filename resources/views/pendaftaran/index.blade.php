@@ -126,7 +126,8 @@
                         <div class="mt-2 flex flex-col items-center gap-1 text-center">
                             <p class="text-xs font-bold text-indigo-900" x-text="autoHint"></p>
                             <span x-show="stabilityText" x-cloak
-                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold"
+                                  class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-extrabold transition-colors duration-200"
+                                  :class="stabilityReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
                                   x-text="stabilityText"></span>
                         </div>
                     </div>
@@ -157,29 +158,37 @@
                     <div x-show="form.setuju" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
                         <video x-ref="cameraPreview" autoplay muted playsinline class="w-full h-full object-cover relative z-0"></video>
 
-                        {{-- Overlay Panduan Posisi Wajah Statis (tengah kamera, ~70% tinggi container, z-10 di atas video & di bawah canvas overlay) --}}
+                        {{-- Overlay panduan posisi wajah (disamakan dengan kiosk gerbang) --}}
                         <div data-face-position-guide
                              aria-hidden="true"
-                             class="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center">
-                            <div class="h-[70%] aspect-[3/4] rounded-3xl transition-all duration-150"
-                                 :class="faceInGuide
-                                     ? 'border-[3px] border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.45)] bg-emerald-500/5'
-                                     : (faceDetected ? 'border-2 border-rose-400/90 bg-rose-500/5' : 'border-2 border-white/70 bg-transparent')">
+                             class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+                            <div class="face-guide-overlay absolute transition-colors duration-200"
+                                 :class="faceGuideState === 'inside'
+                                     ? 'border-solid border-emerald-400'
+                                     : (faceGuideState === 'outside'
+                                         ? 'border-dashed border-amber-400'
+                                         : 'border-dashed border-white/70')"
+                                 style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
                             </div>
-                            <p class="mt-1.5 rounded-full bg-slate-900/80 px-3 py-0.5 text-[11px] font-bold shadow transition-colors"
-                               :class="faceInGuide ? 'text-emerald-300' : 'text-gray-200'"
-                               x-text="faceInGuide ? 'Bagus, tahan posisi...' : 'Posisikan wajah di dalam kotak'">
-                                Posisikan wajah di dalam kotak
-                            </p>
+                            <div class="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide whitespace-nowrap backdrop-blur-sm transition-colors duration-200 border"
+                                 :class="faceGuideState === 'outside'
+                                     ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
+                                     : (faceGuideState === 'inside'
+                                         ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
+                                         : 'bg-slate-950/75 border-white/20 text-slate-100')"
+                                 style="top: calc(50% + min(32%, 140px) + 8px);">
+                                <span x-text="faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai — memproses…' : 'Posisikan wajah di dalam kotak')">Posisikan wajah di dalam kotak</span>
+                            </div>
                         </div>
 
                         <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 z-20 h-full w-full"></canvas>
 
                         <div x-show="!kameraGagal && !manualMode" x-cloak class="pointer-events-none absolute inset-x-0 top-2 z-30 flex flex-col items-center gap-1 px-3">
                             <p class="rounded-full bg-slate-900/80 px-3.5 py-1 text-xs font-extrabold text-emerald-300 shadow" x-text="autoHint"></p>
-                            <span x-show="stabilityText" x-cloak
-                                  class="rounded-full bg-emerald-600/95 px-3 py-0.5 text-[11px] font-black text-white shadow"
-                                  x-text="stabilityText"></span>
+                            <span x-show="stabilityText || faceInGuide" x-cloak
+                                  class="rounded-full px-3 py-0.5 text-[11px] font-black text-white shadow transition-colors duration-200"
+                                  :class="stabilityReady ? 'bg-emerald-600/95' : 'bg-amber-500/95'"
+                                  x-text="stabilityText || (faceInGuide ? 'Bagus, tahan posisi...' : '')"></span>
                         </div>
                         <div x-show="kameraGagal" x-cloak class="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-3">
                             <p class="rounded-lg bg-black/70 px-3 py-1 text-[11px] font-bold text-amber-300">Kamera tidak tersedia — panduan framing tetap tampil</p>
@@ -297,7 +306,9 @@
                 autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
                 faceDetected: false,
                 faceInGuide: false,
+                faceGuideState: 'idle',
                 stabilityText: '',
+                stabilityReady: false,
                 stepTimedOut: false,
                 autoSession: null,
                 enrollStatus: 'idle', // idle | loading | ok | gagal
@@ -333,6 +344,8 @@
                     }
                     this.faceDetected = false;
                     this.faceInGuide = false;
+                    this.faceGuideState = 'idle';
+                    this.stabilityReady = false;
                 },
 
                 async startCamera() {
@@ -380,12 +393,14 @@
 
                     this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
                         video: this.$refs.cameraPreview,
-                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, stabilityText, timedOut }) => {
+                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, stabilityText, stabilityReady, timedOut }) => {
                             this.autoStep = stepIndex;
                             this.autoHint = hint;
                             this.faceDetected = Boolean(faceDetected);
                             this.faceInGuide = Boolean(inGuideBox);
+                            this.faceGuideState = this.faceInGuide ? 'inside' : (this.faceDetected ? 'outside' : 'idle');
                             this.stabilityText = stabilityText || '';
+                            this.stabilityReady = Boolean(stabilityReady);
                             this.stepTimedOut = Boolean(timedOut);
                         },
                         onPhotoCaptured: (slotIndex, jpegDataUrl) => {
@@ -397,6 +412,7 @@
                             this.autoStep = 4;
                             this.autoHint = 'Selesai! 3 foto wajah & kedipan mata terverifikasi.';
                             this.stabilityText = '';
+                            this.stabilityReady = false;
                             this.stepTimedOut = false;
                             this.stopCamera();
                         },
@@ -414,6 +430,7 @@
                 cobaLagiStep() {
                     this.stepTimedOut = false;
                     this.stabilityText = '';
+                    this.stabilityReady = false;
                     if (!this.cameraStream && this.form.setuju) {
                         this.startCamera();
                     } else if (this.autoSession && !this.manualMode) {
@@ -430,6 +447,8 @@
                     }
                     this.stepTimedOut = false;
                     this.stabilityText = '';
+                    this.stabilityReady = false;
+                    this.faceGuideState = 'idle';
                     this.manualMode = true;
                 },
 
@@ -438,6 +457,7 @@
                     this.autoStep = 0;
                     this.autoHint = 'Langkah 1/4: Hadap lurus ke tengah kamera';
                     this.stabilityText = '';
+                    this.stabilityReady = false;
                     this.stepTimedOut = false;
                     if (!this.cameraStream && this.form.setuju) {
                         this.startCamera();
@@ -481,6 +501,8 @@
                     this.autoStep = i;
                     this.stepTimedOut = false;
                     this.stabilityText = '';
+                    this.stabilityReady = false;
+                    this.faceGuideState = 'idle';
                     if (this.form.setuju && !this.cameraStream) {
                         this.startCamera();
                     } else if (this.autoSession && !this.manualMode) {

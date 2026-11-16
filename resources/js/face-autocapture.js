@@ -13,6 +13,7 @@ export const YAW_TURN_MIN = 0.14;
 export const BLINK_SCORE_MIN = 0.30;
 export const EAR_BLINK_MAX = 0.20;
 export const HOLD_FRAMES_POSE = 3;
+export const DWELL_TIME_MS = 1500;
 export const STEP_TIMEOUT_MS = 10000;
 export const DEBUG_LOG_INTERVAL_MS = 500;
 
@@ -156,6 +157,8 @@ export function evaluateFacePose(result) {
         hasFace: true,
         centered,
         inGuideBox: centered,
+        sizeOk,
+        turnSizeOk,
         faceSize: Number(width.toFixed(3)),
         yawRatio: Number(yawRatio.toFixed(3)),
         isStraight: centered && Math.abs(yawRatio) <= YAW_STRAIGHT_MAX,
@@ -166,6 +169,49 @@ export function evaluateFacePose(result) {
         minEar: Number(minEar.toFixed(3)),
         isBlink,
     };
+}
+
+/**
+ * Periksa apakah pusat wajah (rata-rata landmark) berada di dalam DOMRect
+ * `.face-guide-overlay` pada viewport (memperhitungkan CSS object-fit: cover).
+ * Mengembalikan null bila elemen overlay atau ukuran video belum tersedia.
+ */
+function isFaceCenterInsideGuideOverlay(landmarks, video, guideElement) {
+    if (!Array.isArray(landmarks) || landmarks.length === 0 || !video || !guideElement) {
+        return null;
+    }
+
+    const overlayRect = guideElement.getBoundingClientRect();
+    const videoRect = video.getBoundingClientRect();
+    if (!overlayRect || overlayRect.width <= 0 || overlayRect.height <= 0 || !videoRect || videoRect.width <= 0 || videoRect.height <= 0) {
+        return null;
+    }
+
+    let sumX = 0;
+    let sumY = 0;
+    const count = landmarks.length;
+    for (let i = 0; i < count; i += 1) {
+        sumX += Number(landmarks[i]?.x ?? 0);
+        sumY += Number(landmarks[i]?.y ?? 0);
+    }
+
+    const normX = sumX / count;
+    const normY = sumY / count;
+    const videoW = video.videoWidth || videoRect.width;
+    const videoH = video.videoHeight || videoRect.height;
+    const scale = Math.max(videoRect.width / videoW, videoRect.height / videoH);
+    const renderedW = videoW * scale;
+    const renderedH = videoH * scale;
+    const offsetX = (videoRect.width - renderedW) / 2;
+    const offsetY = (videoRect.height - renderedH) / 2;
+
+    const centerX = videoRect.left + offsetX + normX * renderedW;
+    const centerY = videoRect.top + offsetY + normY * renderedH;
+
+    return centerX >= overlayRect.left
+        && centerX <= overlayRect.right
+        && centerY >= overlayRect.top
+        && centerY <= overlayRect.bottom;
 }
 
 /**
@@ -193,7 +239,8 @@ export class FaceAutoCaptureSession {
         this.lastTimestampMs = 0;
         this.lastDebugLogAt = 0;
         this.stepIndex = 0;
-        this.holdCount = 0;
+        this.insideGuideSince = null;
+        this.poseStableSince = null;
         this.firstTurnSign = 0;
         this.cooldownUntil = 0;
         this.stepStartedAt = 0;
@@ -207,7 +254,8 @@ export class FaceAutoCaptureSession {
         this.stopped = false;
         this.timedOut = false;
         this.stepIndex = 0;
-        this.holdCount = 0;
+        this.insideGuideSince = null;
+        this.poseStableSince = null;
         this.firstTurnSign = 0;
         this.stepStartedAt = performance.now();
 
@@ -216,6 +264,7 @@ export class FaceAutoCaptureSession {
             faceDetected: false,
             inGuideBox: false,
             stabilityText: '',
+            stabilityReady: false,
             timedOut: false,
         });
 
@@ -230,6 +279,7 @@ export class FaceAutoCaptureSession {
                 faceDetected: false,
                 inGuideBox: false,
                 stabilityText: '',
+                stabilityReady: false,
                 timedOut: false,
             });
             this.rafId = requestAnimationFrame(this.loop);
@@ -246,7 +296,8 @@ export class FaceAutoCaptureSession {
 
     resetToStep(step = 0) {
         this.stepIndex = step;
-        this.holdCount = 0;
+        this.insideGuideSince = null;
+        this.poseStableSince = null;
         this.timedOut = false;
         if (step <= 1) {
             this.firstTurnSign = 0;
@@ -259,6 +310,7 @@ export class FaceAutoCaptureSession {
             faceDetected: false,
             inGuideBox: false,
             stabilityText: '',
+            stabilityReady: false,
             timedOut: false,
         });
 
@@ -290,38 +342,35 @@ export class FaceAutoCaptureSession {
         }
     }
 
-    formatStabilityText(count, captured = false) {
-        if (captured) {
-            return `Stabil ${HOLD_FRAMES_POSE}/${HOLD_FRAMES_POSE}... Foto diambil!`;
+    formatStabilityText(dwellMs, ready = false) {
+        if (ready || dwellMs >= DWELL_TIME_MS) {
+            return 'Siap — Capture!';
         }
-        if (count <= 0) {
-            return '';
+        if (dwellMs >= 0) {
+            return 'Menstabilkan...';
         }
-        const clamped = Math.min(HOLD_FRAMES_POSE, count);
 
-        return `Stabil ${clamped}/${HOLD_FRAMES_POSE}...`;
+        return '';
     }
 
     emitState({
         hint,
         faceDetected = false,
         inGuideBox = false,
-        stabilityCount = this.holdCount,
-        stabilityText = null,
+        dwellElapsedMs = 0,
+        stabilityText = '',
+        stabilityReady = false,
         timedOut = this.timedOut,
     }) {
-        const resolvedStabilityText = stabilityText !== null
-            ? stabilityText
-            : this.formatStabilityText(stabilityCount, false);
-
         this.onStateChange({
             stepIndex: this.stepIndex,
             hint,
             faceDetected,
             inGuideBox,
-            stabilityCount,
-            stabilityTotal: HOLD_FRAMES_POSE,
-            stabilityText: resolvedStabilityText,
+            dwellElapsedMs,
+            dwellTotalMs: DWELL_TIME_MS,
+            stabilityText,
+            stabilityReady,
             timedOut,
             completed: this.stepIndex >= 4,
         });
@@ -345,16 +394,18 @@ export class FaceAutoCaptureSession {
             this.onPhotoCaptured(capturedSlotIndex, jpeg);
         }
         this.emitState({
-            hint: `Stabil ${HOLD_FRAMES_POSE}/${HOLD_FRAMES_POSE}... Foto diambil!`,
+            hint: 'Siap — Capture!',
             faceDetected: true,
             inGuideBox: true,
-            stabilityCount: HOLD_FRAMES_POSE,
-            stabilityText: `Stabil ${HOLD_FRAMES_POSE}/${HOLD_FRAMES_POSE}... Foto diambil!`,
+            dwellElapsedMs: DWELL_TIME_MS,
+            stabilityText: 'Siap — Capture!',
+            stabilityReady: true,
             timedOut: false,
         });
 
         this.stepIndex = nextStep;
-        this.holdCount = 0;
+        this.insideGuideSince = null;
+        this.poseStableSince = null;
         this.timedOut = false;
         this.stepStartedAt = now + 500;
         this.cooldownUntil = now + 500;
@@ -365,8 +416,9 @@ export class FaceAutoCaptureSession {
                     hint: this.defaultHintForStep(nextStep),
                     faceDetected: true,
                     inGuideBox: true,
-                    stabilityCount: 0,
+                    dwellElapsedMs: 0,
                     stabilityText: '',
+                    stabilityReady: false,
                     timedOut: false,
                 });
             }
@@ -395,15 +447,17 @@ export class FaceAutoCaptureSession {
             return;
         }
 
-        if (this.stepStartedAt > 0 && now - this.stepStartedAt >= STEP_TIMEOUT_MS) {
+        if (this.poseStableSince === null && this.stepStartedAt > 0 && now - this.stepStartedAt >= STEP_TIMEOUT_MS) {
             this.timedOut = true;
-            this.holdCount = 0;
+            this.insideGuideSince = null;
+            this.poseStableSince = null;
             this.emitState({
                 hint: 'Wajah tidak terdeteksi dengan baik. Silakan coba lagi atau gunakan tombol ambil foto manual.',
                 faceDetected: false,
                 inGuideBox: false,
-                stabilityCount: 0,
+                dwellElapsedMs: 0,
                 stabilityText: '',
+                stabilityReady: false,
                 timedOut: true,
             });
 
@@ -431,44 +485,75 @@ export class FaceAutoCaptureSession {
         this.logDebugIfDue(now, pose);
 
         if (!pose.hasFace) {
-            this.holdCount = 0;
+            this.insideGuideSince = null;
+            this.poseStableSince = null;
             this.emitState({
                 hint: 'Wajah belum terlihat — posisikan wajah di dalam kotak panduan',
                 faceDetected: false,
                 inGuideBox: false,
-                stabilityCount: 0,
+                dwellElapsedMs: 0,
                 stabilityText: '',
+                stabilityReady: false,
             });
 
             return;
         }
 
+        const guideElement = this.video?.parentElement?.querySelector('.face-guide-overlay') || null;
+        const overlayInside = isFaceCenterInsideGuideOverlay(result?.faceLandmarks?.[0], this.video, guideElement);
+        const inGuideBox = overlayInside !== null ? overlayInside : pose.inGuideBox;
+
+        if (!inGuideBox) {
+            this.insideGuideSince = null;
+            this.poseStableSince = null;
+            this.emitState({
+                hint: 'Geser wajah ke tengah kotak panduan',
+                faceDetected: true,
+                inGuideBox: false,
+                dwellElapsedMs: 0,
+                stabilityText: '',
+                stabilityReady: false,
+            });
+
+            return;
+        }
+
+        if (this.insideGuideSince === null) {
+            this.insideGuideSince = now;
+        }
+
         if (this.stepIndex === 0) {
-            if (pose.isStraight) {
-                this.holdCount += 1;
-                const progressText = this.formatStabilityText(this.holdCount, this.holdCount >= HOLD_FRAMES_POSE);
+            const straightPose = pose.sizeOk && Math.abs(pose.yawRatio) <= YAW_STRAIGHT_MAX;
+            if (straightPose) {
+                if (this.poseStableSince === null) {
+                    this.poseStableSince = now;
+                }
+                const dwellElapsedMs = now - this.poseStableSince;
+                const ready = dwellElapsedMs >= DWELL_TIME_MS;
+                const progressText = this.formatStabilityText(dwellElapsedMs, ready);
                 this.emitState({
-                    hint: `Tahan posisi hadap lurus… (${progressText})`,
+                    hint: ready ? 'Siap — Capture!' : 'Tahan posisi hadap lurus… (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    stabilityCount: this.holdCount,
+                    dwellElapsedMs,
                     stabilityText: progressText,
+                    stabilityReady: ready,
                 });
-                if (this.holdCount >= HOLD_FRAMES_POSE) {
+                if (ready) {
                     const jpeg = this.captureVideoFrameJpeg();
                     if (jpeg) {
                         this.advanceStep(1, now, 0, jpeg);
                     }
                 }
             } else {
-                this.holdCount = Math.max(0, this.holdCount - 1);
+                this.poseStableSince = null;
                 this.emitState({
-                    hint: pose.inGuideBox
-                        ? 'Langkah 1/4: Hadap lurus ke arah kamera'
-                        : 'Langkah 1/4: Posisikan wajah di dalam kotak panduan',
+                    hint: 'Langkah 1/4: Hadap lurus ke arah kamera',
                     faceDetected: true,
-                    inGuideBox: pose.inGuideBox,
-                    stabilityCount: this.holdCount,
+                    inGuideBox: true,
+                    dwellElapsedMs: 0,
+                    stabilityText: 'Menstabilkan...',
+                    stabilityReady: false,
                 });
             }
 
@@ -481,16 +566,21 @@ export class FaceAutoCaptureSession {
 
             if (turnedRight || turnedAny) {
                 const currentSign = pose.yawRatio < 0 ? -1 : 1;
-                this.holdCount += 1;
-                const progressText = this.formatStabilityText(this.holdCount, this.holdCount >= HOLD_FRAMES_POSE);
+                if (this.poseStableSince === null) {
+                    this.poseStableSince = now;
+                }
+                const dwellElapsedMs = now - this.poseStableSince;
+                const ready = dwellElapsedMs >= DWELL_TIME_MS;
+                const progressText = this.formatStabilityText(dwellElapsedMs, ready);
                 this.emitState({
-                    hint: `Tahan posisi tengok kanan… (${progressText})`,
+                    hint: ready ? 'Siap — Capture!' : 'Tahan posisi tengok kanan… (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    stabilityCount: this.holdCount,
+                    dwellElapsedMs,
                     stabilityText: progressText,
+                    stabilityReady: ready,
                 });
-                if (this.holdCount >= HOLD_FRAMES_POSE) {
+                if (ready) {
                     const jpeg = this.captureVideoFrameJpeg();
                     if (jpeg) {
                         this.firstTurnSign = currentSign;
@@ -498,12 +588,14 @@ export class FaceAutoCaptureSession {
                     }
                 }
             } else {
-                this.holdCount = Math.max(0, this.holdCount - 1);
+                this.poseStableSince = null;
                 this.emitState({
                     hint: 'Langkah 2/4: Tengok perlahan ke kanan',
                     faceDetected: true,
-                    inGuideBox: pose.inGuideBox,
-                    stabilityCount: this.holdCount,
+                    inGuideBox: true,
+                    dwellElapsedMs: 0,
+                    stabilityText: 'Menstabilkan...',
+                    stabilityReady: false,
                 });
             }
 
@@ -516,28 +608,35 @@ export class FaceAutoCaptureSession {
                 : pose.isTurnLeft;
 
             if (oppositeTurn) {
-                this.holdCount += 1;
-                const progressText = this.formatStabilityText(this.holdCount, this.holdCount >= HOLD_FRAMES_POSE);
+                if (this.poseStableSince === null) {
+                    this.poseStableSince = now;
+                }
+                const dwellElapsedMs = now - this.poseStableSince;
+                const ready = dwellElapsedMs >= DWELL_TIME_MS;
+                const progressText = this.formatStabilityText(dwellElapsedMs, ready);
                 this.emitState({
-                    hint: `Tahan posisi tengok kiri… (${progressText})`,
+                    hint: ready ? 'Siap — Capture!' : 'Tahan posisi tengok kiri… (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    stabilityCount: this.holdCount,
+                    dwellElapsedMs,
                     stabilityText: progressText,
+                    stabilityReady: ready,
                 });
-                if (this.holdCount >= HOLD_FRAMES_POSE) {
+                if (ready) {
                     const jpeg = this.captureVideoFrameJpeg();
                     if (jpeg) {
                         this.advanceStep(3, now, 2, jpeg);
                     }
                 }
             } else {
-                this.holdCount = Math.max(0, this.holdCount - 1);
+                this.poseStableSince = null;
                 this.emitState({
                     hint: 'Langkah 3/4: Tengok perlahan ke arah sebaliknya (kiri)',
                     faceDetected: true,
-                    inGuideBox: pose.inGuideBox,
-                    stabilityCount: this.holdCount,
+                    inGuideBox: true,
+                    dwellElapsedMs: 0,
+                    stabilityText: 'Menstabilkan...',
+                    stabilityReady: false,
                 });
             }
 
@@ -547,14 +646,16 @@ export class FaceAutoCaptureSession {
         if (this.stepIndex === 3) {
             if (pose.isBlink) {
                 this.stepIndex = 4;
-                this.holdCount = 0;
+                this.insideGuideSince = null;
+                this.poseStableSince = null;
                 this.timedOut = false;
                 this.emitState({
                     hint: 'Selesai! Kedipan terdeteksi & 3 foto tersimpan.',
                     faceDetected: true,
                     inGuideBox: true,
-                    stabilityCount: HOLD_FRAMES_POSE,
-                    stabilityText: `Stabil ${HOLD_FRAMES_POSE}/${HOLD_FRAMES_POSE}... Selesai!`,
+                    dwellElapsedMs: DWELL_TIME_MS,
+                    stabilityText: 'Siap — Capture!',
+                    stabilityReady: true,
                     timedOut: false,
                 });
                 this.stop();
@@ -563,9 +664,10 @@ export class FaceAutoCaptureSession {
                 this.emitState({
                     hint: 'Langkah 4/4: Kedipkan kedua mata Anda untuk verifikasi',
                     faceDetected: true,
-                    inGuideBox: pose.inGuideBox,
-                    stabilityCount: 0,
+                    inGuideBox: true,
+                    dwellElapsedMs: 0,
                     stabilityText: '',
+                    stabilityReady: false,
                 });
             }
         }
