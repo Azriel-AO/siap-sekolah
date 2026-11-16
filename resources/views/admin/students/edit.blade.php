@@ -43,8 +43,8 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
                         <select name="gender" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="L" @selected(old('gender', $student->gender) === 'L')>L — Laki-laki</option>
-                            <option value="P" @selected(old('gender', $student->gender) === 'P')>P — Perempuan</option>
+                            <option value="L" @selected(old('gender', $student->gender) === 'L')>L - Laki-laki</option>
+                            <option value="P" @selected(old('gender', $student->gender) === 'P')>P - Perempuan</option>
                         </select>
                     </div>
                 </div>
@@ -67,7 +67,7 @@
 
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     @if($student->user)
-                        <p class="text-sm text-gray-700"><span class="font-semibold">Akun login:</span> <code class="font-mono">{{ $student->user->email }}</code> — sudah terhubung.</p>
+                        <p class="text-sm text-gray-700"><span class="font-semibold">Akun login:</span> <code class="font-mono">{{ $student->user->email }}</code> - sudah terhubung.</p>
                     @else
                         <label class="flex items-start space-x-3 cursor-pointer">
                             <input type="checkbox" name="buat_akun" value="1" @checked(old('buat_akun')) class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">

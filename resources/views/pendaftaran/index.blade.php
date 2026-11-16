@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Pendaftaran Siswa Baru — E-PRESKNBI</title>
+    <title>Pendaftaran Siswa Baru - E-PRESKNBI</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -20,14 +20,14 @@
             </div>
             <div>
                 <h1 class="text-base sm:text-lg font-extrabold text-gray-900 leading-tight">Pendaftaran Siswa Baru</h1>
-                <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI — SMK KARYA NUGRAHA</p>
+                <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI - SMK KARYA NUGRAHA</p>
             </div>
         </div>
     </header>
 
     <main class="max-w-2xl mx-auto px-4 py-6">
 
-        {{-- Pendaftaran SELALU terbuka — pengawasan guru piket --}}
+        {{-- Pendaftaran SELALU terbuka dalam pengawasan guru piket --}}
 
         {{-- Daftar error dari server --}}
             <div x-show="message" x-cloak class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
@@ -43,7 +43,7 @@
                     <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div class="flex items-center gap-2">
                             <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
-                            <span class="text-xs font-semibold text-amber-900">Mode Pengembang aktif — lewati perangkat fisik untuk uji alur.</span>
+                            <span class="text-xs font-semibold text-amber-900">Mode Pengembang aktif: lewati perangkat fisik untuk uji alur.</span>
                         </div>
                         <button type="button" @click="isiDummyBiometrik()"
                                 class="inline-flex items-center justify-center px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shadow-sm transition shrink-0">
@@ -69,18 +69,18 @@
                             <div class="flex gap-3">
                                 <label class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition"
                                        :class="form.gender === 'L' ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-gray-300 text-gray-600'">
-                                    <input type="radio" name="gender" value="L" x-model="form.gender" class="sr-only"> L — Laki-laki
+                                    <input type="radio" name="gender" value="L" x-model="form.gender" class="sr-only"> L - Laki-laki
                                 </label>
                                 <label class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition"
                                        :class="form.gender === 'P' ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-gray-300 text-gray-600'">
-                                    <input type="radio" name="gender" value="P" x-model="form.gender" class="sr-only"> P — Perempuan
+                                    <input type="radio" name="gender" value="P" x-model="form.gender" class="sr-only"> P - Perempuan
                                 </label>
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
                             <select x-model="form.school_class_id" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                                <option value="">— Pilih kelas Anda —</option>
+                                <option value="">- Pilih kelas Anda -</option>
                                 @foreach($classes as $kelas)
                                     <option value="{{ $kelas->id }}">{{ $kelas->name }}</option>
                                 @endforeach
@@ -115,6 +115,26 @@
                               x-text="manualMode ? 'Mode Manual (Fallback)' : 'Auto-Capture + Liveness'"></span>
                     </div>
                     <p class="text-[11px] text-gray-400 ml-10 mb-3">Kamera menyala setelah Anda mencentang persetujuan di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
+
+                    {{-- Peringatan visual sebelum proses capture dimulai --}}
+                    <div class="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 flex items-start gap-2.5">
+                        <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <div>
+                            <p class="font-bold">Persiapan Sebelum Pemindaian Wajah</p>
+                            <p class="text-[11px] text-amber-800 mt-0.5">Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.</p>
+                        </div>
+                    </div>
+
+                    {{-- Peringatan real-time bila area mata/wajah tertutup --}}
+                    <div x-show="faceObscured" x-cloak
+                         class="mb-3 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-800 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>Wajah tertutup. Lepas aksesoris penutup wajah.</span>
+                    </div>
 
                     {{-- Indikator 4 langkah otomatis: Hadap Lurus -> Tengok Kanan -> Tengok Kiri -> Kedip --}}
                     <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak class="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
@@ -176,21 +196,23 @@
                              aria-hidden="true"
                              class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
                             <div class="face-guide-overlay absolute transition-colors duration-200"
-                                 :class="faceGuideState === 'inside'
+                                 :class="(faceGuideState === 'inside' && !faceObscured)
                                      ? 'border-solid border-emerald-400'
-                                     : (faceGuideState === 'outside'
+                                     : ((faceGuideState === 'outside' || faceObscured)
                                          ? 'border-dashed border-amber-400'
                                          : 'border-dashed border-white/70')"
                                  style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
                             </div>
-                            <div class="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide whitespace-nowrap backdrop-blur-sm transition-colors duration-200 border"
-                                 :class="faceGuideState === 'outside'
-                                     ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
-                                     : (faceGuideState === 'inside'
-                                         ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
-                                         : 'bg-slate-950/75 border-white/20 text-slate-100')"
+                            <div class="absolute left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-2xl text-[11px] sm:text-xs font-semibold tracking-wide max-w-[92%] sm:max-w-md text-center leading-snug backdrop-blur-sm transition-colors duration-200 border"
+                                 :class="faceObscured
+                                     ? 'bg-rose-950/90 border-rose-400/60 text-rose-200'
+                                     : (faceGuideState === 'outside'
+                                         ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
+                                         : (faceGuideState === 'inside'
+                                             ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
+                                             : 'bg-slate-950/75 border-white/20 text-slate-100'))"
                                  style="top: calc(50% + min(32%, 140px) + 8px);">
-                                <span x-text="faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai — memproses…' : 'Posisikan wajah di dalam kotak')">Posisikan wajah di dalam kotak</span>
+                                <span x-text="faceObscured ? 'Wajah tertutup. Lepas aksesoris penutup wajah.' : (faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai, ikuti instruksi pose' : 'Posisikan wajah di dalam kotak'))">Posisikan wajah di dalam kotak</span>
                             </div>
                         </div>
 
@@ -204,12 +226,16 @@
                                   x-text="stabilityText || (faceInGuide ? 'Bagus, tahan posisi...' : '')"></span>
                         </div>
                         <div x-show="kameraGagal" x-cloak class="pointer-events-none absolute inset-x-0 top-2 z-30 flex justify-center px-3">
-                            <p class="rounded-lg bg-black/70 px-3 py-1 text-[11px] font-bold text-amber-300">Kamera tidak tersedia — panduan framing tetap tampil</p>
+                            <p class="rounded-lg bg-black/70 px-3 py-1 text-[11px] font-bold text-amber-300">Kamera tidak tersedia: panduan framing tetap tampil</p>
                         </div>
                         <div x-show="countdown !== null" x-cloak class="absolute inset-0 z-30 flex items-center justify-center bg-black/40">
                             <div class="text-7xl font-black text-white drop-shadow-lg" x-text="countdown"></div>
                         </div>
                     </div>
+
+                    <p class="mt-2 text-center text-xs font-medium text-gray-600">
+                        Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.
+                    </p>
 
                     <div class="grid grid-cols-3 gap-3 mt-3">
                         <template x-for="(foto, i) in photos" :key="i">
@@ -319,6 +345,7 @@
                 autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
                 faceDetected: false,
                 faceInGuide: false,
+                faceObscured: false,
                 faceGuideState: 'idle',
                 stabilityText: '',
                 stabilityReady: false,
@@ -357,6 +384,7 @@
                     }
                     this.faceDetected = false;
                     this.faceInGuide = false;
+                    this.faceObscured = false;
                     this.faceGuideState = 'idle';
                     this.stabilityReady = false;
                 },
@@ -406,12 +434,15 @@
 
                     this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
                         video: this.$refs.cameraPreview,
-                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, stabilityText, stabilityReady, timedOut }) => {
+                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, faceObscured, stabilityText, stabilityReady, timedOut }) => {
                             this.autoStep = stepIndex;
                             this.autoHint = hint;
                             this.faceDetected = Boolean(faceDetected);
                             this.faceInGuide = Boolean(inGuideBox);
-                            this.faceGuideState = this.faceInGuide ? 'inside' : (this.faceDetected ? 'outside' : 'idle');
+                            this.faceObscured = Boolean(faceObscured);
+                            this.faceGuideState = this.faceObscured
+                                ? 'obscured'
+                                : (this.faceInGuide ? 'inside' : (this.faceDetected ? 'outside' : 'idle'));
                             this.stabilityText = stabilityText || '';
                             this.stabilityReady = Boolean(stabilityReady);
                             this.stepTimedOut = Boolean(timedOut);

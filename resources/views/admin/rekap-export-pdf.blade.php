@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Rekap Kehadiran — {{ $kelasLabel }}</title>
+    <title>Rekap Kehadiran - {{ $kelasLabel }}</title>
     <style>
         @page { margin: 18px 22px; }
         body { font-family: DejaVu Sans, sans-serif; font-size: 9.5px; color: #1f2937; }
@@ -28,7 +28,7 @@
 <body>
     <div class="kop">
         <div class="sekolah">{{ $sekolah }}</div>
-        <div class="alamat">Jl. Pendidikan No. 1 — SMK Karya Nugraha — Rekap Absen Gerbang</div>
+        <div class="alamat">Jl. Pendidikan No. 1 - SMK Karya Nugraha - Rekap Absen Gerbang</div>
     </div>
 
     <div class="judul">Rekap Kehadiran Siswa</div>
@@ -98,7 +98,7 @@
 
     <div class="kaki">
         @if($periode !== 'hari')
-            Definisi: Hadir/Terlambat/Izin/Sakit = jumlah catatan dalam rentang. Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit (diturunkan, bukan disimpan). Persentase = (Hadir + Terlambat) / (hari sekolah dalam rentang − Izin − Sakit) × 100; bila pembagi ≤ 0 ditampilkan "—".<br>
+            Definisi: Hadir/Terlambat/Izin/Sakit = jumlah catatan dalam rentang. Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit (diturunkan, bukan disimpan). Persentase = (Hadir + Terlambat) / (hari sekolah dalam rentang − Izin − Sakit) × 100; bila pembagi ≤ 0 ditampilkan "-".<br>
         @endif
         Dicetak oleh sistem E-PRESKNBI pada {{ \Carbon\Carbon::now('Asia/Jakarta')->translatedFormat('l, d F Y H.i') }} WIB. Jam yang tercatat adalah jam server.
     </div>

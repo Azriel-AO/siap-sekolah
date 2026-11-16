@@ -67,8 +67,8 @@
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-5 border-b border-gray-200 flex justify-between items-center">
                         <div>
-                            <h2 class="text-base font-bold text-gray-900">Pratinjau — {{ $preview['kelas']->name }}</h2>
-                            <p class="text-xs text-gray-400">{{ $preview['namaBulan'] }} {{ $preview['tahun'] }} — pratinjau blok ({{ count($preview['rows']) - 9 - 5 }} siswa)</p>
+                            <h2 class="text-base font-bold text-gray-900">Pratinjau - {{ $preview['kelas']->name }}</h2>
+                            <p class="text-xs text-gray-400">{{ $preview['namaBulan'] }} {{ $preview['tahun'] }} - pratinjau blok ({{ count($preview['rows']) - 9 - 5 }} siswa)</p>
                         </div>
                     </div>
                     <div class="overflow-x-auto">

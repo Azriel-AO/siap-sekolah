@@ -7,6 +7,46 @@ export const FACE_LANDMARK_COUNT = 478;
 export const FACE_DISTANCE_THRESHOLD = 0.15;
 export const FACE_VERIFY_TIMEOUT_MS = 5000;
 export const FACE_VERIFY_INTERVAL_MS = 180;
+export const EYE_LANDMARK_INDICES = [33, 133, 362, 263];
+export const FACE_OBSCURED_VISIBILITY_THRESHOLD = 0.5;
+
+/**
+ * Periksa apakah area mata tertutup aksesoris (kacamata hitam, masker tinggi, atau topeng)
+ * berdasarkan rata-rata properti `visibility` dari `multiFaceLandmarks[0]` (atau `faceLandmarks[0]`)
+ * pada landmark area mata (indeks 33, 133, 362, 263). Rata-rata < 0.5 dianggap tertutup.
+ *
+ * @param {Array<{x?: number, y?: number, z?: number, visibility?: number}>|{multiFaceLandmarks?: Array, faceLandmarks?: Array}|null} landmarksInput
+ * @returns {boolean}
+ */
+export function checkFaceObscured(landmarksInput) {
+    const landmarks = Array.isArray(landmarksInput)
+        ? (Array.isArray(landmarksInput[0]) ? landmarksInput[0] : landmarksInput)
+        : (landmarksInput?.multiFaceLandmarks?.[0] || landmarksInput?.faceLandmarks?.[0] || null);
+
+    if (!Array.isArray(landmarks) || landmarks.length === 0) {
+        return false;
+    }
+
+    let sumVisibility = 0;
+    let count = 0;
+
+    for (const idx of EYE_LANDMARK_INDICES) {
+        const pt = landmarks[idx];
+        if (!pt) {
+            continue;
+        }
+        if (typeof pt.visibility === 'number' && !Number.isNaN(pt.visibility)) {
+            sumVisibility += pt.visibility;
+            count += 1;
+        }
+    }
+
+    if (count === 0) {
+        return false;
+    }
+
+    return (sumVisibility / count) < FACE_OBSCURED_VISIBILITY_THRESHOLD;
+}
 
 let verifierLandmarkerPromise = null;
 
@@ -345,7 +385,7 @@ export function isPointInsideGuideRect(x, y, rect) {
  */
 export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, options = {}) {
     if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
+        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, faceObscured: false, center: null });
         return null;
     }
 
@@ -356,13 +396,14 @@ export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, o
         canvas.getContext('2d').drawImage(video, 0, 0);
 
         const result = landmarker.detect(canvas);
-        const landmarks = result?.faceLandmarks?.[0];
+        const landmarks = result?.multiFaceLandmarks?.[0] || result?.faceLandmarks?.[0];
 
         if (!Array.isArray(landmarks) || landmarks.length < 468) {
-            options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
+            options?.onDetectionState?.({ faceDetected: false, insideGuide: false, faceObscured: false, center: null });
             return null;
         }
 
+        const faceObscured = checkFaceObscured(landmarks);
         const guideElement = options?.guideElement
             ?? (typeof document !== 'undefined' ? document.querySelector('.face-guide-overlay') : null);
         const faceCenter = computeFaceCenterInViewport(landmarks, video);
@@ -374,16 +415,20 @@ export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, o
             );
 
             if (!insideGuide) {
-                options?.onDetectionState?.({ faceDetected: true, insideGuide: false, center: faceCenter });
+                options?.onDetectionState?.({ faceDetected: true, insideGuide: false, faceObscured, center: faceCenter });
                 return null;
             }
         }
 
-        options?.onDetectionState?.({ faceDetected: true, insideGuide: true, center: faceCenter });
+        options?.onDetectionState?.({ faceDetected: true, insideGuide: true, faceObscured, center: faceCenter });
+
+        if (faceObscured) {
+            return null;
+        }
 
         return flattenAndNormalizeLandmarks(landmarks);
     } catch {
-        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
+        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, faceObscured: false, center: null });
         return null;
     }
 }
@@ -427,11 +472,13 @@ export async function verifyStudentFace1to1({
     const offscreenCanvas = document.createElement('canvas');
     const startedAt = performance.now();
     let bestDistance = Number.POSITIVE_INFINITY;
+    let noFaceSince = null;
+    let lowScoreSince = null;
 
-    onProgress({ stage: 'matching_live', message: 'Mencocokkan wajah dengan kamera… Pastikan wajah terkena cahaya.' });
+    onProgress({ stage: 'matching_live', message: 'Mencocokkan wajah dengan kamera... Pastikan wajah terkena cahaya.' });
 
     while (performance.now() - startedAt < timeoutMs) {
-        let detectionState = { faceDetected: false, insideGuide: false };
+        let detectionState = { faceDetected: false, insideGuide: false, faceObscured: false };
         const liveVector = extractVectorFromVideo(landmarker, video, offscreenCanvas, {
             onDetectionState: (state) => {
                 if (state) {
@@ -440,17 +487,42 @@ export async function verifyStudentFace1to1({
             },
         });
 
-        if (liveVector) {
+        const nowMs = performance.now();
+
+        if (detectionState.faceObscured) {
+            noFaceSince = null;
+            onProgress({
+                stage: 'obscured',
+                faceObscured: true,
+                bestDistance: Number.isFinite(bestDistance) ? Number(bestDistance.toFixed(4)) : null,
+                message: 'Wajah tertutup. Lepas aksesoris penutup wajah.',
+            });
+        } else if (liveVector) {
+            noFaceSince = null;
             const distance = computeEuclideanDistance(liveVector, avgReferenceVector);
+            const similarity = computeCosineSimilarity(liveVector, avgReferenceVector);
             if (distance < bestDistance) {
                 bestDistance = distance;
             }
 
+            if (similarity < 0.60) {
+                if (lowScoreSince === null) {
+                    lowScoreSince = nowMs;
+                }
+            } else {
+                lowScoreSince = null;
+            }
+
+            const isLowScoreSustained = lowScoreSince !== null && (nowMs - lowScoreSince) >= 3000;
+
             onProgress({
-                stage: 'matching_live',
+                stage: isLowScoreSustained ? 'low_score' : 'matching_live',
                 distance: Number(distance.toFixed(4)),
                 bestDistance: Number(bestDistance.toFixed(4)),
-                message: 'Wajah terdeteksi — memverifikasi kecocokan landmark…',
+                similarity: Number(similarity.toFixed(4)),
+                message: isLowScoreSustained
+                    ? 'Wajah tidak dikenal. Lepas kacamata/topeng dan pastikan wajah menghadap kamera.'
+                    : 'Wajah terdeteksi, memverifikasi kecocokan landmark...',
             });
 
             if (distance < threshold) {
@@ -465,16 +537,25 @@ export async function verifyStudentFace1to1({
                 };
             }
         } else if (detectionState.faceDetected && !detectionState.insideGuide) {
+            noFaceSince = null;
+            lowScoreSince = null;
             onProgress({
                 stage: 'outside_guide',
                 bestDistance: Number.isFinite(bestDistance) ? Number(bestDistance.toFixed(4)) : null,
-                message: 'Geser wajah ke tengah kotak panduan…',
+                message: 'Geser wajah ke tengah kotak panduan...',
             });
         } else {
+            lowScoreSince = null;
+            if (noFaceSince === null) {
+                noFaceSince = nowMs;
+            }
+            const noFaceSustained = (nowMs - noFaceSince) >= 3000;
             onProgress({
                 stage: 'waiting_face',
                 bestDistance: Number.isFinite(bestDistance) ? Number(bestDistance.toFixed(4)) : null,
-                message: 'Arahkan wajah ke tengah kamera — pastikan wajah terkena cahaya.',
+                message: noFaceSustained
+                    ? 'Wajah tidak terdeteksi. Pastikan cahaya cukup dan wajah tidak tertutup.'
+                    : 'Arahkan wajah ke tengah kamera, pastikan wajah terkena cahaya.',
             });
         }
 

@@ -3,10 +3,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
-                    E-PRESKNBI — SMK KARYA NUGRAHA
+                    E-PRESKNBI - SMK KARYA NUGRAHA
                 </h1>
                 <p class="text-sm text-gray-500 mt-0.5">
-                    Sistem Informasi Absensi Pelajar — SMK Karya Nugraha (KNBI)
+                    Sistem Informasi Absensi Pelajar - SMK Karya Nugraha (KNBI)
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -39,7 +39,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                         </svg>
                         <p class="text-sm sm:text-base font-semibold text-amber-800">
-                            Wajah Anda belum terdaftar untuk absensi — daftar sekarang
+                            Wajah Anda belum terdaftar untuk absensi, daftar sekarang
                         </p>
                     </div>
                     <a href="{{ route('siswa.wajah') }}" class="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-sm transition shrink-0">
@@ -89,7 +89,7 @@
                             <div>
                                 <h2 class="text-xl font-extrabold text-gray-900">Pendaftaran Siswa Baru</h2>
                                 <p class="text-gray-600 mt-1 max-w-2xl leading-relaxed text-sm">
-                                    Buka terminal pendaftaran mandiri — isi data, foto wajah, sidik jari, dan tap kartu RFID.
+                                    Buka terminal pendaftaran mandiri: isi data, foto wajah, sidik jari, dan tap kartu RFID.
                                 </p>
                             </div>
                         </div>
@@ -200,7 +200,7 @@
                         </p>
                     </a>
 
-                    <!-- Kartu 3: Absen Gerbang (aktif — layar kiosk gerbang tunggal) -->
+                    <!-- Kartu 3: Absen Gerbang (aktif - layar kiosk gerbang tunggal) -->
                     <a href="{{ route('kiosk.gerbang') }}" target="_blank" class="text-left bg-white p-6 rounded-xl border border-gray-200 hover:border-amber-400 hover:shadow-md transition group">
                         <div class="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center mb-4 group-hover:scale-105 transition">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

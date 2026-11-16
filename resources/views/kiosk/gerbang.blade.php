@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Absen Gerbang — E-PRESKNBI</title>
+    <title>Absen Gerbang - E-PRESKNBI</title>
     <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -24,7 +24,7 @@
                 <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-10 w-auto object-contain">
             </div>
             <div>
-                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">E-PRESKNBI — SMK KARYA NUGRAHA</h1>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">E-PRESKNBI - SMK KARYA NUGRAHA</h1>
                 <p class="text-xs sm:text-sm text-slate-400 font-medium">Absen Gerbang Tunggal</p>
             </div>
         </div>
@@ -51,7 +51,7 @@
                 <div>
                     <h2 class="text-2xl sm:text-4xl font-black text-white tracking-tight">Absen Gerbang</h2>
                     <p class="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl mx-auto">
-                        Silakan Tap Kartu, Tatap Kamera, atau Tempelkan Jari — tiga jalur absensi aktif bersamaan.
+                        Silakan Tap Kartu, Tatap Kamera, atau Tempelkan Jari. Tiga jalur absensi aktif bersamaan.
                     </p>
                 </div>
 
@@ -69,22 +69,22 @@
                         {{-- Overlay panduan posisi wajah di tengah kamera --}}
                         <div x-show="cameraReady" x-cloak class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
                             <div class="face-guide-overlay absolute transition-colors duration-200"
-                                 :class="faceGuideState === 'inside'
+                                 :class="(faceGuideState === 'inside' || faceGuideState === 'matched')
                                      ? 'border-solid border-emerald-400'
-                                     : (faceGuideState === 'outside'
+                                     : ((faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown' || faceGuideState === 'obscured' || faceObscured)
                                          ? 'border-dashed border-amber-400'
                                          : 'border-dashed border-white/70')"
                                  style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
                             </div>
                             <div x-show="!verifyingFace"
-                                 class="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide whitespace-nowrap backdrop-blur-sm transition-colors duration-200 border"
-                                 :class="faceGuideState === 'outside'
-                                     ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
-                                     : (faceGuideState === 'inside'
-                                         ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
+                                 class="absolute left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-2xl text-[11px] sm:text-xs font-semibold tracking-wide max-w-[92%] sm:max-w-md text-center leading-snug backdrop-blur-sm transition-colors duration-200 border"
+                                 :class="(faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown' || faceGuideState === 'obscured' || faceObscured)
+                                     ? 'bg-amber-950/90 border-amber-400/60 text-amber-200'
+                                     : ((faceGuideState === 'inside' || faceGuideState === 'matched')
+                                         ? 'bg-emerald-950/90 border-emerald-400/60 text-emerald-200'
                                          : 'bg-slate-950/75 border-white/20 text-slate-100')"
                                  style="top: calc(50% + min(32%, 140px) + 8px);">
-                                <span x-text="faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai — memproses…' : 'Posisikan wajah di dalam kotak')">Posisikan wajah di dalam kotak</span>
+                                <span x-text="faceFeedbackMessage || 'Posisikan wajah di dalam kotak'">Posisikan wajah di dalam kotak</span>
                             </div>
                         </div>
 
@@ -191,7 +191,7 @@
                         <button type="button" @click="simulasiJari()"
                                 :disabled="demoLoading"
                                 class="w-full px-6 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 disabled:bg-amber-800 text-slate-900 font-black tracking-wide shadow-lg transition">
-                            <span x-text="demoLoading ? 'Membaca sidik jari…' : 'DEMO — Simulasi jari'"></span>
+                            <span x-text="demoLoading ? 'Membaca sidik jari…' : 'DEMO - Simulasi jari'"></span>
                         </button>
                         <p class="text-[10px] text-amber-500/80 font-mono mt-1">Hanya tampil di driver mock (laptop demo). Sensor nyata tidak menampilkan tombol ini.</p>
                     </div>
@@ -250,7 +250,7 @@
 
                     <!-- Pesan -->
                     <div class="mt-4 p-3 rounded-xl bg-black/20 text-sm sm:text-base font-medium"
-                         x-text="result?.success && result?.card_label ? ('Halo, ' + result.student_name + ' (' + result.card_label + ')') : result?.message"></div>
+                         x-text="result?.success && result?.student_name ? ('Halo ' + result.student_name + ', absen berhasil.' + (result.card_label ? ' (' + result.card_label + ')' : '')) : result?.message"></div>
 
                     <!-- Tombol Daftar Mandiri untuk Kartu / Sidik Jari Tidak Dikenal -->
                     <template x-if="result && (result.registration_url || result.type === 'not_found' || result.type === 'fingerprint_not_found' || result.type === 'fingerprint_unknown')">
@@ -278,7 +278,7 @@
 
     <footer class="p-6 border-t border-slate-800 bg-slate-900/90 text-center">
         <p class="text-xs text-slate-500 font-medium">
-            Kiosk Gerbang Sekolah — satu titik untuk semua kelas. Jam masuk/pulang mengikuti kelas masing-masing siswa.
+            Kiosk Gerbang Sekolah: satu titik untuk semua kelas. Jam masuk/pulang mengikuti kelas masing-masing siswa.
         </p>
     </footer>
 
@@ -298,10 +298,10 @@
                 <label class="block text-[11px] font-semibold text-slate-300 mb-1">Pilih Siswa</label>
                 <select x-model="debugStudentId"
                         class="w-full rounded-lg border border-slate-700 bg-slate-900 text-white text-xs py-2 px-2.5 focus:border-amber-400 focus:ring-amber-400">
-                    <option value="">— Pilih siswa —</option>
+                    <option value="">- Pilih siswa -</option>
                     @foreach($debugStudents as $debugStudent)
                         <option value="{{ $debugStudent->id }}">
-                            {{ $debugStudent->name }} ({{ $debugStudent->schoolClass?->name ?? '-' }} — {{ $debugStudent->nis }})
+                            {{ $debugStudent->name }} ({{ $debugStudent->schoolClass?->name ?? '-' }} - {{ $debugStudent->nis }})
                         </option>
                     @endforeach
                 </select>
@@ -351,6 +351,10 @@
                 faceTemplates: [],
                 faceDetecting: false,
                 faceGuideState: 'idle',
+                faceFeedbackMessage: 'Posisikan wajah di dalam kotak',
+                faceObscured: false,
+                noFaceSince: null,
+                lowScoreSince: null,
                 faceDetectedSince: null,
                 showUnmatchedHint: false,
                 faceCheckinInFlight: false,
@@ -437,7 +441,7 @@
                         stream.getTracks().forEach(track => {
                             track.addEventListener('ended', () => {
                                 this.stopCamera();
-                                this.cameraError = 'Kamera terputus — absen kartu & jari tetap aktif.';
+                                this.cameraError = 'Kamera terputus, absen kartu & jari tetap aktif.';
                                 this.scheduleCameraRetry();
                             });
                         });
@@ -454,7 +458,7 @@
                         const izinDitolak = e && (e.name === 'NotAllowedError' || e.name === 'SecurityError');
                         this.cameraError = izinDitolak
                             ? 'Izin kamera ditolak. Izinkan kamera di browser untuk foto bukti.'
-                            : 'Periksa kamera yang terpasang — percobaan ulang otomatis tiap 10 detik.';
+                            : 'Periksa kamera yang terpasang. Percobaan ulang otomatis tiap 10 detik.';
                         this.scheduleCameraRetry();
                     } finally {
                         this.cameraStarting = false;
@@ -853,7 +857,7 @@
                             this._offscreenCanvas = document.createElement('canvas');
                         }
 
-                        let detectionState = { faceDetected: false, insideGuide: false };
+                        let detectionState = { faceDetected: false, insideGuide: false, faceObscured: false };
                         const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas, {
                             onDetectionState: (state) => {
                                 if (state) {
@@ -862,25 +866,41 @@
                             },
                         });
 
-                        if (detectionState.faceDetected && !detectionState.insideGuide) {
+                        const nowMs = Date.now();
+                        this.faceObscured = Boolean(detectionState.faceObscured);
+
+                        if (this.faceObscured) {
+                            this.faceGuideState = 'obscured';
+                            this.faceDetecting = false;
+                            this.noFaceSince = null;
+                            this.faceFeedbackMessage = 'Wajah tertutup. Lepas aksesoris penutup wajah.';
+                        } else if (detectionState.faceDetected && !detectionState.insideGuide) {
                             this.faceGuideState = 'outside';
                             this.faceDetecting = false;
+                            this.noFaceSince = null;
+                            this.lowScoreSince = null;
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
+                            this.faceFeedbackMessage = 'Geser wajah ke tengah kotak panduan';
                         } else if (liveVector) {
-                            this.faceGuideState = 'inside';
+                            this.noFaceSince = null;
                             this.faceDetecting = true;
 
                             if (this.faceTemplates.length > 0) {
                                 if (!this.faceDetectedSince) {
-                                    this.faceDetectedSince = Date.now();
-                                } else if (Date.now() - this.faceDetectedSince >= 10000) {
+                                    this.faceDetectedSince = nowMs;
+                                } else if (nowMs - this.faceDetectedSince >= 10000) {
                                     this.showUnmatchedHint = true;
                                 }
 
                                 const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
+                                const bestSim = Number(match?.bestSimilarity ?? 0);
 
                                 if (match && match.matched && match.bestMatch && !this.tapInFlight && !this.verifyingFace && !this.result) {
+                                    const matchedName = match.bestMatch.nama || match.bestMatch.student_name || 'Siswa';
+                                    this.faceGuideState = 'matched';
+                                    this.faceFeedbackMessage = 'Halo ' + matchedName + ', absen berhasil.';
+                                    this.lowScoreSince = null;
                                     this.faceDetectedSince = null;
                                     this.showUnmatchedHint = false;
                                     this.faceCheckinInFlight = true;
@@ -910,19 +930,56 @@
                                     } finally {
                                         this.faceCheckinInFlight = false;
                                     }
+                                } else {
+                                    if (bestSim < 0.60) {
+                                        if (!this.lowScoreSince) {
+                                            this.lowScoreSince = nowMs;
+                                        }
+                                    } else {
+                                        this.lowScoreSince = null;
+                                    }
+
+                                    if (this.lowScoreSince && (nowMs - this.lowScoreSince) >= 3000) {
+                                        this.faceGuideState = 'unknown';
+                                        this.faceFeedbackMessage = 'Wajah tidak dikenal. Lepas kacamata/topeng dan pastikan wajah menghadap kamera.';
+                                    } else {
+                                        this.faceGuideState = 'inside';
+                                        this.faceFeedbackMessage = 'Mencocokkan wajah...';
+                                    }
+                                }
+                            } else {
+                                if (!this.lowScoreSince) {
+                                    this.lowScoreSince = nowMs;
+                                }
+                                if ((nowMs - this.lowScoreSince) >= 3000) {
+                                    this.faceGuideState = 'unknown';
+                                    this.faceFeedbackMessage = 'Wajah tidak dikenal. Lepas kacamata/topeng dan pastikan wajah menghadap kamera.';
+                                } else {
+                                    this.faceGuideState = 'inside';
+                                    this.faceFeedbackMessage = 'Mencocokkan wajah...';
                                 }
                             }
-                            // Bila tidak match (similarity < 0.75): DIAM, tidak spam di layar.
                         } else {
-                            this.faceGuideState = 'idle';
                             this.faceDetecting = false;
+                            this.lowScoreSince = null;
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
+                            if (!this.noFaceSince) {
+                                this.noFaceSince = nowMs;
+                            }
+                            if ((nowMs - this.noFaceSince) >= 3000) {
+                                this.faceGuideState = 'no_face';
+                                this.faceFeedbackMessage = 'Wajah tidak terdeteksi. Pastikan cahaya cukup dan wajah tidak tertutup.';
+                            } else {
+                                this.faceGuideState = 'idle';
+                                this.faceFeedbackMessage = 'Posisikan wajah di dalam kotak';
+                            }
                         }
                     } catch {
                         // Reset state visual bila model gagal dimuat / error agar UI tidak terjebak
                         this.faceGuideState = 'idle';
                         this.faceDetecting = false;
+                        this.faceObscured = false;
                     } finally {
                         this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                     }
@@ -932,14 +989,23 @@
                     this.result = data;
                     this.faceDetecting = false;
                     this.faceGuideState = 'idle';
+                    this.faceObscured = false;
+                    this.noFaceSince = null;
+                    this.lowScoreSince = null;
                     this.faceDetectedSince = null;
                     this.showUnmatchedHint = false;
+                    if (data && data.success && data.student_name) {
+                        this.faceFeedbackMessage = 'Halo ' + data.student_name + ', absen berhasil.';
+                    } else {
+                        this.faceFeedbackMessage = 'Posisikan wajah di dalam kotak';
+                    }
 
                     if (this.resetTimer) clearTimeout(this.resetTimer);
                     const resetDuration = (data?.type === 'not_found' || data?.type === 'fingerprint_not_found' || data?.type === 'fingerprint_unknown') ? 8000 : 4000;
                     this.resetTimer = setTimeout(() => {
                         this.result = null;
                         this.fotoBukti = '';
+                        this.faceFeedbackMessage = 'Posisikan wajah di dalam kotak';
                         this.$nextTick(() => this.focusInput());
                     }, resetDuration);
                 }

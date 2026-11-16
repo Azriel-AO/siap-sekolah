@@ -3,10 +3,10 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
-                    Rekap Kehadiran — {{ $periodeLabel }}<span class="text-gray-400"> · {{ $schoolClass->name }}</span>
+                    Rekap Kehadiran - {{ $periodeLabel }}<span class="text-gray-400"> · {{ $schoolClass->name }}</span>
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    {{ $tanggalDisplay }} — Jurusan {{ $schoolClass->department }} — Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} — Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
+                    {{ $tanggalDisplay }} - Jurusan {{ $schoolClass->department }} - Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} - Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
                 </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
@@ -110,7 +110,7 @@
                 <div class="bg-rose-50/60 p-5 rounded-xl border border-rose-200 shadow-sm">
                     <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider">Alpa (hari)</div>
                     <div class="text-3xl font-black text-rose-700 mt-2" x-text="summary.alpa">{{ $summary['alpa'] }}</div>
-                    <div class="text-xs text-rose-600 mt-1">Rata-rata kehadiran: <span x-text="summary.rata_persen ?? '—'">{{ $summary['rata_persen'] ?? '—' }}</span>%</div>
+                    <div class="text-xs text-rose-600 mt-1">Rata-rata kehadiran: <span x-text="summary.rata_persen ?? '-'">{{ $summary['rata_persen'] ?? '-' }}</span>%</div>
                 </div>
             </div>
             @endif
@@ -238,7 +238,7 @@
                                     <td class="py-3 px-4 text-center">
                                         <span class="font-mono font-bold"
                                               :class="s.persentase === null ? 'text-gray-400' : (s.persentase >= 80 ? 'text-emerald-700' : (s.persentase >= 50 ? 'text-amber-700' : 'text-rose-600'))"
-                                              x-text="s.persentase === null ? '—' : s.persentase + '%'"></span>
+                                              x-text="s.persentase === null ? '-' : s.persentase + '%'"></span>
                                     </td>
                                     <td class="py-3 px-4 text-center">
                                         <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold"
@@ -254,7 +254,7 @@
                 </div>
 
                 <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 flex flex-wrap justify-between items-center gap-2">
-                    <span>Menampilkan {{ $students->count() }} siswa aktif kelas {{ $schoolClass->name }}@if($periode !== 'hari') — ringkasan {{ strtolower($periodeLabel) }} (hari sekolah: Senin–Jumat)@endif</span>
+                    <span>Menampilkan {{ $students->count() }} siswa aktif kelas {{ $schoolClass->name }}@if($periode !== 'hari') - ringkasan {{ strtolower($periodeLabel) }} (hari sekolah: Senin–Jumat)@endif</span>
                     <span>SMK Karya Nugraha (KNBI) - E-PRESKNBI</span>
                 </div>
             </div>

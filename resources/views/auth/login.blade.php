@@ -4,7 +4,7 @@
             <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-10 w-auto object-contain">
         </div>
         <h2 class="text-xl font-bold text-gray-900 tracking-tight">
-            E-PRESKNBI — SMK KARYA NUGRAHA
+            E-PRESKNBI - SMK KARYA NUGRAHA
         </h2>
         <p class="text-xs text-gray-500 mt-1">
             Sistem Informasi Absensi Pelajar (KNBI)

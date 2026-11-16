@@ -48,7 +48,7 @@
                     <div class="p-5 border-b border-gray-200 flex items-center justify-between gap-3">
                         <div>
                             <h2 class="text-lg font-bold text-gray-900">Siswa Kelas {{ $kelasDipilih->name }}</h2>
-                            <p class="text-xs text-gray-500">{{ $kelasDipilih->department }} — {{ $students->count() }} siswa</p>
+                            <p class="text-xs text-gray-500">{{ $kelasDipilih->department }} - {{ $students->count() }} siswa</p>
                         </div>
                     </div>
                     <div class="overflow-x-auto">

@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pengaturan Laporan</h1>
-        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Kop &amp; tanda tangan untuk laporan "Daftar Hadir" — tersimpan di tabel settings, tidak menyentuh data siswa.</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Kop &amp; tanda tangan untuk laporan "Daftar Hadir", tersimpan di tabel settings dan tidak menyentuh data siswa.</p>
     </x-slot>
 
     <div class="py-8">

@@ -3,7 +3,7 @@
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Rekapitulasi Kehadiran</h1>
-                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Per kelas — {{ $periodeLabel }}: {{ $tanggalDisplay }}</p>
+                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Per kelas - {{ $periodeLabel }}: {{ $tanggalDisplay }}</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
                 <select id="filterKelasRekap"
@@ -48,7 +48,7 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                     <h2 class="text-lg font-bold text-gray-900 mb-1">
-                        Kehadiran <span x-text="kelasLabel">{{ $kelasLabel }}</span> — {{ $periodeLabel }}
+                        Kehadiran <span x-text="kelasLabel">{{ $kelasLabel }}</span> - {{ $periodeLabel }}
                     </h2>
                     <p class="text-xs text-gray-400 mb-4">Batang menunjukkan jumlah siswa per status.</p>
                     <div class="relative" style="height: 340px;">
@@ -74,7 +74,7 @@
             </div>
 
             <p class="text-[11px] text-gray-400 leading-relaxed border-t border-gray-200 pt-4">
-                <strong>Catatan:</strong> Hadir / Terlambat / Izin / Sakit dihitung dari catatan pada rentang periode terpilih — Hadir/Terlambat ditentukan otomatis oleh jam server dibandingkan jam masuk kelas saat siswa tap (sama dengan aturan rekap harian); Izin/Sakit dari halaman "Catat Izin / Sakit". Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit. Data diambil langsung dari database.
+                <strong>Catatan:</strong> Hadir / Terlambat / Izin / Sakit dihitung dari catatan pada rentang periode terpilih. Hadir/Terlambat ditentukan otomatis oleh jam server dibandingkan jam masuk kelas saat siswa tap (sama dengan aturan rekap harian); Izin/Sakit dari halaman "Catat Izin / Sakit". Alpa = hari sekolah (Senin–Jumat) yang sudah lewat dalam rentang − Hadir − Terlambat − Izin − Sakit. Data diambil langsung dari database.
             </p>
         </div>
     </div>

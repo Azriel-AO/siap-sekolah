@@ -9,7 +9,7 @@
                         <div class="bg-white rounded-lg p-1 shadow-sm border border-gray-100 flex items-center justify-center">
                             <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-9 w-auto object-contain">
                         </div>
-                        <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI — SMK KARYA NUGRAHA</span>
+                        <span class="hidden 2xl:inline whitespace-nowrap">E-PRESKNBI - SMK KARYA NUGRAHA</span>
                         <span class="2xl:hidden whitespace-nowrap">E-PRESKNBI</span>
                     </a>
                 </div>

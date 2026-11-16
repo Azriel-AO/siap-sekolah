@@ -43,8 +43,8 @@
             @else
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-5 border-b border-gray-200">
-                        <h2 class="text-lg font-bold text-gray-900">Izin / Sakit — {{ $kelasDipilih->name }}</h2>
-                        <p class="text-xs text-gray-500">{{ $tanggalDisplay }} — {{ $rows->count() }} siswa</p>
+                        <h2 class="text-lg font-bold text-gray-900">Izin / Sakit - {{ $kelasDipilih->name }}</h2>
+                        <p class="text-xs text-gray-500">{{ $tanggalDisplay }} - {{ $rows->count() }} siswa</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">

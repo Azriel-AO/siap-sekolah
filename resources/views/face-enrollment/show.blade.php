@@ -6,7 +6,7 @@
                     Pendaftaran Wajah
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    Ambil 3 foto wajah Anda sebagai data referensi absensi — bukan pengenalan wajah.
+                    Ambil 3 foto wajah Anda sebagai data referensi absensi, bukan pengenalan wajah.
                 </p>
             </div>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -124,6 +124,26 @@
                         </div>
                         <p class="text-xs text-gray-500 mt-1">Kamera menyala setelah Anda mencentang pernyataan izin di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
 
+                        {{-- Peringatan visual sebelum proses capture dimulai --}}
+                        <div class="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 flex items-start gap-2.5">
+                            <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <div>
+                                <p class="font-bold">Persiapan Sebelum Pemindaian Wajah</p>
+                                <p class="text-[11px] text-amber-800 mt-0.5">Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.</p>
+                            </div>
+                        </div>
+
+                        {{-- Peringatan real-time bila wajah tertutup --}}
+                        <div x-show="faceObscured" x-cloak
+                             class="mt-3 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-800 flex items-center gap-2">
+                            <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            <span>Wajah tertutup. Lepas aksesoris penutup wajah.</span>
+                        </div>
+
                         {{-- Indikator 4 langkah otomatis --}}
                         <div x-show="consent && !kameraGagal && !manualMode" x-cloak class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
                             <div class="grid grid-cols-4 gap-2 text-xs font-bold text-center">
@@ -174,6 +194,10 @@
                                 <div class="text-8xl font-black text-white drop-shadow-lg" x-text="countdown"></div>
                             </div>
                         </div>
+
+                        <p x-show="consent && !kameraGagal" class="mt-2 text-center text-xs font-medium text-gray-600">
+                            Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.
+                        </p>
                     </div>
 
                     {{-- 3 Slot Foto --}}
@@ -246,6 +270,7 @@
                 manualMode: false,
                 autoStep: 0,
                 autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
+                faceObscured: false,
                 autoSession: null,
                 saving: false,
                 message: '',
@@ -333,9 +358,10 @@
 
                     this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
                         video: this.$refs.cameraPreview,
-                        onStateChange: ({ stepIndex, hint }) => {
+                        onStateChange: ({ stepIndex, hint, faceObscured }) => {
                             this.autoStep = stepIndex;
                             this.autoHint = hint;
+                            this.faceObscured = Boolean(faceObscured);
                         },
                         onPhotoCaptured: (slotIndex, jpegDataUrl) => {
                             if (slotIndex >= 0 && slotIndex < 3) {

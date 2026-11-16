@@ -245,7 +245,7 @@ class FingerprintTest extends TestCase
         $bridge = $this->withDriver('bridge', fn () => $this->get(route('kiosk.gerbang')));
 
         $bridge->assertOk();
-        $bridge->assertDontSee('DEMO — Simulasi jari');
+        $bridge->assertDontSee('DEMO - Simulasi jari');
         $bridge->assertSee('isMockFingerprint: false', false);
     }
 
@@ -254,7 +254,7 @@ class FingerprintTest extends TestCase
         $mock = $this->withDriver('mock', fn () => $this->get(route('kiosk.gerbang')));
 
         $mock->assertOk();
-        $mock->assertSee('DEMO — Simulasi jari');
+        $mock->assertSee('DEMO - Simulasi jari');
         $mock->assertSee('isMockFingerprint: true', false);
     }
 }

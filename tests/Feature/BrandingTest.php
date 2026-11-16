@@ -31,7 +31,7 @@ class BrandingTest extends TestCase
 
         $dashboard = $this->actingAs($admin)->get(route('dashboard'))->assertOk();
         $dashboard->assertSee('<title>E-PRESKNBI</title>', false);
-        $dashboard->assertSee('E-PRESKNBI — SMK KARYA NUGRAHA');
+        $dashboard->assertSee('E-PRESKNBI - SMK KARYA NUGRAHA');
         $dashboard->assertSee('images/logo-sekolah.png', false);
         $dashboard->assertSee('alt="Logo SMK Karya Nugraha"', false);
         $dashboard->assertSee('<link rel="icon" type="image/png"', false);

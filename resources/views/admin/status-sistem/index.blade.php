@@ -63,7 +63,7 @@
                                             };
                                         @endphp
                                         <div class="h-6 rounded-sm {{ $boxColor }} transition-colors cursor-default"
-                                             title="{{ $slot['day_label'] }} {{ $slot['hour_label'] }} — {{ $slot['availability'] }}% ({{ $slot['note'] }})"></div>
+                                             title="{{ $slot['day_label'] }} {{ $slot['hour_label'] }} - {{ $slot['availability'] }}% ({{ $slot['note'] }})"></div>
                                     @endforeach
                                 </div>
                             </div>
@@ -90,7 +90,7 @@
                 <div class="pt-4 border-t border-gray-100 space-y-3">
                     <div class="flex items-center justify-between">
                         <h2 class="text-sm font-bold text-gray-900">Availability over the last 24 hours</h2>
-                        <span class="text-xs font-mono text-gray-500" x-text="hoveredPoint ? (hoveredPoint.hour_label + ' — ' + hoveredPoint.availability + '%') : '24 jam terakhir'">24 jam terakhir</span>
+                        <span class="text-xs font-mono text-gray-500" x-text="hoveredPoint ? (hoveredPoint.hour_label + ' - ' + hoveredPoint.availability + '%') : '24 jam terakhir'">24 jam terakhir</span>
                     </div>
 
                     <div class="rounded-lg border border-gray-100 bg-slate-50/70 p-3">
@@ -130,7 +130,7 @@
                                         class="cursor-pointer"
                                         @mouseenter="hoveredPoint = @js($pt)"
                                         @mouseleave="hoveredPoint = null">
-                                    <title>{{ $pt['hour_label'] }} — {{ $pt['availability'] }}% ({{ $pt['note'] }})</title>
+                                    <title>{{ $pt['hour_label'] }} - {{ $pt['availability'] }}% ({{ $pt['note'] }})</title>
                                 </circle>
                             @endforeach
                         </svg>
@@ -178,12 +178,12 @@
                     </div>
 
                     @if($statusSensor['conectado'])
-                        <h2 class="text-base font-extrabold text-emerald-700">Terhubung — {{ $statusSensor['modelo'] ?? 'ZK9500' }}</h2>
+                        <h2 class="text-base font-extrabold text-emerald-700">Terhubung - {{ $statusSensor['modelo'] ?? 'ZK9500' }}</h2>
                         <p class="text-[11px] text-gray-500">
                             {{ $driver === 'bridge' ? 'Bridge lokal ' . $baseUrl . ' aktif.' : 'Mode simulasi (mock) aktif.' }}
                         </p>
                     @else
-                        <h2 class="text-base font-extrabold text-rose-700">Terputus — Sensor/bridge belum aktif</h2>
+                        <h2 class="text-base font-extrabold text-rose-700">Terputus - Sensor/bridge belum aktif</h2>
                         <p class="text-[11px] text-rose-700">
                             Periksa USB ZK9500 atau jalankan <code class="font-mono">box\mulai-sistem.bat</code>.
                         </p>

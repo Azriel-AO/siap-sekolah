@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Tambah Kelas</h1>
-        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Slug kosongkan saja — dibuat otomatis dari nama (contoh: "X TKJ 1" menjadi X-TKJ-1).</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Slug kosongkan saja, dibuat otomatis dari nama (contoh: "X TKJ 1" menjadi X-TKJ-1).</p>
     </x-slot>
 
     <div class="py-8">

@@ -36,8 +36,8 @@
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
                         <select name="gender" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                            <option value="L" @selected(old('gender', 'L') === 'L')>L — Laki-laki</option>
-                            <option value="P" @selected(old('gender') === 'P')>P — Perempuan</option>
+                            <option value="L" @selected(old('gender', 'L') === 'L')>L - Laki-laki</option>
+                            <option value="P" @selected(old('gender') === 'P')>P - Perempuan</option>
                         </select>
                     </div>
                 </div>
@@ -47,14 +47,14 @@
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">NIS Induk</label>
                         <input type="text" name="induk" value="{{ old('induk') }}" maxlength="20"
                                class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0075384110">
-                        <p class="text-[11px] text-gray-400 mt-1">NIS Induk sekolah (opsional) — jangan tertukar dengan NISN dari pendaftaran.</p>
+                        <p class="text-[11px] text-gray-400 mt-1">NIS Induk sekolah (opsional), jangan tertukar dengan NISN dari pendaftaran.</p>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
                     <select name="school_class_id" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                        <option value="">— Pilih kelas —</option>
+                        <option value="">- Pilih kelas -</option>
                         @foreach($classes as $kelas)
                             <option value="{{ $kelas->id }}" @selected(old('school_class_id') == $kelas->id)>{{ $kelas->name }}</option>
                         @endforeach
