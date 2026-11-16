@@ -6,7 +6,7 @@
                     Pendaftaran Wajah
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    Ambil 3 foto wajah Anda sebagai data referensi absensi, bukan pengenalan wajah.
+                    Ambil 3 foto wajah Anda sebagai data referensi dan verifikasi absensi.
                 </p>
             </div>
             <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -99,9 +99,8 @@
                         <h2 class="text-lg font-bold text-gray-900">Pernyataan Izin Orang Tua / Wali</h2>
                         <p class="text-sm text-gray-600 mt-2 leading-relaxed">
                             Saya menyatakan bahwa saya telah mendapat <strong>izin orang tua atau wali</strong>
-                            untuk mendaftarkan foto wajah saya. Foto ini hanya dipakai sebagai
-                            <strong>data referensi absensi</strong>, disimpan di penyimpanan privat sekolah,
-                            dan <strong>tidak digunakan untuk pengenalan/pencocokan wajah</strong> otomatis.
+                            untuk mendaftarkan foto wajah saya. Foto ini disimpan di penyimpanan privat sekolah
+                            dan digunakan <strong>hanya untuk keperluan absensi resmi sekolah</strong>.
                         </p>
                         <label class="mt-4 flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition"
                                :class="consent ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 bg-gray-50 hover:border-indigo-400'">

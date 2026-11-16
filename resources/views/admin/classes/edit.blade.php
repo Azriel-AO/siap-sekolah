@@ -31,7 +31,7 @@
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Slug</label>
                     <input type="text" name="slug" value="{{ old('slug', $class->slug) }}" maxlength="50"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
-                    <p class="text-[11px] text-gray-400 mt-1">Slug dipakai di URL kiosk &amp; rekap (contoh: /kiosk/X-TKJ-1). Harus unik; kosongkan untuk dibuat ulang dari nama.</p>
+                    <p class="text-[11px] text-gray-400 mt-1">Slug dipakai sebagai identitas filter kelas pada URL rekap (contoh: X-TKJ-1). Harus unik; kosongkan untuk dibuat ulang dari nama.</p>
                 </div>
 
                 <div>

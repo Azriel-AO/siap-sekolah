@@ -6,7 +6,7 @@
                     Data Siswa
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
-                    Kelola nama, NIS, jenis kelamin, kartu RFID, dan akun login siswa per kelas.
+                    Kelola nama, NIS, jenis kelamin, dan kartu RFID siswa per kelas.
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -60,7 +60,6 @@
                                     <th class="py-3.5 px-4">Nama Siswa</th>
                                     <th class="py-3.5 px-4 text-center">L/P</th>
                                     <th class="py-3.5 px-4">Kartu</th>
-                                    <th class="py-3.5 px-4">Akun Login</th>
                                     <th class="py-3.5 px-4 text-center">Aksi</th>
                                 </tr>
                             </thead>
@@ -80,13 +79,6 @@
                                                 <span class="text-gray-400">-</span>
                                             @endif
                                         </td>
-                                        <td class="py-3 px-4 text-xs">
-                                            @if($siswa->user)
-                                                <span class="font-mono text-gray-700">{{ $siswa->user->email }}</span>
-                                            @else
-                                                <span class="text-gray-400">Belum ada</span>
-                                            @endif
-                                        </td>
                                         <td class="py-3 px-4 text-center">
                                             <div class="flex items-center justify-center space-x-2">
                                                 <a href="{{ route('admin.siswa.edit', $siswa) }}" class="inline-flex items-center px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:border-indigo-400 hover:text-indigo-700 text-xs font-semibold text-gray-700 shadow-sm transition">
@@ -102,7 +94,6 @@
                                                             'card_uid' => $siswa->rfidCard?->card_uid,
                                                             'card_label' => $siswa->card_label,
                                                             'face_photos_count' => $siswa->faceEnrollment ? collect([$siswa->faceEnrollment->photo_1_path, $siswa->faceEnrollment->photo_2_path, $siswa->faceEnrollment->photo_3_path])->filter()->count() : 0,
-                                                            'user_email' => $siswa->user?->email,
                                                         ]) }}; actionUrl = '{{ route('admin.siswa.destroy', $siswa) }}'; modalHapus = true;"
                                                         class="inline-flex items-center px-3 py-1.5 rounded-md bg-white border border-gray-300 hover:border-rose-400 hover:text-rose-700 text-xs font-semibold text-gray-700 shadow-sm transition">
                                                     Hapus
@@ -112,7 +103,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="py-8 text-center text-sm text-gray-400">Belum ada siswa di kelas ini. Klik "Tambah Siswa".</td>
+                                        <td colspan="6" class="py-8 text-center text-sm text-gray-400">Belum ada siswa di kelas ini. Klik "Tambah Siswa".</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -162,12 +153,6 @@
                             </li>
                             <li>
                                 <strong x-text="targetSiswa?.face_photos_count"></strong> foto wajah
-                            </li>
-                            <li x-show="targetSiswa?.user_email" x-cloak>
-                                Akun login terhubung (<span class="font-mono" x-text="targetSiswa?.user_email"></span>)
-                            </li>
-                            <li x-show="!targetSiswa?.user_email" x-cloak class="opacity-75">
-                                Tidak ada akun login
                             </li>
                         </ul>
                         <p class="text-[11px] text-rose-600 mt-2 italic">

@@ -218,7 +218,7 @@
                             <span class="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded">Buka di Tab Baru</span>
                         </div>
                         <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                            Titik absen gerbang tunggal: semua kelas, lewat kartu RFID atau sidik jari.
+                            Titik absen gerbang tunggal: semua kelas, lewat kartu RFID, wajah (Face ID), atau sidik jari.
                         </p>
                     </a>
 
@@ -235,7 +235,7 @@
                                 <span class="text-xs bg-emerald-100 text-emerald-700 font-medium px-2 py-0.5 rounded">Aktif</span>
                             </div>
                             <p class="text-xs text-gray-500 mt-2 leading-relaxed">
-                                Pemantauan kehadiran siswa kelas binaan hari ini, diperbarui otomatis tiap 4 detik.
+                                Pemantauan kehadiran siswa kelas binaan hari ini, diperbarui otomatis tiap 10 detik.
                             </p>
                         </a>
                     @elseif($user->role === 'siswa')

@@ -108,7 +108,7 @@
                 @endif
 
                 <div class="p-4 bg-gray-50 border-t border-gray-200 text-xs text-gray-500 text-center">
-                    Jika ada ketidaksesuaian jam absensi, silakan hubungi Wali Kelas X TKJ 1.
+                    Jika ada ketidaksesuaian jam absensi, silakan hubungi Wali Kelas {{ $student->schoolClass?->name ?? 'Anda' }}.
                 </div>
             </div>
 

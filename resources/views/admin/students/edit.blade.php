@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Ubah Siswa</h1>
-        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">NIS, nama, jenis kelamin, kelas, kartu RFID, dan akun login milik {{ $student->name }}.</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Perbarui NIS, nama, jenis kelamin, kelas, dan kartu RFID milik {{ $student->name }}.</p>
     </x-slot>
 
     <div class="py-8">
@@ -63,14 +63,6 @@
                     <input type="text" name="card_uid" value="{{ old('card_uid', $student->rfidCard?->card_uid) }}" maxlength="50"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Kosongkan bila tidak ingin mengubah kartu">
                     <p class="text-[11px] text-gray-400 mt-1">Isi untuk membuat/memperbarui kartu milik siswa ini. Kartu tidak dihapus dari sini.</p>
-                </div>
-
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    @if($student->user)
-                        <p class="text-sm text-gray-700"><span class="font-semibold">Akun login:</span> <code class="font-mono">{{ $student->user->email }}</code> - terhubung otomatis.</p>
-                    @else
-                        <p class="text-xs text-emerald-800"><span class="font-semibold">Akun login otomatis:</span> <code class="font-mono">{{ $student->nis }}@knbi.sch.id</code> akan disinkronkan saat perubahan disimpan.</p>
-                    @endif
                 </div>
 
                 <div class="flex items-center justify-end space-x-3 pt-2">

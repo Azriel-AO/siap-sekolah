@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Tambah Siswa</h1>
-        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Isi data siswa. Akun login siswa akan dibuat secara otomatis.</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Isi data siswa dan kartu RFID (bila sudah ada).</p>
     </x-slot>
 
     <div class="py-8">
@@ -31,7 +31,7 @@
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">NIS <span class="text-rose-500">*</span></label>
                         <input type="text" name="nis" value="{{ old('nis') }}" required maxlength="20"
                                class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 10240111">
-                        <p class="text-[11px] text-gray-400 mt-1">NIS harus unik dan dipakai juga sebagai email akun login.</p>
+                        <p class="text-[11px] text-gray-400 mt-1">NIS harus unik untuk setiap siswa.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
@@ -66,10 +66,6 @@
                     <input type="text" name="card_uid" value="{{ old('card_uid') }}" maxlength="50"
                            class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: CARD-TKJ-011 (kosongkan bila belum ada)">
                     <p class="text-[11px] text-gray-400 mt-1">Kartu dibuat baru bila siswa belum punya, atau UID-nya diperbarui bila sudah ada.</p>
-                </div>
-
-                <div class="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-xs text-emerald-900">
-                    <span class="font-bold">Akun Login Otomatis:</span> Akun siswa (<code class="font-mono">&lt;NIS&gt;@knbi.sch.id</code>, kata sandi awal: <code class="font-mono">password</code>) dibuat secara otomatis saat data disimpan.
                 </div>
 
                 <div class="flex items-center justify-end space-x-3 pt-2">

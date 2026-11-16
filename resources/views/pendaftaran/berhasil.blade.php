@@ -22,7 +22,7 @@
         <p class="text-2xl font-black text-gray-900 mt-1">{{ $nama }}</p>
         <p class="text-sm font-semibold text-gray-500 mt-1">Kelas {{ $kelas }}</p>
         <div class="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 leading-relaxed">
-            Foto wajah, sidik jari, dan akun login siswa sudah tersimpan.
+            Foto wajah dan sidik jari Anda sudah tersimpan sebagai data referensi absensi.
             Kartu pelajar Anda sudah aktif untuk Absen Gerbang.
         </div>
         <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
