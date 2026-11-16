@@ -333,6 +333,7 @@
                 fotoBukti: '',
                 currentTime: '',
                 currentDate: '',
+                clockTimer: null,
                 resetTimer: null,
                 cameraStream: null,
                 cameraReady: false,
@@ -343,6 +344,7 @@
                 sensorBelumAktif: false,
                 sensorTimeoutInfo: false,
                 demoLoading: false,
+                tapInFlight: false,
                 verifyingFace: false,
                 faceVerifyStudent: null,
                 faceVerifyStatus: '',
@@ -354,6 +356,7 @@
                 faceCheckinInFlight: false,
                 faceDetectionTimer: null,
                 _offscreenCanvas: null,
+                _photoCanvas: null,
                 @if(isDebugMode())
                 debugPanelOpen: false,
                 debugStudentId: '',
@@ -362,7 +365,7 @@
 
                 initKiosk() {
                     this.updateClock();
-                    setInterval(() => this.updateClock(), 1000);
+                    this.clockTimer = setInterval(() => this.updateClock(), 1000);
                     this.$nextTick(() => this.focusInput());
                     this.startCamera();
                     this.muatFaceTemplates();
@@ -379,6 +382,10 @@
                     window.addEventListener('beforeunload', () => {
                         this.stopCamera();
                         this.stopAutoLoop();
+                        if (this.clockTimer) {
+                            clearInterval(this.clockTimer);
+                            this.clockTimer = null;
+                        }
                         if (this.faceDetectionTimer) {
                             clearTimeout(this.faceDetectionTimer);
                             this.faceDetectionTimer = null;
@@ -529,8 +536,8 @@
                 // satu panggilan boleh berjalan sampai ~25 detik (menunggu jari);
                 // jeda antar-panggilan >= 2 detik setelah response. Mock TIDAK memanggil ini.
                 async loopFingerprint() {
-                    // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk) atau sedang verifikasi wajah
-                    if (this.result || this.verifyingFace) {
+                    // Jangan panggil server saat kartu sedang menampilkan hasil (4/8 dtk) atau sedang verifikasi wajah / tap
+                    if (this.result || this.verifyingFace || this.tapInFlight || this.faceCheckinInFlight) {
                         this.loopTimer = setTimeout(() => this.loopFingerprint(), 2000);
                         return;
                     }
@@ -629,15 +636,18 @@
 
                 // Ambil 1 frame dari kamera sebagai foto bukti absen (PRD F1).
                 // Tanpa kamera / belum siap -> null; tap tetap jalan.
+                // Menggunakan kembali satu instance canvas offscreen agar tidak memicu alokasi memori berulang.
                 ambilFotoBukti() {
                     const video = this.$refs.cameraPreview;
                     if (!this.cameraStream || !video || !video.videoWidth) return null;
                     try {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth;
-                        canvas.height = video.videoHeight;
-                        canvas.getContext('2d').drawImage(video, 0, 0);
-                        return canvas.toDataURL('image/jpeg', 0.7);
+                        if (!this._photoCanvas) {
+                            this._photoCanvas = document.createElement('canvas');
+                        }
+                        this._photoCanvas.width = video.videoWidth;
+                        this._photoCanvas.height = video.videoHeight;
+                        this._photoCanvas.getContext('2d').drawImage(video, 0, 0);
+                        return this._photoCanvas.toDataURL('image/jpeg', 0.7);
                     } catch (e) {
                         return null;
                     }
@@ -645,9 +655,10 @@
 
                 async submitTap() {
                     const uid = this.cardUid.trim();
-                    if (!uid || this.verifyingFace) return;
+                    if (!uid || this.verifyingFace || this.tapInFlight || this.faceCheckinInFlight || this.demoLoading) return;
 
                     this.cardUid = '';
+                    this.tapInFlight = true;
                     const foto = this.ambilFotoBukti();
 
                     try {
@@ -677,6 +688,8 @@
                             status: 'ERROR',
                             message: 'Gagal menghubungi server kiosk. Periksa koneksi.'
                         });
+                    } finally {
+                        this.tapInFlight = false;
                     }
                 },
 
@@ -811,10 +824,10 @@
                 async loopFaceDetection() {
                     // Loop rekursif via setTimeout (900ms) untuk mencegah penumpukan task di main thread.
                     // Jangan jalankan matching jika ada hasil di layar, sedang verifikasi 1:1,
-                    // check-in sedang in-flight, atau kamera belum siap.
+                    // check-in/tap sedang in-flight, tab tersembunyi, atau kamera belum siap.
                     const FACE_LOOP_DELAY_MS = 900;
 
-                    if (this.result || this.verifyingFace || this.faceCheckinInFlight || !this.cameraReady) {
+                    if (document.hidden || this.result || this.verifyingFace || this.faceCheckinInFlight || this.tapInFlight || this.demoLoading || !this.cameraReady) {
                         if (this.result) {
                             this.faceGuideState = 'idle';
                         }
@@ -867,7 +880,7 @@
 
                                 const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
 
-                                if (match && match.matched && match.bestMatch) {
+                                if (match && match.matched && match.bestMatch && !this.tapInFlight && !this.verifyingFace && !this.result) {
                                     this.faceDetectedSince = null;
                                     this.showUnmatchedHint = false;
                                     this.faceCheckinInFlight = true;
@@ -907,7 +920,9 @@
                             this.showUnmatchedHint = false;
                         }
                     } catch {
-                        // Abaikan error deteksi hening agar loop tetap stabil
+                        // Reset state visual bila model gagal dimuat / error agar UI tidak terjebak
+                        this.faceGuideState = 'idle';
+                        this.faceDetecting = false;
                     } finally {
                         this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                     }

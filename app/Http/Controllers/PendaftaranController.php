@@ -64,7 +64,7 @@ class PendaftaranController extends Controller
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
             'gender' => ['required', Rule::in(['L', 'P'])],
             'nisn' => ['required', 'regex:/^\d{6,20}$/', Rule::unique('students', 'nisn')],
@@ -75,6 +75,7 @@ class PendaftaranController extends Controller
             'photos.*' => ['required', 'string'],
         ], [
             'name.required' => 'Nama wajib diisi.',
+            'name.not_regex' => 'Nama tidak boleh mengandung tag HTML atau karakter < dan >.',
             'school_class_id.required' => 'Kelas wajib dipilih.',
             'school_class_id.exists' => 'Kelas yang dipilih tidak ditemukan.',
             'gender.required' => 'Jenis kelamin wajib dipilih.',

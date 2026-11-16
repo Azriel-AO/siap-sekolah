@@ -63,7 +63,7 @@ class RekapPeriodeHelper
 
         $labelRentang = $periode === 'hari'
             ? $base->translatedFormat('l, d F Y')
-            : $start->translatedFormat('d F Y') . ' s/d ' . $end->translatedFormat('d F Y');
+            : $start->translatedFormat('d F Y').' s/d '.$end->translatedFormat('d F Y');
 
         return [
             'periode' => $periode,
@@ -83,6 +83,10 @@ class RekapPeriodeHelper
      */
     public static function hitungHariSekolah(Carbon $start, Carbon $end): int
     {
+        if ($end->lt($start)) {
+            [$start, $end] = [$end->copy(), $start->copy()];
+        }
+
         $count = 0;
         $curr = $start->copy()->startOfDay();
         $endDay = $end->copy()->startOfDay();

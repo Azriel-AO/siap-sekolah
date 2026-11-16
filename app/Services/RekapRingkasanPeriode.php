@@ -30,6 +30,10 @@ class RekapRingkasanPeriode
      */
     public static function hitungPerSiswa(Collection $students, Carbon $start, Carbon $end, int $hariSekolah): array
     {
+        if ($end->lt($start)) {
+            [$start, $end] = [$end->copy(), $start->copy()];
+        }
+
         $ids = $students->pluck('id')->all();
 
         $attendCache = Attendance::whereIn('student_id', $ids)

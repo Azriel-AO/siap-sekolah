@@ -134,7 +134,7 @@ class AdminStudentController extends Controller
     private function validasi(Request $request, ?Student $student = null): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:100'],
+            'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
             'nis' => ['required', 'string', 'max:20', Rule::unique('students', 'nis')->ignore($student?->id)],
             'induk' => ['nullable', 'string', 'max:20', Rule::unique('students', 'induk')->ignore($student?->id)],
             'gender' => ['required', Rule::in(['L', 'P'])],
@@ -142,6 +142,7 @@ class AdminStudentController extends Controller
             'card_uid' => ['nullable', 'string', 'max:50', Rule::unique('rfid_cards', 'card_uid')->ignore($student?->rfidCard?->id)],
         ], [
             'name.required' => 'Nama siswa wajib diisi.',
+            'name.not_regex' => 'Nama siswa tidak boleh mengandung tag HTML atau karakter < dan >.',
             'nis.required' => 'NIS wajib diisi.',
             'nis.unique' => 'NIS tersebut sudah dipakai siswa lain.',
             'induk.unique' => 'NIS Induk tersebut sudah dipakai siswa lain.',

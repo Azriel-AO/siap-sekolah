@@ -7,6 +7,7 @@ use App\Models\RfidCard;
 use App\Models\Student;
 use App\Services\FingerprintService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -479,6 +480,14 @@ class KioskController extends Controller
         }
 
         $schoolClass = $student->schoolClass;
+        if (! $schoolClass) {
+            return response()->json([
+                'success' => false,
+                'type' => 'class_not_found',
+                'student_name' => $student->name,
+                'message' => 'Data kelas siswa tidak ditemukan. Hubungi admin sekolah.',
+            ], 422);
+        }
 
         // Waktu Server Mutlak (PRD R7 & Konstitusi II)
         $now = Carbon::now('Asia/Jakarta');
@@ -504,16 +513,25 @@ class KioskController extends Controller
             // Status: <= entry_time = HADIR, > entry_time = TERLAMBAT
             $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
 
-            $attendance = Attendance::create([
-                'student_id' => $student->id,
-                'school_class_id' => $schoolClass->id,
-                'date' => $today,
-                'check_in_at' => $currentTime,
-                'status' => $status,
-                'last_tap_at' => $now,
-                'kiosk_device' => $device,
-                'photo_in_path' => $this->simpanFotoBukti($photo, $student, 'masuk', $now),
-            ]);
+            try {
+                $attendance = Attendance::create([
+                    'student_id' => $student->id,
+                    'school_class_id' => $schoolClass->id,
+                    'date' => $today,
+                    'check_in_at' => $currentTime,
+                    'status' => $status,
+                    'last_tap_at' => $now,
+                    'kiosk_device' => $device,
+                    'photo_in_path' => $this->simpanFotoBukti($photo, $student, 'masuk', $now),
+                ]);
+            } catch (QueryException) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'cooldown',
+                    'student_name' => $student->name,
+                    'message' => 'Kartu baru saja dicatat. Silakan tunggu sebentar.',
+                ], 429);
+            }
 
             $statusLabel = ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat';
 
