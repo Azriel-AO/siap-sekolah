@@ -18,7 +18,7 @@ class AdminRekapitulasiController extends Controller
      */
     public function index(Request $request): View
     {
-        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
         $tanggal = $this->tanggalDipilih($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
         $classes = SchoolClass::orderBy('name')->get();
@@ -47,7 +47,7 @@ class AdminRekapitulasiController extends Controller
      */
     public function grafik(Request $request): JsonResponse
     {
-        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
         $tanggal = $this->tanggalDipilih($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
         $kelasDipilih = $this->kelasDipilih($request);
@@ -116,12 +116,6 @@ class AdminRekapitulasiController extends Controller
 
     private function tanggalDipilih(Request $request): string
     {
-        $t = (string) $request->query('tanggal', '');
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) !== false) {
-            return $t;
-        }
-
-        return Carbon::now('Asia/Jakarta')->toDateString();
+        return RekapPeriodeHelper::ambilTanggalDariRequest($request);
     }
 }

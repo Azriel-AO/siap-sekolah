@@ -24,14 +24,14 @@ class AdminRekapExportController extends Controller
         // Judul di atas tabel: nama sekolah + periode/kelas
         $rows = [
             [$data['sekolah']],
-            ['Rekap Kehadiran — ' . $data['periodeLabel'] . ' (' . $data['rentangLabel'] . ') — ' . $data['kelasLabel']],
+            ['Rekap Kehadiran — '.$data['periodeLabel'].' ('.$data['rentangLabel'].') — '.$data['kelasLabel']],
             [''],
             ...$data['rows'],
         ];
 
-        $tmp = tempnam(sys_get_temp_dir(), 'rekap_') . '.xlsx';
+        $tmp = tempnam(sys_get_temp_dir(), 'rekap_').'.xlsx';
 
-        $writer = new Writer();
+        $writer = new Writer;
         $writer->openToFile($tmp);
         $writer->getCurrentSheet()->setName('Rekap');
         foreach ($rows as $row) {
@@ -44,7 +44,7 @@ class AdminRekapExportController extends Controller
 
         return new Response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $this->namaFile($data, 'xlsx') . '"',
+            'Content-Disposition' => 'attachment; filename="'.$this->namaFile($data, 'xlsx').'"',
         ]);
     }
 
@@ -62,7 +62,7 @@ class AdminRekapExportController extends Controller
 
         return new Response($pdf->output(), 200, [
             'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="' . $this->namaFile($data, 'pdf') . '"',
+            'Content-Disposition' => 'attachment; filename="'.$this->namaFile($data, 'pdf').'"',
         ]);
     }
 
@@ -75,10 +75,10 @@ class AdminRekapExportController extends Controller
         $kelas = str_replace(' ', '-', $data['kelasLabel']);
 
         if ($data['periode'] === 'hari') {
-            return 'rekap-hari-' . $data['tanggal'] . '-' . $kelas . '.' . $ext;
+            return 'rekap-hari-'.$data['tanggal'].'-'.$kelas.'.'.$ext;
         }
 
-        return 'rekap-' . $data['periode'] . '-' . $data['rentangAwal'] . '-sd-' . $data['rentangAkhir'] . '-' . $kelas . '.' . $ext;
+        return 'rekap-'.$data['periode'].'-'.$data['rentangAwal'].'-sd-'.$data['rentangAkhir'].'-'.$kelas.'.'.$ext;
     }
 
     /**
@@ -86,15 +86,12 @@ class AdminRekapExportController extends Controller
      */
     private function filter(Request $request): array
     {
-        $t = (string) $request->query('tanggal', '');
-        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) || strtotime($t) === false) {
-            $t = \Carbon\Carbon::now('Asia/Jakarta')->toDateString();
-        }
+        $t = RekapPeriodeHelper::ambilTanggalDariRequest($request);
 
         $slug = $request->query('kelas');
-        $slug = ($slug === null || $slug === '' ) ? 'semua' : $slug;
+        $slug = ($slug === null || $slug === '') ? 'semua' : $slug;
 
-        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
 
         return [$t, $slug, $periode];
     }

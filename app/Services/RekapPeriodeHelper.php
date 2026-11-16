@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class RekapPeriodeHelper
 {
@@ -14,10 +15,77 @@ class RekapPeriodeHelper
         $p = strtolower(trim((string) $periode));
 
         return match ($p) {
-            'minggu', 'minggu-ini', 'mingguan' => 'minggu',
-            'bulan', 'bulan-ini', 'bulanan' => 'bulan',
+            'minggu', 'minggu-ini', 'minggu_ini', 'mingguan', 'week', 'this_week' => 'minggu',
+            'bulan', 'bulan-ini', 'bulan_ini', 'bulanan', 'month', 'this_month' => 'bulan',
             default => 'hari',
         };
+    }
+
+    /**
+     * Ambil periode dari request ('periode' atau 'filter').
+     */
+    public static function ambilPeriodeDariRequest(Request $request): string
+    {
+        $raw = $request->input('periode') ?? $request->input('filter');
+
+        return self::normalisasiPeriode(is_string($raw) ? $raw : null);
+    }
+
+    /**
+     * Normalisasi string tanggal manual ('YYYY-MM-DD', 'DD/MM/YYYY', atau 'DD-MM-YYYY') ke 'YYYY-MM-DD'.
+     * Mengembalikan null bila kosong atau tidak valid.
+     */
+    public static function normalisasiTanggal(?string $tanggal): ?string
+    {
+        $t = trim((string) $tanggal);
+        if ($t === '') {
+            return null;
+        }
+
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $t, $m)) {
+            $year = (int) $m[1];
+            $month = (int) $m[2];
+            $day = (int) $m[3];
+            if ($year >= 1970 && $year <= 2100 && checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+
+            return null;
+        }
+
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $t, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+            if ($year >= 1970 && $year <= 2100 && checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Ambil tanggal dari request dengan memprioritaskan input manual ('date', 'tanggal', 'filter_date', 'start_date').
+     * Hanya jatuh ke hari ini bila tidak ada input manual yang valid.
+     */
+    public static function ambilTanggalDariRequest(Request $request): string
+    {
+        foreach (['date', 'tanggal', 'filter_date', 'start_date'] as $key) {
+            if ($request->filled($key)) {
+                $val = $request->input($key);
+                if (is_string($val)) {
+                    $normalized = self::normalisasiTanggal($val);
+                    if ($normalized !== null) {
+                        return $normalized;
+                    }
+                }
+            }
+        }
+
+        return Carbon::now('Asia/Jakarta')->toDateString();
     }
 
     /**
@@ -38,10 +106,7 @@ class RekapPeriodeHelper
     public static function hitungRentang(string $periode, ?string $tanggal = null): array
     {
         $periode = self::normalisasiPeriode($periode);
-
-        if (! $tanggal || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal) || strtotime($tanggal) === false) {
-            $tanggal = Carbon::now('Asia/Jakarta')->toDateString();
-        }
+        $tanggal = self::normalisasiTanggal($tanggal) ?? Carbon::now('Asia/Jakarta')->toDateString();
 
         $base = Carbon::parse($tanggal, 'Asia/Jakarta');
 

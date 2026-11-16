@@ -22,7 +22,7 @@ class TeacherAttendanceController extends Controller
 
         $schoolClass = $this->kelasDipilih($request);
         $classes = SchoolClass::orderBy('name')->get();
-        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $this->tanggalDipilih($request));
 
         if ($periode === 'hari') {
@@ -38,6 +38,8 @@ class TeacherAttendanceController extends Controller
             'periodeLabel' => $rentang['label_periode'],
             'rentangLabel' => $rentang['label_rentang'],
             'today' => $rentang['tanggal'],
+            'date' => $rentang['tanggal'],
+            'tanggal' => $rentang['tanggal'],
             'tanggalDisplay' => $periode === 'hari'
                 ? Carbon::parse($rentang['tanggal'])->translatedFormat('l, d F Y')
                 : $rentang['label_rentang'],
@@ -54,7 +56,7 @@ class TeacherAttendanceController extends Controller
         $this->pastikanGuruAtauAdmin($request);
 
         $schoolClass = $this->kelasDipilih($request);
-        $periode = RekapPeriodeHelper::normalisasiPeriode($request->query('periode'));
+        $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
         $rentang = RekapPeriodeHelper::hitungRentang($periode, $this->tanggalDipilih($request));
 
         if ($periode === 'hari') {
@@ -69,6 +71,8 @@ class TeacherAttendanceController extends Controller
             'periode' => $periode,
             'periode_label' => $rentang['label_periode'],
             'rentang_label' => $rentang['label_rentang'],
+            'tanggal' => $rentang['tanggal'],
+            'date' => $rentang['tanggal'],
             'date_formatted' => $periode === 'hari'
                 ? Carbon::parse($rentang['tanggal'])->translatedFormat('l, d F Y')
                 : $rentang['label_rentang'],
@@ -231,18 +235,12 @@ class TeacherAttendanceController extends Controller
     }
 
     /**
-     * Tanggal rekap dipilih lewat query param "?tanggal=YYYY-MM-DD".
+     * Tanggal rekap dipilih lewat query param ("date" atau "tanggal").
      * Format salah/tidak masuk akal → hari ini.
      */
     private function tanggalDipilih(Request $request): string
     {
-        $t = (string) $request->query('tanggal', '');
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) !== false) {
-            return $t;
-        }
-
-        return Carbon::now('Asia/Jakarta')->toDateString();
+        return RekapPeriodeHelper::ambilTanggalDariRequest($request);
     }
 
     /**

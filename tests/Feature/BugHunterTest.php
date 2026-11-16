@@ -15,6 +15,7 @@ use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use ReflectionMethod;
@@ -330,5 +331,97 @@ class BugHunterTest extends TestCase
 
         $this->expectException(TokenMismatchException::class);
         $csrfMiddleware->handle($request, fn () => response('ok'));
+    }
+
+    public function test_rekap_harian_menghormati_input_tanggal_manual_meski_filter_hari_ini_aktif(): void
+    {
+        Carbon::setTestNow('2026-11-16 09:00:00');
+        $this->seed(DatabaseSeeder::class);
+        $admin = $this->admin();
+
+        $kelas = SchoolClass::orderBy('name')->firstOrFail();
+        $siswaManualDate = Student::create([
+            'school_class_id' => $kelas->id,
+            'nis' => '10990061',
+            'nisn' => '0010990061',
+            'name' => 'Siswa Tanggal Manual',
+            'gender' => 'L',
+        ]);
+        $siswaHariIni = Student::create([
+            'school_class_id' => $kelas->id,
+            'nis' => '10990062',
+            'nisn' => '0010990062',
+            'name' => 'Siswa Hari Ini',
+            'gender' => 'P',
+        ]);
+
+        // Siswa pertama HADIR pada 2026-02-15, siswa kedua HADIR pada hari ini (2026-11-16)
+        Attendance::create([
+            'student_id' => $siswaManualDate->id,
+            'school_class_id' => $kelas->id,
+            'date' => '2026-02-15',
+            'check_in_at' => '06:45:00',
+            'status' => 'HADIR',
+            'last_tap_at' => Carbon::parse('2026-02-15 06:45:00', 'Asia/Jakarta'),
+            'kiosk_device' => 'gerbang-kartu',
+        ]);
+        Attendance::create([
+            'student_id' => $siswaHariIni->id,
+            'school_class_id' => $kelas->id,
+            'date' => Carbon::today('Asia/Jakarta')->toDateString(),
+            'check_in_at' => '06:50:00',
+            'status' => 'HADIR',
+            'last_tap_at' => Carbon::now('Asia/Jakarta'),
+            'kiosk_device' => 'gerbang-kartu',
+        ]);
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+
+        // Request ke endpoint rekap harian dengan filter=hari_ini DAN date=2026-02-15
+        $response = $this->actingAs($admin)->get(route('guru.rekap', [
+            'kelas' => $kelas->slug,
+            'filter' => 'hari_ini',
+            'date' => '2026-02-15',
+        ]));
+
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $response->assertOk();
+        $response->assertViewHas('today', '2026-02-15');
+
+        // Pastikan query ke tabel attendances memfilter tanggal 2026-02-15, BUKAN Carbon::today()
+        $attendanceQueries = collect($queries)->filter(
+            fn (array $q) => str_contains(strtolower($q['query']), 'attendances')
+        );
+        $this->assertNotEmpty($attendanceQueries);
+        $allBindings = $attendanceQueries->pluck('bindings')->flatten()->map(fn ($b) => (string) $b)->all();
+        $this->assertContains('2026-02-15', $allBindings);
+        $this->assertNotContains(Carbon::today('Asia/Jakarta')->toDateString(), $allBindings);
+
+        // Pastikan endpoint JSON polling juga menghormati filter=hari_ini & date=2026-02-15 (maupun format d/m/Y 15/02/2026)
+        $jsonResponse = $this->actingAs($admin)->getJson(route('guru.rekap.data', [
+            'kelas' => $kelas->slug,
+            'filter' => 'hari_ini',
+            'date' => '2026-02-15',
+        ]));
+        $jsonResponse->assertOk();
+        $this->assertSame('2026-02-15', $jsonResponse->json('date'));
+        $this->assertSame(1, $jsonResponse->json('summary.hadir'));
+
+        $rows = collect($jsonResponse->json('students'));
+        $this->assertSame('HADIR', $rows->firstWhere('id', $siswaManualDate->id)['status']);
+        $this->assertSame('BELUM_ABSEN', $rows->firstWhere('id', $siswaHariIni->id)['status']);
+
+        $dmyResponse = $this->actingAs($admin)->getJson(route('guru.rekap.data', [
+            'kelas' => $kelas->slug,
+            'filter' => 'hari_ini',
+            'date' => '15/02/2026',
+        ]));
+        $dmyResponse->assertOk();
+        $this->assertSame('2026-02-15', $dmyResponse->json('date'));
+
+        Carbon::setTestNow();
     }
 }

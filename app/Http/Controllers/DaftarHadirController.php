@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
 use App\Services\DaftarHadirBulanan;
+use App\Services\RekapPeriodeHelper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,8 +25,9 @@ class DaftarHadirController extends Controller
      */
     public function index(Request $request): View
     {
-        $bulan = (int) filter_var($request->query('bulan', (int) now()->month), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]) ?: (int) now()->month;
-        $tahun = (int) filter_var($request->query('tahun', (int) now()->year), FILTER_VALIDATE_INT, ['options' => ['min_range' => 2000, 'max_range' => 2100]]) ?: (int) now()->year;
+        [$defaultBulan, $defaultTahun] = $this->defaultBulanTahun($request);
+        $bulan = (int) filter_var($request->query('bulan', $defaultBulan), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]) ?: $defaultBulan;
+        $tahun = (int) filter_var($request->query('tahun', $defaultTahun), FILTER_VALIDATE_INT, ['options' => ['min_range' => 2000, 'max_range' => 2100]]) ?: $defaultTahun;
 
         $slug = $request->query('kelas', 'semua');
 
@@ -55,8 +57,9 @@ class DaftarHadirController extends Controller
      */
     public function excel(Request $request): Response
     {
-        $bulan = (int) filter_var($request->query('bulan'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]) ?: (int) now()->month;
-        $tahun = (int) filter_var($request->query('tahun'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 2000, 'max_range' => 2100]]) ?: (int) now()->year;
+        [$defaultBulan, $defaultTahun] = $this->defaultBulanTahun($request);
+        $bulan = (int) filter_var($request->query('bulan'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 12]]) ?: $defaultBulan;
+        $tahun = (int) filter_var($request->query('tahun'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 2000, 'max_range' => 2100]]) ?: $defaultTahun;
         $slug = $request->query('kelas', 'semua');
 
         $kelasExport = (new DaftarHadirBulanan)->classesExport($slug);
@@ -209,5 +212,18 @@ class DaftarHadirController extends Controller
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
+    }
+
+    /**
+     * Gunakan bulan/tahun dari parameter date/tanggal manual bila tersedia, fallback ke bulan/tahun saat ini.
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function defaultBulanTahun(Request $request): array
+    {
+        $tanggal = RekapPeriodeHelper::ambilTanggalDariRequest($request);
+        $parsed = Carbon::parse($tanggal, 'Asia/Jakarta');
+
+        return [(int) $parsed->month, (int) $parsed->year];
     }
 }

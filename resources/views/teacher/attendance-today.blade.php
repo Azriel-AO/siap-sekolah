@@ -9,30 +9,30 @@
                     {{ $tanggalDisplay }} — Jurusan {{ $schoolClass->department }} — Jam Masuk: {{ substr($schoolClass->entry_time, 0, 5) }} — Jam Pulang: {{ substr($schoolClass->exit_time, 0, 5) }}
                 </p>
             </div>
-            <div class="flex items-center space-x-3">
-                {{-- Filter: tanggal (anchor minggu/bulan) + kelas + periode --}}
-                <select onchange="window.location.href='{{ route('guru.rekap') }}?periode=' + encodeURIComponent(this.value) + '&kelas={{ $schoolClass->slug }}&tanggal={{ $today }}'"
-                        class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
-                        aria-label="Pilih periode">
-                    <option value="hari" @selected($periode === 'hari')>Hari Ini</option>
-                    <option value="minggu" @selected($periode === 'minggu')>Minggu Ini</option>
-                    <option value="bulan" @selected($periode === 'bulan')>Bulan Ini</option>
-                </select>
-                <form method="GET" action="{{ route('guru.rekap') }}" class="flex items-center">
-                    <input type="hidden" name="kelas" value="{{ $schoolClass->slug }}">
-                    <input type="hidden" name="periode" value="{{ $periode }}">
-                    <input type="date" name="tanggal" value="{{ $today }}" onchange="this.form.submit()"
+            <div class="flex flex-wrap items-center gap-3">
+                {{-- Filter: tanggal (anchor minggu/bulan) + kelas + periode dalam satu form agar input manual tanggal tidak pernah di-override --}}
+                <form id="filterRekapHarianForm" method="GET" action="{{ route('guru.rekap') }}" class="flex flex-wrap items-center gap-3">
+                    <select name="periode" onchange="this.form.submit()"
+                            class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                            aria-label="Pilih periode">
+                        <option value="hari" @selected($periode === 'hari')>Hari Ini</option>
+                        <option value="minggu" @selected($periode === 'minggu')>Minggu Ini</option>
+                        <option value="bulan" @selected($periode === 'bulan')>Bulan Ini</option>
+                    </select>
+                    <input type="date" id="filterTanggalRekapHarian" name="tanggal" value="{{ $today }}"
+                           onkeydown="if (event.key === 'Enter') { if (/^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value)) this.form.submit(); } else { this.dataset.typing = '1'; }"
+                           onchange="if (this.dataset.typing !== '1' && /^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value)) this.form.submit()"
+                           onblur="if (this.dataset.typing === '1') { delete this.dataset.typing; if (/^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value) && this.value !== this.defaultValue) this.form.submit(); }"
                            class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
                            aria-label="Tanggal acuan periode">
+                    <select name="kelas" onchange="this.form.submit()"
+                            class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
+                            aria-label="Pilih kelas">
+                        @foreach($classes as $kelas)
+                            <option value="{{ $kelas->slug }}" @selected($kelas->slug === $schoolClass->slug)>{{ $kelas->name }}</option>
+                        @endforeach
+                    </select>
                 </form>
-                {{-- Pemilih kelas: reload halaman dengan ?kelas=slug --}}
-                <select onchange="window.location.href='{{ route('guru.rekap') }}?kelas=' + encodeURIComponent(this.value) + '&tanggal={{ $today }}&periode={{ $periode }}'"
-                        class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
-                        aria-label="Pilih kelas">
-                    @foreach($classes as $kelas)
-                        <option value="{{ $kelas->slug }}" @selected($kelas->slug === $schoolClass->slug)>{{ $kelas->name }}</option>
-                    @endforeach
-                </select>
                 @if(Auth::user()->role === 'admin')
                     <a href="{{ route('admin.rekap.excel', ['tanggal' => $today, 'kelas' => $schoolClass->slug, 'periode' => $periode]) }}" class="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-sm transition">
                         <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -290,7 +290,16 @@
 
                 async fetchData() {
                     try {
-                        const res = await fetch("{{ route('guru.rekap.data') }}?kelas={{ $schoolClass->slug }}&tanggal={{ $today }}&periode={{ $periode }}");
+                        const dateInput = document.getElementById('filterTanggalRekapHarian');
+                        const activeDate = (dateInput && /^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(dateInput.value))
+                            ? dateInput.value
+                            : @js($today);
+                        const params = new URLSearchParams({
+                            kelas: @js($schoolClass->slug),
+                            tanggal: activeDate,
+                            periode: @js($periode),
+                        });
+                        const res = await fetch("{{ route('guru.rekap.data') }}?" + params.toString());
                         if (res.ok) {
                             const data = await res.json();
                             this.summary = data.summary;

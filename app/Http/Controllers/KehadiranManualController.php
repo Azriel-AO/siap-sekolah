@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\IzinSakit;
 use App\Models\SchoolClass;
+use App\Services\RekapPeriodeHelper;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class KehadiranManualController extends Controller
@@ -38,7 +38,7 @@ class KehadiranManualController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            $rows = $students->map(function ($student) use ($tanggal) {
+            $rows = $students->map(function ($student) {
                 $att = $student->attendances->first();
                 $izinSakit = $student->izinSakits->first();
 
@@ -114,7 +114,7 @@ class KehadiranManualController extends Controller
             ]
         );
 
-        return $this->kembali($request, 'Catatan ' . strtoupper($validated['aksi']) . ' tersimpan.');
+        return $this->kembali($request, 'Catatan '.strtoupper($validated['aksi']).' tersimpan.');
     }
 
     private function kembali(Request $request, string $pesan): RedirectResponse
@@ -131,12 +131,6 @@ class KehadiranManualController extends Controller
 
     private function tanggalDipilih(Request $request): string
     {
-        $t = (string) $request->query('tanggal', '');
-
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) !== false) {
-            return $t;
-        }
-
-        return Carbon::now('Asia/Jakarta')->toDateString();
+        return RekapPeriodeHelper::ambilTanggalDariRequest($request);
     }
 }

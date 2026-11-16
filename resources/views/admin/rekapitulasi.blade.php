@@ -16,7 +16,7 @@
                     @endforeach
                 </select>
                 <select id="filterPeriodeRekap"
-                        onchange="window.location.href='{{ route('admin.rekapitulasi') }}?periode=' + encodeURIComponent(this.value) + '&tanggal={{ $tanggal }}&kelas=' + encodeURIComponent(document.getElementById('filterKelasRekap')?.value || '{{ $kelas }}')"
+                        onchange="window.location.href='{{ route('admin.rekapitulasi') }}?periode=' + encodeURIComponent(this.value) + '&tanggal=' + encodeURIComponent(document.getElementById('filterTanggalRekap')?.value || '{{ $tanggal }}') + '&kelas=' + encodeURIComponent(document.getElementById('filterKelasRekap')?.value || '{{ $kelas }}')"
                         class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
                         aria-label="Pilih periode">
                     <option value="hari" @selected($periode === 'hari')>Hari Ini</option>
@@ -26,7 +26,10 @@
                 <form method="GET" action="{{ route('admin.rekapitulasi') }}" class="flex items-center">
                     <input type="hidden" name="periode" value="{{ $periode }}">
                     <input type="hidden" name="kelas" id="inputHiddenKelasRekap" value="{{ $kelas }}">
-                    <input type="date" name="tanggal" value="{{ $tanggal }}" onchange="this.form.submit()"
+                    <input type="date" id="filterTanggalRekap" name="tanggal" value="{{ $tanggal }}"
+                           onkeydown="if (event.key === 'Enter') { if (/^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value)) this.form.submit(); } else { this.dataset.typing = '1'; }"
+                           onchange="if (this.dataset.typing !== '1' && /^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value)) this.form.submit()"
+                           onblur="if (this.dataset.typing === '1') { delete this.dataset.typing; if (/^(19\d\d|20\d\d|2100)-\d{2}-\d{2}$/.test(this.value) && this.value !== this.defaultValue) this.form.submit(); }"
                            class="rounded-lg border-gray-300 text-sm font-medium text-gray-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 py-1.5"
                            aria-label="Tanggal acuan periode">
                 </form>
