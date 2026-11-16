@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Tambah Siswa</h1>
-        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Isi data siswa. Kartu RFID dan akun login boleh diisi belakangan.</p>
+        <p class="text-xs sm:text-sm text-gray-500 mt-0.5">Isi data siswa. Akun login siswa akan dibuat secara otomatis.</p>
     </x-slot>
 
     <div class="py-8">
@@ -68,14 +68,8 @@
                     <p class="text-[11px] text-gray-400 mt-1">Kartu dibuat baru bila siswa belum punya, atau UID-nya diperbarui bila sudah ada.</p>
                 </div>
 
-                <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                    <label class="flex items-start space-x-3 cursor-pointer">
-                        <input type="checkbox" name="buat_akun" value="1" @checked(old('buat_akun')) class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <span class="text-sm">
-                            <span class="font-semibold text-gray-800">Buatkan akun login siswa</span><br>
-                            <span class="text-xs text-gray-500">Email: <code>&lt;NIS&gt;@knbi.sch.id</code>, kata sandi awal: <code>password</code>, peran: siswa. Siswa terhubung otomatis ke data ini. Ingatkan siswa mengganti kata sandi setelah login pertama.</span>
-                        </span>
-                    </label>
+                <div class="rounded-lg border border-emerald-200 bg-emerald-50/70 p-4 text-xs text-emerald-900">
+                    <span class="font-bold">Akun Login Otomatis:</span> Akun siswa (<code class="font-mono">&lt;NIS&gt;@knbi.sch.id</code>, kata sandi awal: <code class="font-mono">password</code>) dibuat secara otomatis saat data disimpan.
                 </div>
 
                 <div class="flex items-center justify-end space-x-3 pt-2">

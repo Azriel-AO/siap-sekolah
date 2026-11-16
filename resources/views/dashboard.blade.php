@@ -31,6 +31,12 @@
     <div class="py-8">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            @if(session('status') || session('success'))
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 shadow-sm">
+                    {{ session('status') ?? session('success') }}
+                </div>
+            @endif
+
             {{-- Banner pengingat pendaftaran wajah (khusus siswa yang belum terdaftar) --}}
             @if($siswaPerluDaftarWajah ?? false)
                 <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">

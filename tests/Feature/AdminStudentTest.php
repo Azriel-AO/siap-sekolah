@@ -11,6 +11,7 @@ use App\Models\Student;
 use App\Models\User;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -274,5 +275,37 @@ class AdminStudentTest extends TestCase
             'card_label' => '10-TKJ-1-003',
             'message' => 'Halo, Siswa Tiga (10-TKJ-1-003)',
         ]);
+    }
+
+    public function test_tambah_dan_ubah_siswa_otomatis_membuat_serta_menyinkronkan_akun_login(): void
+    {
+        $this->seedDemo();
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        $class = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+
+        // Form tambah siswa tidak lagi menampilkan checkbox manual buat_akun
+        $createPage = $this->actingAs($admin)->get(route('admin.siswa.create'));
+        $createPage->assertOk();
+        $createPage->assertDontSee('Buatkan akun login siswa');
+
+        // Simpan siswa baru tanpa mengirim buat_akun -> akun user otomatis dibuat
+        $storeRes = $this->actingAs($admin)->post(route('admin.siswa.store'), [
+            'name' => 'Siswa Otomatis Akun',
+            'nis' => '10248881',
+            'induk' => '0881',
+            'gender' => 'L',
+            'school_class_id' => $class->id,
+            'card_uid' => 'CARD-AUTO-881',
+        ]);
+        $storeRes->assertRedirect(route('admin.siswa.index', ['kelas' => $class->slug]));
+
+        $student = Student::where('nis', '10248881')->firstOrFail();
+        $this->assertNotNull($student->user_id);
+
+        $user = User::where('email', '10248881@knbi.sch.id')->first();
+        $this->assertNotNull($user);
+        $this->assertSame('siswa', $user->role);
+        $this->assertSame($student->id, (int) $user->student_id);
+        $this->assertTrue(Hash::check('password', $user->password));
     }
 }

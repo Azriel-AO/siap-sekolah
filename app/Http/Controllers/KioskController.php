@@ -36,6 +36,8 @@ class KioskController extends Controller
 
     /**
      * Simulasi absensi developer mode tanpa perangkat fisik (hanya aktif saat DEBUG_MODE=true).
+     * Mendukung simulasi granular per kanal (`channel`: debug|kartu|wajah|fingerprint),
+     * foto bukti riil dari kamera jika dikirim (`photo`), serta opsi `bypass_cooldown`.
      */
     public function debugSimulate(Request $request): JsonResponse
     {
@@ -43,13 +45,25 @@ class KioskController extends Controller
 
         $validated = $request->validate([
             'student_id' => ['required', 'integer', 'exists:students,id'],
+            'channel' => ['nullable', 'string', 'in:debug,kartu,wajah,fingerprint'],
+            'photo' => ['nullable', 'string', 'max:400000'],
+            'bypass_cooldown' => ['nullable', 'boolean'],
         ]);
 
         $student = Student::with(['schoolClass', 'rfidCard'])->findOrFail((int) $validated['student_id']);
+        $channel = $validated['channel'] ?? 'debug';
 
-        $response = $this->prosesAbsensi($student, null, 'debug');
+        [$device, $methodLabel] = match ($channel) {
+            'kartu' => ['gerbang-kartu', 'Kartu'],
+            'wajah' => ['face', 'Wajah'],
+            'fingerprint' => ['gerbang-fingerprint', 'Sidik Jari'],
+            default => ['debug', 'debug'],
+        };
+
+        $bypassCooldown = $request->boolean('bypass_cooldown');
+        $response = $this->prosesAbsensi($student, $validated['photo'] ?? null, $device, $bypassCooldown);
         $data = $response->getData(true);
-        $data['method'] = 'debug';
+        $data['method'] = $methodLabel;
         $cardLabel = $student->card_label;
 
         if ($cardLabel !== null) {
@@ -96,7 +110,8 @@ class KioskController extends Controller
         $student = $card->student;
         $cardLabel = $student->card_label;
         $facePhotos = $this->ambilFotoEnrollmentBase64($student);
-        $isDirect = $request->boolean('direct');
+        $isDirect = $request->boolean('direct') || (isDebugMode() && $request->boolean('bypass_face_verify'));
+        $bypassCooldown = isDebugMode() && $request->boolean('bypass_cooldown');
 
         // Bila direct = false (backward compatible Task 36) dan siswa memiliki 3 foto
         // enrollment wajah di storage privat, minta kiosk melakukan verifikasi wajah 1:1.
@@ -106,7 +121,7 @@ class KioskController extends Controller
                 ->where('date', $now->toDateString())
                 ->first();
 
-            if ($attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
+            if (! $bypassCooldown && $attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
                 return response()->json([
                     'success' => false,
                     'type' => 'cooldown',
@@ -143,7 +158,7 @@ class KioskController extends Controller
             ]);
         }
 
-        $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-kartu');
+        $response = $this->prosesAbsensi($student, $request->input('photo'), 'gerbang-kartu', $bypassCooldown);
         $data = $response->getData(true);
         $data['method'] = 'Kartu';
 
@@ -473,7 +488,7 @@ class KioskController extends Controller
      * Kelas yang dipakai untuk batas Hadir/Terlambat adalah kelas SISWA,
      * bukan kelas perangkat (tidak ada lagi kiosk per kelas).
      */
-    private function prosesAbsensi(Student $student, ?string $photo, string $device): JsonResponse
+    private function prosesAbsensi(Student $student, ?string $photo, string $device, bool $bypassCooldown = false): JsonResponse
     {
         if (! $student->relationLoaded('schoolClass')) {
             $student->load('schoolClass');
@@ -498,8 +513,8 @@ class KioskController extends Controller
             ->where('date', $today)
             ->first();
 
-        // Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan.
-        if ($attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
+        // Anti-Double-Tap Cooldown (PRD R3): selang < 60 detik diabaikan (kecuali di-bypass saat Debug Mode).
+        if (! $bypassCooldown && $attendance && $attendance->last_tap_at && abs($now->diffInSeconds($attendance->last_tap_at)) < 60) {
             return response()->json([
                 'success' => false,
                 'type' => 'cooldown',

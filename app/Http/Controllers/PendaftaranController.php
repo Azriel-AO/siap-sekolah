@@ -38,9 +38,19 @@ class PendaftaranController extends Controller
 
     /**
      * Daftarkan sidik jari siswa ke sensor (server-side ke bridge/mock).
+     * Pada Debug Mode, mendukung parameter granular `bypass_fingerprint=1` tanpa menyentuh device lain.
      */
     public function fingerprintEnrolar(Request $request): JsonResponse
     {
+        if (isDebugMode() && $request->boolean('bypass_fingerprint')) {
+            return response()->json([
+                'ok' => true,
+                'huellaId' => 'DBG-FP-'.strtoupper(uniqid()),
+                'bypassed' => true,
+                'message' => 'Sidik jari dilewati (Debug Bypass).',
+            ]);
+        }
+
         $hasil = FingerprintService::dariConfig()->enroll();
 
         if ($hasil === null) {
@@ -58,11 +68,17 @@ class PendaftaranController extends Controller
     }
 
     /**
-     * Simpan pendaftaran lengkap: siswa + kartu + 3 foto wajah + sidik jari (opsional).
+     * Simpan pendaftaran lengkap: siswa + akun login + kartu + 3 foto wajah + sidik jari (opsional).
      * SATU transaksi DB — semua berhasil atau tidak ada yang tersimpan.
+     * Pada Debug Mode, mendukung bypass granular per device (`bypass_camera`, `bypass_rfid`, `bypass_fingerprint`)
+     * yang HANYA mengisi bagian yang kosong tanpa menimpa data asli yang sudah ada.
      */
     public function store(Request $request): JsonResponse|RedirectResponse
     {
+        if (isDebugMode()) {
+            $this->applyGranularDebugBypasses($request);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
@@ -127,6 +143,9 @@ class PendaftaranController extends Controller
                     'fingerprint_id' => $fingerprintId,
                 ]);
 
+                // Buat atau sinkronkan akun login siswa secara otomatis ({NIS}@knbi.sch.id)
+                $siswa->syncUserAccount();
+
                 // Kartu: buat baru, atau "adopsi" kartu menganggur yang sudah ada
                 if ($kartuTerpakai) {
                     $kartuTerpakai->update(['student_id' => $siswa->id, 'is_active' => true]);
@@ -171,18 +190,67 @@ class PendaftaranController extends Controller
         }
 
         $kelas = SchoolClass::find($validated['school_class_id']);
+        $successMessage = 'Pendaftaran siswa "'.$student->name.'" berhasil disimpan dan akun login telah aktif.';
 
         session()->flash('nama', $student->name);
         session()->flash('kelas', $kelas?->name ?? '-');
+        session()->flash('status', $successMessage);
+        session()->flash('success', $successMessage);
+
+        $redirectUrl = $request->user()?->role === 'admin'
+            ? route('admin.siswa.index', array_filter(['kelas' => $kelas?->slug]))
+            : route('dashboard');
 
         if ($request->expectsJson()) {
             return response()->json([
                 'success' => true,
-                'redirect' => route('pendaftaran.berhasil'),
+                'message' => $successMessage,
+                'redirect' => $redirectUrl,
             ]);
         }
 
-        return redirect()->route('pendaftaran.berhasil');
+        return redirect($redirectUrl)
+            ->with('status', $successMessage)
+            ->with('success', $successMessage);
+    }
+
+    /**
+     * Terapkan bypass debug secara granular pada request pendaftaran:
+     * Hanya mengisi field device yang di-bypass DAN masih kosong,
+     * tidak pernah menimpa (overwrite) data riil yang sudah diisi user.
+     */
+    private function applyGranularDebugBypasses(Request $request): void
+    {
+        $token = strtoupper(base_convert((string) hrtime(true), 10, 36));
+
+        if ($request->boolean('bypass_rfid')) {
+            $currentCard = trim((string) $request->input('card_uid', ''));
+            if ($currentCard === '') {
+                $request->merge(['card_uid' => 'DBG-CARD-'.$token]);
+            }
+        }
+
+        if ($request->boolean('bypass_fingerprint')) {
+            $currentFp = trim((string) $request->input('fingerprint_id', ''));
+            if ($currentFp === '') {
+                $request->merge(['fingerprint_id' => 'DBG-FP-'.$token]);
+            }
+        }
+
+        if ($request->boolean('bypass_camera')) {
+            $photos = $request->input('photos');
+            $photosArray = is_array($photos) ? array_values($photos) : [];
+            $mergedPhotos = [];
+            for ($i = 0; $i < 3; $i++) {
+                $existing = $photosArray[$i] ?? null;
+                if (is_string($existing) && trim($existing) !== '' && $this->decodeDataUrlJpeg($existing) !== null) {
+                    $mergedPhotos[$i] = $existing;
+                } else {
+                    $mergedPhotos[$i] = generateDummyJpegDataUrl('DBG'.($i + 1));
+                }
+            }
+            $request->merge(['photos' => $mergedPhotos]);
+        }
     }
 
     /**

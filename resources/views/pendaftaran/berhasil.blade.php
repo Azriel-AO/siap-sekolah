@@ -22,8 +22,18 @@
         <p class="text-2xl font-black text-gray-900 mt-1">{{ $nama }}</p>
         <p class="text-sm font-semibold text-gray-500 mt-1">Kelas {{ $kelas }}</p>
         <div class="mt-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-xs text-emerald-800 leading-relaxed">
-            Foto wajah dan sidik jari Anda sudah tersimpan sebagai data referensi absensi.
+            Foto wajah, sidik jari, dan akun login siswa sudah tersimpan.
             Kartu pelajar Anda sudah aktif untuk Absen Gerbang.
+        </div>
+        <div class="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="{{ Auth::check() && Auth::user()->role === 'admin' ? route('admin.siswa.index') : route('dashboard') }}"
+               class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition">
+                {{ Auth::check() && Auth::user()->role === 'admin' ? 'Ke Daftar Siswa' : 'Ke Dashboard' }}
+            </a>
+            <a href="{{ route('pendaftaran.index') }}"
+               class="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition">
+                Daftar Siswa Lain
+            </a>
         </div>
     </main>
 </body>

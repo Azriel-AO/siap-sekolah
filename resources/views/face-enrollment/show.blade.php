@@ -115,6 +115,18 @@
 
                     {{-- Area kamera (gagal-aman) --}}
                     <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                        @if(isDebugMode())
+                            <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
+                                    <span class="text-xs font-semibold text-amber-900">Bypass Kamera Granular: isi hanya slot foto yang masih kosong.</span>
+                                </div>
+                                <button type="button" @click="isiSlotFotoKosongDebug()"
+                                        class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold transition shrink-0">
+                                    Bypass Kamera (Isi Slot Kosong)
+                                </button>
+                            </div>
+                        @endif
                         <div class="flex items-center justify-between gap-2">
                             <h2 class="text-lg font-bold text-gray-900">Kamera Wajah</h2>
                             <span x-show="consent && !kameraGagal" x-cloak
@@ -438,6 +450,32 @@
                     this.message = teks;
                     this.messageOk = ok;
                 },
+
+                @if(isDebugMode())
+                buatDummyFotoJpeg(label) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 320;
+                    canvas.height = 240;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, canvas.width / 2, canvas.height / 2 - 10);
+                    return canvas.toDataURL('image/jpeg', 0.8);
+                },
+
+                isiSlotFotoKosongDebug() {
+                    this.consent = true;
+                    const labels = ['FOTO 1 (DEPAN)', 'FOTO 2 (KANAN)', 'FOTO 3 (KIRI)'];
+                    this.photos = this.photos.map((existing, idx) => existing || this.buatDummyFotoJpeg(labels[idx]));
+                },
+                @endif
 
                 async simpan() {
                     if (this.photos.some(p => !p)) {

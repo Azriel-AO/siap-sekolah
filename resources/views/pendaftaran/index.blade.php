@@ -40,15 +40,38 @@
             <form @submit.prevent="simpan()" class="space-y-5">
 
                 @if(isDebugMode())
-                    <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div class="flex items-center gap-2">
-                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
-                            <span class="text-xs font-semibold text-amber-900">Mode Pengembang aktif: lewati perangkat fisik untuk uji alur.</span>
+                    <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
+                                <span class="text-xs font-semibold text-amber-900">Mode Pengembang Granular: lewati perangkat tertentu tanpa menimpa data asli perangkat lain.</span>
+                            </div>
+                            <button type="button" @click="isiDummyBiometrik()"
+                                    class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shadow-sm transition shrink-0">
+                                Lewati Biometrik (Pakai Data Dummy)
+                            </button>
                         </div>
-                        <button type="button" @click="isiDummyBiometrik()"
-                                class="inline-flex items-center justify-center px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shadow-sm transition shrink-0">
-                            Lewati Biometrik (Pakai Data Dummy)
-                        </button>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-amber-200/80">
+                            <button type="button" @click="isiDataDiriContoh()"
+                                    class="px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition text-center">
+                                + Isi Data Diri Kosong
+                            </button>
+                            <button type="button" @click="bypassKameraGranular()"
+                                    class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
+                                    :class="debugBypass.camera ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                Bypass Kamera (Slot Kosong)
+                            </button>
+                            <button type="button" @click="bypassSidikJariGranular()"
+                                    class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
+                                    :class="debugBypass.fingerprint ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                Bypass Sidik Jari
+                            </button>
+                            <button type="button" @click="bypassRfidGranular()"
+                                    class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
+                                    :class="debugBypass.rfid ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                Bypass Kartu RFID
+                            </button>
+                        </div>
                     </div>
                 @endif
 
@@ -253,11 +276,19 @@
                     </div>
                 </section>
 
-                {{-- Langkah 3: Sidik Jari --}}
+                    {{-- Langkah 3: Sidik Jari --}}
                 <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                    <div class="flex items-center space-x-3 mb-1">
-                        <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">3</span>
-                        <h2 class="text-base font-bold text-gray-900">Sidik Jari</h2>
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">3</span>
+                            <h2 class="text-base font-bold text-gray-900">Sidik Jari</h2>
+                        </div>
+                        @if(isDebugMode())
+                            <button type="button" @click="bypassSidikJariGranular()"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition">
+                                DEBUG: Skip Sidik Jari
+                            </button>
+                        @endif
                     </div>
                     <p class="text-[11px] text-gray-400 ml-10 mb-4">Tekan tombol, lalu letakkan jari Anda pada sensor. Bisa dilewati bila sensor belum tersedia.</p>
 
@@ -267,16 +298,24 @@
                             <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.1.9-2 2-2s2 .9 2 2m-6.5 1.5A6.5 6.5 0 0112 5a6.5 6.5 0 014.5 11M8 14.5A3.5 3.5 0 0012 17a3.5 3.5 0 003.5-3M5.5 12H3m18 0h-2.5"/></svg>
                             <span x-text="enrollStatus === 'loading' ? 'Membaca sidik jari…' : 'Daftar Sidik Jari'"></span>
                         </button>
-                        <span x-show="enrollStatus === 'ok'" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">✓ Sidik jari terdaftar</span>
+                        <span x-show="enrollStatus === 'ok'" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">✓ Sidik jari terdaftar <span x-show="form.fingerprint_id" class="ms-1 font-mono text-[10px]" x-text="'(' + form.fingerprint_id + ')'"></span></span>
                         <span x-show="enrollStatus === 'gagal'" class="text-xs text-rose-600 font-medium" x-text="enrollMessage"></span>
                     </div>
                 </section>
 
                 {{-- Langkah 4: Kartu Pelajar --}}
                 <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                    <div class="flex items-center space-x-3 mb-1">
-                        <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">4</span>
-                        <h2 class="text-base font-bold text-gray-900">Kartu Pelajar</h2>
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">4</span>
+                            <h2 class="text-base font-bold text-gray-900">Kartu Pelajar</h2>
+                        </div>
+                        @if(isDebugMode())
+                            <button type="button" @click="bypassRfidGranular()"
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition">
+                                DEBUG: Generate UID Kartu
+                            </button>
+                        @endif
                     </div>
                     <p class="text-[11px] text-gray-400 ml-10 mb-4">Ketuk kotak di bawah, lalu tempelkan kartu pelajar Anda ke scanner (atau ketik UID kartu lalu Enter).</p>
 
@@ -333,6 +372,11 @@
                 saving: false,
                 message: '',
                 errorList: [],
+                debugBypass: {
+                    camera: false,
+                    fingerprint: false,
+                    rfid: false,
+                },
 
                 init() {
                     window.addEventListener('beforeunload', () => this.stopCamera());
@@ -565,9 +609,14 @@
                 tampilError(pesan, daftar = []) {
                     this.message = pesan;
                     this.errorList = daftar;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
                 @if(isDebugMode())
+                buatTokenDebug() {
+                    return Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+                },
+
                 buatDummyFotoJpeg(label) {
                     const canvas = document.createElement('canvas');
                     canvas.width = 320;
@@ -589,27 +638,80 @@
                     return canvas.toDataURL('image/jpeg', 0.8);
                 },
 
-                isiDummyBiometrik() {
-                    this.stopCamera();
-                    this.manualMode = true;
+                isiDataDiriContoh() {
+                    if (!this.form.name.trim()) {
+                        this.form.name = 'Siswa Uji Debug ' + Math.floor(100 + Math.random() * 900);
+                    }
+                    if (!this.form.gender) {
+                        this.form.gender = 'L';
+                    }
+                    if (!this.form.school_class_id) {
+                        const firstClassId = @js($classes->first()?->id ?? '');
+                        if (firstClassId) {
+                            this.form.school_class_id = String(firstClassId);
+                        }
+                    }
+                    if (!/^\d{6,20}$/.test(this.form.nisn)) {
+                        this.form.nisn = '00' + String(Math.floor(10000000 + Math.random() * 89999999));
+                    }
+                    if (!this.form.setuju) {
+                        this.form.setuju = true;
+                        this.onSetujuChange();
+                    }
+                },
+
+                bypassKameraGranular() {
+                    this.debugBypass.camera = true;
                     this.stepTimedOut = false;
-                    this.form.setuju = true;
-                    const token = Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
-                    this.form.card_uid = 'DBG-CARD-' + token;
-                    this.form.fingerprint_id = 'DBG-FP-' + token;
+                    if (!this.form.setuju) {
+                        this.form.setuju = true;
+                    }
+                    const labels = ['FOTO 1 (DEPAN)', 'FOTO 2 (KANAN)', 'FOTO 3 (KIRI)'];
+                    // Hanya isi slot foto yang masih kosong (null), TIDAK menimpa foto asli yang sudah diambil
+                    const nextPhotos = this.photos.map((existing, idx) => existing || this.buatDummyFotoJpeg(labels[idx]));
+                    this.photos = nextPhotos;
+                },
+
+                bypassSidikJariGranular() {
+                    this.debugBypass.fingerprint = true;
+                    // Hanya isi fingerprint_id jika belum ada data asli dari sensor
+                    if (!this.form.fingerprint_id || !this.form.fingerprint_id.trim()) {
+                        this.form.fingerprint_id = 'DBG-FP-' + this.buatTokenDebug();
+                    }
                     this.enrollStatus = 'ok';
                     this.enrollMessage = '';
-                    this.photos = [
-                        this.buatDummyFotoJpeg('FOTO 1 (DEPAN)'),
-                        this.buatDummyFotoJpeg('FOTO 2 (KANAN)'),
-                        this.buatDummyFotoJpeg('FOTO 3 (KIRI)'),
-                    ];
+                },
+
+                bypassRfidGranular() {
+                    this.debugBypass.rfid = true;
+                    // Hanya isi card_uid jika belum ada kartu asli yang di-tap
+                    if (!this.form.card_uid || !this.form.card_uid.trim()) {
+                        this.form.card_uid = 'DBG-CARD-' + this.buatTokenDebug();
+                    }
+                },
+
+                isiDummyBiometrik() {
+                    // Isi hanya perangkat biometrik yang masih kosong tanpa menimpa data asli yang sudah ada
+                    this.bypassKameraGranular();
+                    this.bypassSidikJariGranular();
+                    this.bypassRfidGranular();
                 },
                 @endif
 
                 async simpan() {
                     this.message = '';
                     this.errorList = [];
+                    @if(isDebugMode())
+                    if (this.debugBypass.camera && this.photos.some(p => !p)) {
+                        this.bypassKameraGranular();
+                    }
+                    if (this.debugBypass.rfid && !this.form.card_uid.trim()) {
+                        this.bypassRfidGranular();
+                    }
+                    if (this.debugBypass.fingerprint && !this.form.fingerprint_id.trim()) {
+                        this.bypassSidikJariGranular();
+                    }
+                    @endif
                     if (this.photos.some(p => !p)) {
                         this.tampilError('Foto wajah wajib pas 3 foto.');
                         return;
@@ -623,11 +725,19 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                             },
-                            body: JSON.stringify({ ...this.form, photos: this.photos }),
+                            body: JSON.stringify({
+                                ...this.form,
+                                photos: this.photos,
+                                @if(isDebugMode())
+                                bypass_camera: this.debugBypass.camera,
+                                bypass_fingerprint: this.debugBypass.fingerprint,
+                                bypass_rfid: this.debugBypass.rfid,
+                                @endif
+                            }),
                         });
                         const data = await res.json();
                         if (res.ok && data.success) {
-                            window.location.href = data.redirect;
+                            window.location.href = data.redirect || "{{ route('dashboard') }}";
                             return;
                         }
                         const errors = data.errors ? Object.values(data.errors).flat() : [data.message ?? 'Gagal menyimpan.'];

@@ -87,6 +87,20 @@ class FaceEnrollmentController extends Controller
         }
 
         $photos = $request->input('photos');
+        if (isDebugMode() && $request->boolean('bypass_camera')) {
+            $photosArray = is_array($photos) ? array_values($photos) : [];
+            $mergedPhotos = [];
+            for ($i = 0; $i < 3; $i++) {
+                $existingPhoto = $photosArray[$i] ?? null;
+                if (is_string($existingPhoto) && trim($existingPhoto) !== '' && $this->decodeDataUrlJpeg($existingPhoto) !== null) {
+                    $mergedPhotos[$i] = $existingPhoto;
+                } else {
+                    $mergedPhotos[$i] = generateDummyJpegDataUrl('DBG'.($i + 1));
+                }
+            }
+            $photos = $mergedPhotos;
+        }
+
         if (! is_array($photos) || count($photos) !== 3) {
             $jumlah = is_array($photos) ? count($photos) : 0;
 

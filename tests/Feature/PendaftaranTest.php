@@ -6,8 +6,10 @@ use App\Models\FaceEnrollment;
 use App\Models\RfidCard;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Models\User;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -69,13 +71,23 @@ class PendaftaranTest extends TestCase
         $response = $this->postJson('/pendaftaran', $this->dataValid());
 
         $response->assertOk();
-        $response->assertJson(['success' => true]);
+        $response->assertJson([
+            'success' => true,
+            'redirect' => route('dashboard'),
+        ]);
 
         $student = Student::where('nisn', '0099001122')->first();
         $this->assertNotNull($student);
         $this->assertSame('L', $student->gender);
-        $this->assertNull($student->user_id, 'Siswa baru tidak boleh punya akun login.');
+        $this->assertNotNull($student->user_id, 'Siswa baru wajib punya akun login otomatis.');
         $this->assertSame('MOCK-FP-BARU-001', $student->fingerprint_id);
+
+        $user = User::find($student->user_id);
+        $this->assertNotNull($user);
+        $this->assertSame('0099001122@knbi.sch.id', $user->email);
+        $this->assertSame('siswa', $user->role);
+        $this->assertSame($student->id, (int) $user->student_id);
+        $this->assertTrue(Hash::check('password', $user->password));
 
         $kartu = RfidCard::where('card_uid', 'CARD-BARU-001')->first();
         $this->assertNotNull($kartu);

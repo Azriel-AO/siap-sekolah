@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DebugModeAndDeviceStatusTest extends TestCase
@@ -163,5 +164,47 @@ class DebugModeAndDeviceStatusTest extends TestCase
         $responseAktif = $this->actingAs($admin)->get(route('admin.status-sistem'));
         $responseAktif->assertOk();
         $responseAktif->assertSee('RFID Reader: Aktif');
+    }
+
+    public function test_granular_debug_mode_bypass_satu_device_tidak_menimpa_data_asli_device_lain(): void
+    {
+        $this->seed(DatabaseSeeder::class);
+        Storage::fake('local');
+        config(['app.debug_mode' => true]);
+
+        $kelas = SchoolClass::firstOrFail();
+        $realPhoto1 = generateDummyJpegDataUrl('REAL-CAMERA-PHOTO-1');
+
+        // User memakai kartu RFID asli ('REAL-CARD-777') dan 1 foto kamera asli,
+        // lalu mengaktifkan bypass_fingerprint dan bypass_camera (hanya untuk 2 slot foto sisanya).
+        $response = $this->postJson(route('pendaftaran.simpan'), [
+            'name' => 'Siswa Granular Debug',
+            'gender' => 'L',
+            'school_class_id' => $kelas->id,
+            'nisn' => '0077889900',
+            'setuju' => true,
+            'card_uid' => 'REAL-CARD-777',
+            'fingerprint_id' => '',
+            'photos' => [$realPhoto1, null, null],
+            'bypass_camera' => true,
+            'bypass_fingerprint' => true,
+            'bypass_rfid' => false,
+        ]);
+
+        $response->assertOk();
+        $response->assertJson(['success' => true]);
+
+        $student = Student::where('nisn', '0077889900')->with(['rfidCard', 'faceEnrollment'])->firstOrFail();
+
+        // Kartu RFID asli TIDAK tertimpa oleh dummy
+        $this->assertSame('REAL-CARD-777', $student->rfidCard->card_uid);
+
+        // Fingerprint terisi oleh bypass karena kosong
+        $this->assertNotNull($student->fingerprint_id);
+        $this->assertStringStartsWith('DBG-FP-', $student->fingerprint_id);
+
+        // Foto slot 1 tetap memakai binary foto asli (REAL-CAMERA-PHOTO-1), tidak ditimpa dummy
+        $savedPhoto1Binary = Storage::disk('local')->get($student->faceEnrollment->photo_1_path);
+        $this->assertStringContainsString('REAL-CAMERA-PHOTO-1', (string) $savedPhoto1Binary);
     }
 }

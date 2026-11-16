@@ -87,6 +87,12 @@
 
             <!-- Settings & User Profile -->
             <div class="hidden lg:flex lg:items-center lg:space-x-4 shrink-0">
+                @if(isDebugMode())
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[11px] font-black tracking-wider uppercase" title="Developer Debug Mode Aktif">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        DEBUG
+                    </span>
+                @endif
                 <!-- User Info & Role Badge -->
                 <div class="text-right">
                     <div class="text-sm font-semibold text-gray-800">{{ Auth::user()->name }}</div>

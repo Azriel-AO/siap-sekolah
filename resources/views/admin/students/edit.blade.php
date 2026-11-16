@@ -67,15 +67,9 @@
 
                 <div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
                     @if($student->user)
-                        <p class="text-sm text-gray-700"><span class="font-semibold">Akun login:</span> <code class="font-mono">{{ $student->user->email }}</code> - sudah terhubung.</p>
+                        <p class="text-sm text-gray-700"><span class="font-semibold">Akun login:</span> <code class="font-mono">{{ $student->user->email }}</code> - terhubung otomatis.</p>
                     @else
-                        <label class="flex items-start space-x-3 cursor-pointer">
-                            <input type="checkbox" name="buat_akun" value="1" @checked(old('buat_akun')) class="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="text-sm">
-                                <span class="font-semibold text-gray-800">Buatkan akun login siswa</span><br>
-                                <span class="text-xs text-gray-500">Email: <code>&lt;NIS&gt;@knbi.sch.id</code>, kata sandi awal: <code>password</code>, peran: siswa.</span>
-                            </span>
-                        </label>
+                        <p class="text-xs text-emerald-800"><span class="font-semibold">Akun login otomatis:</span> <code class="font-mono">{{ $student->nis }}@knbi.sch.id</code> akan disinkronkan saat perubahan disimpan.</p>
                     @endif
                 </div>
 

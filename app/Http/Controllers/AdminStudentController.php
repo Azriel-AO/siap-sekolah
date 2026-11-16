@@ -9,10 +9,8 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminStudentController extends Controller
@@ -56,7 +54,7 @@ class AdminStudentController extends Controller
     }
 
     /**
-     * Simpan siswa baru + kartu RFID (opsional) + akun login (opsional).
+     * Simpan siswa baru + kartu RFID (opsional) + akun login otomatis.
      * Satu transaksi: gagal di tengah → semua batal.
      */
     public function store(Request $request): RedirectResponse
@@ -64,7 +62,7 @@ class AdminStudentController extends Controller
 
         $validated = $this->validasi($request);
 
-        DB::transaction(function () use ($validated, $request) {
+        DB::transaction(function () use ($validated) {
             $student = Student::create([
                 'school_class_id' => $validated['school_class_id'],
                 'nis' => $validated['nis'],
@@ -74,10 +72,7 @@ class AdminStudentController extends Controller
             ]);
 
             $this->simpanKartu($student, $validated['card_uid'] ?? null);
-
-            if ($request->boolean('buat_akun')) {
-                $this->buatAkun($student);
-            }
+            $student->syncUserAccount();
         });
 
         return redirect()
@@ -100,14 +95,14 @@ class AdminStudentController extends Controller
     }
 
     /**
-     * Perbarui siswa + kartu RFID (buat/perbarui) + akun login (opsional, bila belum ada).
+     * Perbarui siswa + kartu RFID (buat/perbarui) + sinkronisasi akun login otomatis.
      */
     public function update(Request $request, Student $student): RedirectResponse
     {
 
         $validated = $this->validasi($request, $student);
 
-        DB::transaction(function () use ($validated, $student, $request) {
+        DB::transaction(function () use ($validated, $student) {
             $student->update([
                 'school_class_id' => $validated['school_class_id'],
                 'nis' => $validated['nis'],
@@ -117,10 +112,7 @@ class AdminStudentController extends Controller
             ]);
 
             $this->simpanKartu($student, $validated['card_uid'] ?? null);
-
-            if ($request->boolean('buat_akun') && ! $student->user_id) {
-                $this->buatAkun($student);
-            }
+            $student->syncUserAccount();
         });
 
         return redirect()
@@ -174,30 +166,6 @@ class AdminStudentController extends Controller
     }
 
     /**
-     * Buat akun login siswa: email dari NIS (<nis>@knbi.sch.id),
-     * password default "password", role siswa, terhubung via user_id.
-     */
-    private function buatAkun(Student $student): void
-    {
-        $email = $student->nis.'@knbi.sch.id';
-
-        if (User::where('email', $email)->exists()) {
-            throw ValidationException::withMessages([
-                'buat_akun' => 'Email '.$email.' sudah dipakai. Siswa belum dibuat — periksa dulu.',
-            ]);
-        }
-
-        $user = User::create([
-            'name' => $student->name,
-            'email' => $email,
-            'password' => Hash::make('password'),
-            'role' => 'siswa',
-        ]);
-
-        $student->update(['user_id' => $user->id]);
-    }
-
-    /**
      * Hapus permanen data siswa (hard delete) beserta seluruh data terkait dalam 1 transaksi DB:
      * - Catatan absensi (& file foto bukti)
      * - Kartu RFID
@@ -231,8 +199,8 @@ class AdminStudentController extends Controller
             }
             Storage::disk('local')->deleteDirectory("face-photos/{$student->id}");
 
-            // 4. Hapus akun login terhubung (bila user_id ada)
-            $user = $student->user;
+            // 4. Hapus akun login terhubung (bila user_id atau student_id ada)
+            $user = $student->user ?? User::where('student_id', $student->id)->first();
             if ($user) {
                 $student->update(['user_id' => null]);
                 $user->delete();

@@ -306,6 +306,30 @@
                     @endforeach
                 </select>
 
+                <label class="block text-[11px] font-semibold text-slate-300 mt-2.5 mb-1">Kanal Simulasi</label>
+                <select x-model="debugChannel"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-900 text-white text-xs py-1.5 px-2.5 focus:border-amber-400 focus:ring-amber-400">
+                    <option value="debug">Debug Langsung</option>
+                    <option value="kartu">Kartu RFID</option>
+                    <option value="wajah">Face ID (Wajah)</option>
+                    <option value="fingerprint">Sidik Jari</option>
+                </select>
+
+                <div class="mt-2.5 space-y-1.5 border-t border-slate-800 pt-2 text-[11px] text-slate-300">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="debugBypassFaceVerify" class="rounded border-slate-600 bg-slate-900 text-amber-400 focus:ring-amber-400">
+                        <span>Bypass Verifikasi Wajah 1:1 saat Tap Kartu</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="debugBypassCooldown" class="rounded border-slate-600 bg-slate-900 text-amber-400 focus:ring-amber-400">
+                        <span>Bypass Cooldown 60 Detik</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="debugUseRealPhoto" class="rounded border-slate-600 bg-slate-900 text-amber-400 focus:ring-amber-400">
+                        <span>Tetap pakai foto kamera asli bila aktif</span>
+                    </label>
+                </div>
+
                 <button type="button"
                         @click="simulasiAbsenDebug()"
                         :disabled="!debugStudentId || debugSimulating"
@@ -363,6 +387,10 @@
                 @if(isDebugMode())
                 debugPanelOpen: false,
                 debugStudentId: '',
+                debugChannel: 'debug',
+                debugBypassFaceVerify: false,
+                debugBypassCooldown: false,
+                debugUseRealPhoto: true,
                 debugSimulating: false,
                 @endif
 
@@ -502,6 +530,7 @@
                         return;
                     }
                     this.debugSimulating = true;
+                    const fotoRiil = this.debugUseRealPhoto ? this.ambilFotoBukti() : null;
                     try {
                         const res = await fetch("{{ route('kiosk.debug.simulate') }}", {
                             method: 'POST',
@@ -510,10 +539,15 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            body: JSON.stringify({ student_id: Number(this.debugStudentId) })
+                            body: JSON.stringify({
+                                student_id: Number(this.debugStudentId),
+                                channel: this.debugChannel || 'debug',
+                                bypass_cooldown: Boolean(this.debugBypassCooldown),
+                                photo: fotoRiil,
+                            })
                         });
                         const data = await res.json();
-                        this.fotoBukti = '';
+                        this.fotoBukti = fotoRiil || '';
                         this.debugPanelOpen = false;
                         this.showResult(data);
                     } catch {
@@ -672,7 +706,15 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            body: JSON.stringify({ card_uid: uid, photo: foto, direct: 1 })
+                            body: JSON.stringify({
+                                card_uid: uid,
+                                photo: foto,
+                                direct: 1,
+                                @if(isDebugMode())
+                                bypass_face_verify: Boolean(this.debugBypassFaceVerify),
+                                bypass_cooldown: Boolean(this.debugBypassCooldown),
+                                @endif
+                            })
                         });
 
                         const data = await res.json();
