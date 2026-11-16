@@ -100,6 +100,65 @@
                 </div>
             @endif
 
+            <!-- Ringkasan 7 Hari Terakhir (Mini Bar Chart + 4 Metrik Mingguan) -->
+            <section class="bg-white overflow-hidden shadow-sm sm:rounded-xl border border-gray-200 p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Ringkasan 7 Hari Terakhir</h3>
+                        <p class="text-xs text-gray-500">Total siswa hadir tepat waktu per hari dalam 7 hari terakhir dan rekap minggu ini.</p>
+                    </div>
+                    <a href="{{ route('admin.rekapitulasi') }}"
+                       class="inline-flex items-center text-sm font-bold text-indigo-600 hover:text-indigo-800 transition shrink-0">
+                        Lihat Detail →
+                    </a>
+                </div>
+
+                {{-- Mini Bar Chart 7 Kolom (Warna Hijau) --}}
+                <div class="rounded-xl border border-gray-100 bg-slate-50/70 p-4 sm:p-5">
+                    <div class="grid grid-cols-7 gap-2 sm:gap-4 items-end h-36">
+                        @foreach($chart7Hari as $bar)
+                            <div class="flex flex-col items-center justify-end h-full gap-1.5" title="{{ $bar['day_label'] }}, {{ $bar['date_label'] }}: {{ $bar['hadir'] }} hadir">
+                                <span class="text-[11px] font-bold {{ $bar['hadir'] > 0 ? 'text-emerald-700' : 'text-gray-400' }}">
+                                    {{ $bar['hadir'] }}
+                                </span>
+                                <div class="w-full max-w-[44px] flex-1 flex items-end justify-center">
+                                    @if($bar['hadir'] > 0)
+                                        <div class="w-full rounded-t-lg bg-emerald-500 hover:bg-emerald-600 transition-all shadow-sm"
+                                             style="height: {{ $bar['height_percent'] }}%;"></div>
+                                    @else
+                                        <div class="w-full h-1.5 rounded-full bg-gray-200"></div>
+                                    @endif
+                                </div>
+                                <div class="text-center leading-tight">
+                                    <div class="text-[11px] font-bold text-gray-700">{{ $bar['day_label'] }}</div>
+                                    <div class="text-[10px] text-gray-400">{{ $bar['date_label'] }}</div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+
+                {{-- 4 Angka Ringkas Minggu Ini --}}
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+                    <div class="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-700">Total Hadir Minggu Ini</div>
+                        <div class="text-2xl sm:text-3xl font-black text-emerald-600 mt-1">{{ $weeklyTotals['hadir'] }}</div>
+                    </div>
+                    <div class="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-amber-700">Total Terlambat</div>
+                        <div class="text-2xl sm:text-3xl font-black text-amber-600 mt-1">{{ $weeklyTotals['terlambat'] }}</div>
+                    </div>
+                    <div class="rounded-xl border border-sky-200 bg-sky-50/50 p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-sky-700">Total Izin/Sakit</div>
+                        <div class="text-2xl sm:text-3xl font-black text-sky-600 mt-1">{{ $weeklyTotals['izin_sakit'] }}</div>
+                    </div>
+                    <div class="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-rose-700">Total Alpa</div>
+                        <div class="text-2xl sm:text-3xl font-black text-rose-600 mt-1">{{ $weeklyTotals['alpa'] }}</div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Menu Layanan Sekolah -->
             <div>
                 <div class="flex items-center justify-between mb-4">

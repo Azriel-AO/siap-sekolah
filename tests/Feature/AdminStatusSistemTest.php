@@ -104,4 +104,26 @@ class AdminStatusSistemTest extends TestCase
         $this->assertFileExists(base_path('box/watchdog.bat'));
         $this->assertFileExists(base_path('box/pasang-autostart.bat'));
     }
+
+    public function test_status_sistem_menampilkan_uptime_availability_72_kotak_dan_grafik_24_jam(): void
+    {
+        $this->seedDemo();
+
+        $response = $this->actingAs($this->admin())->get('/admin/status-sistem');
+
+        $response->assertOk();
+        $response->assertSee('Uptime (3d)');
+        $response->assertSee('Availability (3d)');
+        $response->assertSee('Riwayat Kesehatan 72 Jam (3 Hari × 24 Jam)');
+        $response->assertSee('Availability over the last 24 hours');
+        $response->assertSee('<polyline', false);
+        $response->assertSee('Server Web &amp; SQLite Siap', false);
+        $response->assertSee('Fingerprint');
+        $response->assertSee('Kamera / Webcam');
+        $response->assertSee('RFID Reader');
+
+        // Pastikan tepat 72 kotak (title="... — ...%") dirender
+        preg_match_all('/class="h-6 rounded-sm /', (string) $response->getContent(), $matches);
+        $this->assertCount(72, $matches[0]);
+    }
 }
