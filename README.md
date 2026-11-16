@@ -89,6 +89,13 @@ php artisan db:seed --class=UserSeeder --force
 ```
 > **Catatan**: Perintah `UserSeeder` di atas bersifat idempoten dan membuat akun Administrator default (`admin@knbi.sch.id`). Jangan pernah menjalankan perintah destruktif yang menghapus tabel pada komputer produksi yang sudah berisi data presensi siswa.
 
+#### Opsional: Generator Data Dummy Realistis (Demo & Testing Visual)
+Untuk keperluan demo atau pengujian visual (menghasilkan **78 siswa dengan nama Indonesia realistis** yang terdistribusi merata di **39 kelas**, akun login otomatis `{NISN}@knbi.sch.id`, kartu RFID, serta **27 data absensi/izin selama 3 hari terakhir** agar grafik Dashboard langsung terisi):
+```powershell
+php artisan db:seed --class=DummyStudentSeeder
+```
+> **Aman & Idempotent**: Seeder ini menggunakan `updateOrCreate` sehingga aman dijalankan berkali-kali tanpa menduplikasi data dan tidak menghapus akun Admin maupun data siswa asli.
+
 ### 4. Build Aset Antarmuka (Frontend)
 Kompilasi aset CSS dan JavaScript produksi menggunakan Vite:
 ```powershell
