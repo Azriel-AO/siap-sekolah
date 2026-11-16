@@ -262,15 +262,90 @@ export async function extractVectorFromDataUrl(landmarker, dataUrl) {
 }
 
 /**
+ * Hitung koordinat pusat wajah (rata-rata x, y dari seluruh landmark) dalam koordinat viewport
+ * dengan memperhitungkan aspect ratio video dan CSS object-fit: cover.
+ *
+ * @param {Array<{x: number, y: number, z?: number}>} landmarks
+ * @param {HTMLVideoElement} video
+ * @returns {{centerX: number, centerY: number, bounds: {minX: number, maxX: number, minY: number, maxY: number}}|null}
+ */
+export function computeFaceCenterInViewport(landmarks, video) {
+    if (!Array.isArray(landmarks) || landmarks.length === 0 || !video || typeof video.getBoundingClientRect !== 'function') {
+        return null;
+    }
+
+    const videoRect = video.getBoundingClientRect();
+    if (!videoRect || videoRect.width <= 0 || videoRect.height <= 0) {
+        return null;
+    }
+
+    let sumX = 0;
+    let sumY = 0;
+    let minX = 1;
+    let maxX = 0;
+    let minY = 1;
+    let maxY = 0;
+    const count = landmarks.length;
+
+    for (let i = 0; i < count; i += 1) {
+        const pt = landmarks[i];
+        const x = Number(pt?.x ?? 0);
+        const y = Number(pt?.y ?? 0);
+        sumX += x;
+        sumY += y;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+    }
+
+    const normCenterX = sumX / count;
+    const normCenterY = sumY / count;
+
+    const videoW = video.videoWidth || videoRect.width;
+    const videoH = video.videoHeight || videoRect.height;
+    const scale = Math.max(videoRect.width / videoW, videoRect.height / videoH);
+    const renderedW = videoW * scale;
+    const renderedH = videoH * scale;
+    const offsetX = (videoRect.width - renderedW) / 2;
+    const offsetY = (videoRect.height - renderedH) / 2;
+
+    return {
+        centerX: videoRect.left + offsetX + normCenterX * renderedW,
+        centerY: videoRect.top + offsetY + normCenterY * renderedH,
+        bounds: { minX, maxX, minY, maxY },
+    };
+}
+
+/**
+ * Periksa apakah titik (x, y) berada di dalam area DOMRect overlay panduan wajah.
+ *
+ * @param {number} x
+ * @param {number} y
+ * @param {DOMRect|{left: number, right: number, top: number, bottom: number, width: number, height: number}|null} rect
+ * @returns {boolean}
+ */
+export function isPointInsideGuideRect(x, y, rect) {
+    if (!rect || rect.width <= 0 || rect.height <= 0) {
+        return false;
+    }
+
+    return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+/**
  * Ekstrak vektor landmark ternormalisasi dari frame live elemen <video>.
+ * Hanya memproses landmark jika pusat wajah berada di dalam elemen `.face-guide-overlay` (bila tersedia).
  *
  * @param {FaceLandmarker} landmarker
  * @param {HTMLVideoElement} video
  * @param {HTMLCanvasElement} [sharedCanvas]
+ * @param {{guideElement?: Element|null, onDetectionState?: (state: {faceDetected: boolean, insideGuide: boolean, center: {centerX: number, centerY: number}|null}) => void}} [options]
  * @returns {Float32Array|null}
  */
-export function extractVectorFromVideo(landmarker, video, sharedCanvas = null) {
+export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, options = {}) {
     if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
         return null;
     }
 
@@ -283,8 +358,32 @@ export function extractVectorFromVideo(landmarker, video, sharedCanvas = null) {
         const result = landmarker.detect(canvas);
         const landmarks = result?.faceLandmarks?.[0];
 
+        if (!Array.isArray(landmarks) || landmarks.length < 468) {
+            options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
+            return null;
+        }
+
+        const guideElement = options?.guideElement
+            ?? (typeof document !== 'undefined' ? document.querySelector('.face-guide-overlay') : null);
+        const faceCenter = computeFaceCenterInViewport(landmarks, video);
+
+        if (guideElement) {
+            const overlayRect = guideElement.getBoundingClientRect();
+            const insideGuide = Boolean(
+                faceCenter && isPointInsideGuideRect(faceCenter.centerX, faceCenter.centerY, overlayRect)
+            );
+
+            if (!insideGuide) {
+                options?.onDetectionState?.({ faceDetected: true, insideGuide: false, center: faceCenter });
+                return null;
+            }
+        }
+
+        options?.onDetectionState?.({ faceDetected: true, insideGuide: true, center: faceCenter });
+
         return flattenAndNormalizeLandmarks(landmarks);
     } catch {
+        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null });
         return null;
     }
 }
@@ -332,7 +431,14 @@ export async function verifyStudentFace1to1({
     onProgress({ stage: 'matching_live', message: 'Mencocokkan wajah dengan kamera… Pastikan wajah terkena cahaya.' });
 
     while (performance.now() - startedAt < timeoutMs) {
-        const liveVector = extractVectorFromVideo(landmarker, video, offscreenCanvas);
+        let detectionState = { faceDetected: false, insideGuide: false };
+        const liveVector = extractVectorFromVideo(landmarker, video, offscreenCanvas, {
+            onDetectionState: (state) => {
+                if (state) {
+                    detectionState = state;
+                }
+            },
+        });
 
         if (liveVector) {
             const distance = computeEuclideanDistance(liveVector, avgReferenceVector);
@@ -358,6 +464,12 @@ export async function verifyStudentFace1to1({
                     reason: 'matched',
                 };
             }
+        } else if (detectionState.faceDetected && !detectionState.insideGuide) {
+            onProgress({
+                stage: 'outside_guide',
+                bestDistance: Number.isFinite(bestDistance) ? Number(bestDistance.toFixed(4)) : null,
+                message: 'Geser wajah ke tengah kotak panduan…',
+            });
         } else {
             onProgress({
                 stage: 'waiting_face',

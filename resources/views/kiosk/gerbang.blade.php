@@ -66,8 +66,30 @@
                         <video x-ref="cameraPreview" autoplay muted playsinline x-show="cameraReady"
                                class="absolute inset-0 h-full w-full object-cover object-center block bg-slate-900"></video>
 
+                        {{-- Overlay panduan posisi wajah di tengah kamera --}}
+                        <div x-show="cameraReady" x-cloak class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
+                            <div class="face-guide-overlay absolute transition-colors duration-200"
+                                 :class="faceGuideState === 'inside'
+                                     ? 'border-solid border-emerald-400'
+                                     : (faceGuideState === 'outside'
+                                         ? 'border-dashed border-amber-400'
+                                         : 'border-dashed border-white/70')"
+                                 style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
+                            </div>
+                            <div x-show="!verifyingFace"
+                                 class="absolute left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide whitespace-nowrap backdrop-blur-sm transition-colors duration-200 border"
+                                 :class="faceGuideState === 'outside'
+                                     ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
+                                     : (faceGuideState === 'inside'
+                                         ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
+                                         : 'bg-slate-950/75 border-white/20 text-slate-100')"
+                                 style="top: calc(50% + min(32%, 140px) + 8px);">
+                                <span x-text="faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai — memproses…' : 'Posisikan wajah di dalam kotak')">Posisikan wajah di dalam kotak</span>
+                            </div>
+                        </div>
+
                         {{-- Fallback ramah: kamera tidak ada / izin ditolak. Kartu & sidik jari tetap aktif. --}}
-                        <div x-show="!cameraReady" x-cloak class="absolute inset-0 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                        <div x-show="!cameraReady" x-cloak class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 px-6 text-center">
                             <svg class="w-10 h-10 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.55-2.28A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 18h8a3 3 0 003-3V9a3 3 0 00-3-3H5a3 3 0 00-3 3v6a3 3 0 003 3zM3 3l18 18" />
                             </svg>
@@ -78,17 +100,17 @@
                             <p x-show="cameraError" x-text="cameraError" class="text-[10px] text-amber-400/90 max-w-sm leading-relaxed"></p>
                         </div>
 
-                        <div class="absolute top-3 left-3 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200 tracking-wide">
+                        <div class="absolute top-3 left-3 z-20 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200 tracking-wide">
                             <span x-text="verifyingFace ? 'Verifikasi Wajah 1:1 (Face ID)' : (faceDetecting ? 'Mendeteksi Wajah…' : 'Kamera Siap')">Kamera Siap</span>
                         </div>
-                        <div x-show="cameraReady" x-cloak class="absolute bottom-3 right-3 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
+                        <div x-show="cameraReady" x-cloak class="absolute bottom-3 right-3 z-20 flex items-center gap-2 px-3 py-1 rounded-lg bg-black/60 text-[11px] font-bold text-slate-200">
                             <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                             <span>LIVE</span>
                         </div>
 
                         {{-- Hint halus jika wajah terdeteksi 10 detik tanpa kecocokan template --}}
                         <div x-show="showUnmatchedHint && !result && !verifyingFace" x-cloak x-transition.opacity.duration.300ms
-                             class="absolute bottom-3 left-3 right-auto sm:left-4 px-3.5 py-1.5 rounded-xl bg-amber-950/90 border border-amber-400/50 text-amber-200 text-xs font-semibold shadow-lg backdrop-blur flex items-center gap-2">
+                             class="absolute bottom-3 left-3 right-auto sm:left-4 z-20 px-3.5 py-1.5 rounded-xl bg-amber-950/90 border border-amber-400/50 text-amber-200 text-xs font-semibold shadow-lg backdrop-blur flex items-center gap-2">
                             <svg class="w-4 h-4 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
@@ -97,7 +119,7 @@
 
                         {{-- Panel Status Verifikasi Wajah 1:1 (muncul otomatis setelah tap kartu siswa ber-enrollment) --}}
                         <div x-show="verifyingFace" x-cloak x-transition.opacity.duration.200ms
-                             class="absolute inset-x-3 bottom-3 sm:inset-x-6 sm:bottom-4 rounded-2xl bg-slate-950/90 border border-indigo-400/50 px-4 py-3 text-left shadow-2xl backdrop-blur">
+                             class="absolute inset-x-3 bottom-3 sm:inset-x-6 sm:bottom-4 z-20 rounded-2xl bg-slate-950/90 border border-indigo-400/50 px-4 py-3 text-left shadow-2xl backdrop-blur">
                             <div class="flex items-center justify-between gap-3">
                                 <div class="flex items-center gap-3 min-w-0">
                                     <svg class="w-6 h-6 text-indigo-400 animate-spin shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -177,7 +199,7 @@
             </div>
 
             <!-- Result State -->
-            <div x-show="result" x-cloak x-transition.scale.duration.250ms class="w-full max-w-xl mx-auto">
+            <div x-show="result" x-cloak x-transition.scale.duration.250ms class="relative z-30 w-full max-w-xl mx-auto">
                 <div class="rounded-3xl p-6 sm:p-8 shadow-2xl border transition text-center"
                      :class="{
                          'bg-emerald-950/90 border-emerald-500/50 text-white': result && result.status === 'HADIR',
@@ -284,6 +306,7 @@
                 faceVerifyStatus: '',
                 faceTemplates: [],
                 faceDetecting: false,
+                faceGuideState: 'idle',
                 faceDetectedSince: null,
                 showUnmatchedHint: false,
                 faceCheckinInFlight: false,
@@ -612,6 +635,13 @@
                                 if (info && info.message) {
                                     this.faceVerifyStatus = info.message;
                                 }
+                                if (info?.stage === 'matching_live') {
+                                    this.faceGuideState = 'inside';
+                                } else if (info?.stage === 'outside_guide') {
+                                    this.faceGuideState = 'outside';
+                                } else if (info?.stage === 'waiting_face') {
+                                    this.faceGuideState = 'idle';
+                                }
                             }
                         });
 
@@ -663,6 +693,7 @@
                         this.verifyingFace = false;
                         this.faceVerifyStudent = null;
                         this.faceVerifyStatus = '';
+                        this.faceGuideState = 'idle';
                     }
                 },
 
@@ -683,10 +714,13 @@
                 async loopFaceDetection() {
                     // Loop rekursif via setTimeout (900ms) untuk mencegah penumpukan task di main thread.
                     // Jangan jalankan matching jika ada hasil di layar, sedang verifikasi 1:1,
-                    // check-in sedang in-flight, kamera belum siap, atau belum ada template.
+                    // check-in sedang in-flight, atau kamera belum siap.
                     const FACE_LOOP_DELAY_MS = 900;
 
-                    if (this.result || this.verifyingFace || this.faceCheckinInFlight || !this.cameraReady || !this.faceTemplates.length) {
+                    if (this.result || this.verifyingFace || this.faceCheckinInFlight || !this.cameraReady) {
+                        if (this.result) {
+                            this.faceGuideState = 'idle';
+                        }
                         this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
@@ -709,51 +743,68 @@
                             this._offscreenCanvas = document.createElement('canvas');
                         }
 
-                        const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas);
+                        let detectionState = { faceDetected: false, insideGuide: false };
+                        const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas, {
+                            onDetectionState: (state) => {
+                                if (state) {
+                                    detectionState = state;
+                                }
+                            },
+                        });
 
-                        if (liveVector) {
+                        if (detectionState.faceDetected && !detectionState.insideGuide) {
+                            this.faceGuideState = 'outside';
+                            this.faceDetecting = false;
+                            this.faceDetectedSince = null;
+                            this.showUnmatchedHint = false;
+                        } else if (liveVector) {
+                            this.faceGuideState = 'inside';
                             this.faceDetecting = true;
-                            if (!this.faceDetectedSince) {
-                                this.faceDetectedSince = Date.now();
-                            } else if (Date.now() - this.faceDetectedSince >= 10000) {
-                                this.showUnmatchedHint = true;
-                            }
 
-                            const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
+                            if (this.faceTemplates.length > 0) {
+                                if (!this.faceDetectedSince) {
+                                    this.faceDetectedSince = Date.now();
+                                } else if (Date.now() - this.faceDetectedSince >= 10000) {
+                                    this.showUnmatchedHint = true;
+                                }
 
-                            if (match && match.matched && match.bestMatch) {
-                                this.faceDetectedSince = null;
-                                this.showUnmatchedHint = false;
-                                this.faceCheckinInFlight = true;
+                                const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
 
-                                const foto = this.ambilFotoBukti();
+                                if (match && match.matched && match.bestMatch) {
+                                    this.faceDetectedSince = null;
+                                    this.showUnmatchedHint = false;
+                                    this.faceCheckinInFlight = true;
 
-                                try {
-                                    const res = await fetch("{{ route('kiosk.face.checkin') }}", {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'Accept': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                                        },
-                                        body: JSON.stringify({
-                                            student_id: match.bestMatch.student_id,
-                                            similarity: match.bestMatch.similarity,
-                                            photo: foto
-                                        })
-                                    });
+                                    const foto = this.ambilFotoBukti();
 
-                                    const data = await res.json();
-                                    this.fotoBukti = foto || '';
-                                    this.showResult(data);
-                                } catch {
-                                    // Gagal checkin ditangani hening
-                                } finally {
-                                    this.faceCheckinInFlight = false;
+                                    try {
+                                        const res = await fetch("{{ route('kiosk.face.checkin') }}", {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'Accept': 'application/json',
+                                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                            },
+                                            body: JSON.stringify({
+                                                student_id: match.bestMatch.student_id,
+                                                similarity: match.bestMatch.similarity,
+                                                photo: foto
+                                            })
+                                        });
+
+                                        const data = await res.json();
+                                        this.fotoBukti = foto || '';
+                                        this.showResult(data);
+                                    } catch {
+                                        // Gagal checkin ditangani hening
+                                    } finally {
+                                        this.faceCheckinInFlight = false;
+                                    }
                                 }
                             }
                             // Bila tidak match (similarity < 0.75): DIAM, tidak spam di layar.
                         } else {
+                            this.faceGuideState = 'idle';
                             this.faceDetecting = false;
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
@@ -768,6 +819,7 @@
                 showResult(data) {
                     this.result = data;
                     this.faceDetecting = false;
+                    this.faceGuideState = 'idle';
                     this.faceDetectedSince = null;
                     this.showUnmatchedHint = false;
 
