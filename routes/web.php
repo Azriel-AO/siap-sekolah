@@ -39,6 +39,7 @@ Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
 Route::post('/kiosk/face-checkin', [KioskController::class, 'faceCheckin'])->name('kiosk.face.checkin');
 Route::post('/kiosk/face-verify', [KioskController::class, 'faceVerify'])->name('kiosk.face.verify');
 Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
+Route::post('/kiosk/debug/simulate', [KioskController::class, 'debugSimulate'])->name('kiosk.debug.simulate');
 
 // Terminal Pendaftaran Mandiri (guest; SELALU terbuka — pengawasan guru piket)
 Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaftaran.index');

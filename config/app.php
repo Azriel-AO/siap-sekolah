@@ -43,6 +43,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Developer Debug Mode (Hardware Bypass & Simulasi Kiosk)
+    |--------------------------------------------------------------------------
+    |
+    | Mengaktifkan tombol bypass biometrik di pendaftaran, panel simulasi
+    | absensi di kiosk, dan badge indikator DEBUG. Wajib false di produksi.
+    |
+    */
+
+    'debug_mode' => filter_var(env('DEBUG_MODE', false), FILTER_VALIDATE_BOOLEAN),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application URL
     |--------------------------------------------------------------------------
     |

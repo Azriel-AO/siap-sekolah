@@ -21,9 +21,46 @@ class KioskController extends Controller
      */
     public function gerbang(): View
     {
+        $debugStudents = isDebugMode()
+            ? Student::with('schoolClass:id,name')
+                ->orderBy('name')
+                ->get(['id', 'name', 'nis', 'school_class_id'])
+            : collect();
+
         return view('kiosk.gerbang', [
             'isMockFingerprint' => config('fingerprint.driver', 'mock') === 'mock',
+            'debugStudents' => $debugStudents,
         ]);
+    }
+
+    /**
+     * Simulasi absensi developer mode tanpa perangkat fisik (hanya aktif saat DEBUG_MODE=true).
+     */
+    public function debugSimulate(Request $request): JsonResponse
+    {
+        abort_unless(isDebugMode(), 404);
+
+        $validated = $request->validate([
+            'student_id' => ['required', 'integer', 'exists:students,id'],
+        ]);
+
+        $student = Student::with(['schoolClass', 'rfidCard'])->findOrFail((int) $validated['student_id']);
+
+        $response = $this->prosesAbsensi($student, null, 'debug');
+        $data = $response->getData(true);
+        $data['method'] = 'debug';
+        $cardLabel = $student->card_label;
+
+        if ($cardLabel !== null) {
+            $data['card_label'] = $cardLabel;
+            if (! empty($data['success'])) {
+                $data['message'] = "Halo, {$student->name} ({$cardLabel})";
+            }
+        }
+
+        $response->setData($data);
+
+        return $response;
     }
 
     /**

@@ -282,6 +282,48 @@
         </p>
     </footer>
 
+    @if(isDebugMode())
+        {{-- Tombol & Panel Tersembunyi Simulasi Absensi (DEBUG_MODE=true; pintasan Ctrl+D) --}}
+        <div class="fixed bottom-3 right-3 z-50 flex flex-col items-end gap-2" @click.stop>
+            <div x-show="debugPanelOpen" x-cloak x-transition.opacity.duration.150ms
+                 class="w-80 max-w-[92vw] rounded-2xl border border-amber-400/60 bg-slate-950/95 p-4 text-left shadow-2xl backdrop-blur">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
+                        <span class="text-xs font-bold text-white">Simulasi Absensi</span>
+                    </div>
+                    <button type="button" @click="debugPanelOpen = false" class="text-slate-400 hover:text-white text-xs font-bold px-1.5 py-0.5">✕</button>
+                </div>
+
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Pilih Siswa</label>
+                <select x-model="debugStudentId"
+                        class="w-full rounded-lg border border-slate-700 bg-slate-900 text-white text-xs py-2 px-2.5 focus:border-amber-400 focus:ring-amber-400">
+                    <option value="">— Pilih siswa —</option>
+                    @foreach($debugStudents as $debugStudent)
+                        <option value="{{ $debugStudent->id }}">
+                            {{ $debugStudent->name }} ({{ $debugStudent->schoolClass?->name ?? '-' }} — {{ $debugStudent->nis }})
+                        </option>
+                    @endforeach
+                </select>
+
+                <button type="button"
+                        @click="simulasiAbsenDebug()"
+                        :disabled="!debugStudentId || debugSimulating"
+                        class="mt-3 w-full py-2 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 disabled:bg-slate-700 disabled:text-slate-400 text-slate-950 text-xs font-black tracking-wide transition">
+                    <span x-text="debugSimulating ? 'Memproses…' : 'Simulasi Absen'"></span>
+                </button>
+                <p class="mt-2 text-[10px] text-slate-400">Pintasan keyboard: <kbd class="px-1 py-0.5 rounded bg-slate-800 text-slate-200 font-mono">Ctrl+D</kbd></p>
+            </div>
+
+            <button type="button"
+                    @click="toggleDebugPanel()"
+                    title="Toggle Panel Debug (Ctrl+D)"
+                    class="px-2.5 py-1 rounded-full bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-black tracking-widest uppercase shadow-lg border border-amber-300 transition">
+                DEBUG
+            </button>
+        </div>
+    @endif
+
     <script>
         function kioskGerbangApp() {
             return {
@@ -312,6 +354,11 @@
                 faceCheckinInFlight: false,
                 faceDetectionTimer: null,
                 _offscreenCanvas: null,
+                @if(isDebugMode())
+                debugPanelOpen: false,
+                debugStudentId: '',
+                debugSimulating: false,
+                @endif
 
                 initKiosk() {
                     this.updateClock();
@@ -321,6 +368,14 @@
                     this.muatFaceTemplates();
                     // Mulai deteksi wajah secara non-blocking setelah render awal
                     this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 900);
+                    @if(isDebugMode())
+                    window.addEventListener('keydown', (event) => {
+                        if (event.ctrlKey && event.key.toLowerCase() === 'd') {
+                            event.preventDefault();
+                            this.toggleDebugPanel();
+                        }
+                    });
+                    @endif
                     window.addEventListener('beforeunload', () => {
                         this.stopCamera();
                         this.stopAutoLoop();
@@ -416,10 +471,52 @@
                 },
 
                 focusInput() {
+                    if (this.debugPanelOpen) {
+                        return;
+                    }
                     if (this.$refs.cardInput) {
                         this.$refs.cardInput.focus();
                     }
                 },
+
+                @if(isDebugMode())
+                toggleDebugPanel() {
+                    this.debugPanelOpen = !this.debugPanelOpen;
+                    if (!this.debugPanelOpen) {
+                        this.$nextTick(() => this.focusInput());
+                    }
+                },
+
+                async simulasiAbsenDebug() {
+                    if (!this.debugStudentId || this.debugSimulating) {
+                        return;
+                    }
+                    this.debugSimulating = true;
+                    try {
+                        const res = await fetch("{{ route('kiosk.debug.simulate') }}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ student_id: Number(this.debugStudentId) })
+                        });
+                        const data = await res.json();
+                        this.fotoBukti = '';
+                        this.debugPanelOpen = false;
+                        this.showResult(data);
+                    } catch {
+                        this.showResult({
+                            success: false,
+                            type: 'ERROR',
+                            message: 'Gagal menjalankan simulasi absensi debug.'
+                        });
+                    } finally {
+                        this.debugSimulating = false;
+                    }
+                },
+                @endif
 
                 stopAutoLoop() {
                     if (this.loopTimer) {

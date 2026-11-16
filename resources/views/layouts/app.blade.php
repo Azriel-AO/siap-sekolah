@@ -36,5 +36,10 @@
                 {{ $slot }}
             </main>
         </div>
+        @if(isDebugMode())
+            <div class="fixed bottom-3 right-3 z-50 pointer-events-none select-none px-2.5 py-1 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase shadow-lg border border-amber-300">
+                DEBUG
+            </div>
+        @endif
     </body>
 </html>

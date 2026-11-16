@@ -39,6 +39,19 @@
 
             <form @submit.prevent="simpan()" class="space-y-5">
 
+                @if(isDebugMode())
+                    <div class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
+                            <span class="text-xs font-semibold text-amber-900">Mode Pengembang aktif — lewati perangkat fisik untuk uji alur.</span>
+                        </div>
+                        <button type="button" @click="isiDummyBiometrik()"
+                                class="inline-flex items-center justify-center px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shadow-sm transition shrink-0">
+                            Lewati Biometrik (Pakai Data Dummy)
+                        </button>
+                    </div>
+                @endif
+
                 {{-- Langkah 1: Data Diri --}}
                 <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
                     <div class="flex items-center space-x-3 mb-4">
@@ -549,6 +562,46 @@
                     this.message = pesan;
                     this.errorList = daftar;
                 },
+
+                @if(isDebugMode())
+                buatDummyFotoJpeg(label) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 320;
+                    canvas.height = 240;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#0f172a';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 4;
+                    ctx.strokeRect(12, 12, canvas.width - 24, canvas.height - 24);
+                    ctx.fillStyle = '#f8fafc';
+                    ctx.font = 'bold 20px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label, canvas.width / 2, canvas.height / 2 - 10);
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.font = '12px monospace';
+                    ctx.fillText('DEBUG DUMMY PHOTO', canvas.width / 2, canvas.height / 2 + 20);
+                    return canvas.toDataURL('image/jpeg', 0.8);
+                },
+
+                isiDummyBiometrik() {
+                    this.stopCamera();
+                    this.manualMode = true;
+                    this.stepTimedOut = false;
+                    this.form.setuju = true;
+                    const token = Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+                    this.form.card_uid = 'DBG-CARD-' + token;
+                    this.form.fingerprint_id = 'DBG-FP-' + token;
+                    this.enrollStatus = 'ok';
+                    this.enrollMessage = '';
+                    this.photos = [
+                        this.buatDummyFotoJpeg('FOTO 1 (DEPAN)'),
+                        this.buatDummyFotoJpeg('FOTO 2 (KANAN)'),
+                        this.buatDummyFotoJpeg('FOTO 3 (KIRI)'),
+                    ];
+                },
+                @endif
 
                 async simpan() {
                     this.message = '';

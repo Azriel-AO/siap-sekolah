@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Attendance;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Services\FingerprintService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -19,12 +21,25 @@ class AdminStatusSistemController extends Controller
         $baseUrl = (string) config('fingerprint.base_url', 'http://127.0.0.1:8787');
         $statusSensor = FingerprintService::dariConfig()->status();
 
+        $now = Carbon::now('Asia/Jakarta');
+        $lastCardTapRaw = Attendance::whereNotNull('last_tap_at')
+            ->where(function ($query): void {
+                $query->where('kiosk_device', 'gerbang-kartu')
+                    ->orWhere('kiosk_device', 'like', 'kiosk-%');
+            })
+            ->max('last_tap_at');
+
+        $lastCardTapAt = $lastCardTapRaw ? Carbon::parse($lastCardTapRaw, 'Asia/Jakarta') : null;
+        $rfidAktif = $lastCardTapAt !== null && $lastCardTapAt->greaterThanOrEqualTo($now->copy()->subHours(24));
+
         return view('admin.status-sistem.index', [
             'driver' => $driver,
             'baseUrl' => $baseUrl,
             'statusSensor' => $statusSensor,
             'jumlahKelas' => SchoolClass::count(),
             'jumlahSiswa' => Student::count(),
+            'rfidAktif' => $rfidAktif,
+            'lastCardTapAt' => $lastCardTapAt,
         ]);
     }
 }

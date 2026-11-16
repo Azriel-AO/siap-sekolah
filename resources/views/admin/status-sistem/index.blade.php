@@ -14,10 +14,10 @@
         </div>
     </x-slot>
 
-    <div class="py-8">
+    <div class="py-8" x-data="statusSistemApp()" x-init="cekWebcam()">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {{-- Kartu 1: Server Aplikasi & Database --}}
                 <div class="bg-white rounded-xl border border-emerald-200 shadow-sm p-6 space-y-3">
                     <div class="flex items-center justify-between">
@@ -83,13 +83,64 @@
                         </p>
                     @endif
                 </div>
+
+                {{-- Kartu 4: Kamera / Webcam (navigator.mediaDevices.enumerateDevices) --}}
+                <div class="bg-white rounded-xl border shadow-sm p-6 space-y-3 transition-colors"
+                     :class="webcamState === 'detected' ? 'border-emerald-200' : 'border-rose-300'">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Kamera / Webcam</span>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                              :class="webcamState === 'detected' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                              x-text="webcamState === 'detected' ? 'Aktif' : (webcamState === 'checking' ? 'Memeriksa…' : 'Mati')">
+                            Memeriksa…
+                        </span>
+                    </div>
+                    <h2 class="text-lg font-extrabold"
+                        :class="webcamState === 'detected' ? 'text-emerald-700' : 'text-rose-700'"
+                        x-text="webcamState === 'detected' ? ('Webcam: Terdeteksi (' + webcamCount + ' device)') : (webcamState === 'checking' ? 'Memeriksa webcam…' : 'Webcam: Tidak terdeteksi')">
+                        Memeriksa webcam…
+                    </h2>
+                    <p class="text-xs leading-relaxed"
+                       :class="webcamState === 'detected' ? 'text-gray-600' : 'text-rose-700'">
+                        <span x-show="webcamState === 'detected'">Perangkat video input siap dipakai untuk Face ID dan foto bukti di kiosk maupun pendaftaran.</span>
+                        <span x-show="webcamState !== 'detected'">Pastikan webcam USB terpasang dan izin kamera browser tidak diblokir.</span>
+                    </p>
+                </div>
+
+                {{-- Kartu 5: RFID Reader (deteksi aktivitas tap kartu 24 jam terakhir) --}}
+                <div class="bg-white rounded-xl border {{ $rfidAktif ? 'border-emerald-200' : 'border-rose-300' }} shadow-sm p-6 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">RFID Reader</span>
+                        @if($rfidAktif)
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                Aktif
+                            </span>
+                        @else
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                                Mati
+                            </span>
+                        @endif
+                    </div>
+
+                    @if($rfidAktif)
+                        <h2 class="text-lg font-extrabold text-emerald-700">RFID Reader: Aktif</h2>
+                        <p class="text-xs text-gray-600 leading-relaxed">
+                            Tap kartu terakhir tercatat pada <strong class="text-gray-900">{{ $lastCardTapAt?->format('d M Y H:i:s') }} WIB</strong> (dalam 24 jam terakhir).
+                        </p>
+                    @else
+                        <h2 class="text-lg font-extrabold text-rose-700">RFID Reader: Belum terdeteksi</h2>
+                        <p class="text-xs text-rose-700 leading-relaxed">
+                            Belum ada aktivitas tap kartu dalam 24 jam terakhir. Pastikan scanner RFID USB terpasang (mode keyboard wedge).
+                        </p>
+                    @endif
+                </div>
             </div>
 
             {{-- Panduan Singkat Petugas / Guru Piket --}}
             <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                 <h3 class="text-sm font-bold text-gray-900 mb-2">Panduan Cepat Jika Ada Indikator Merah</h3>
                 <ol class="list-decimal list-inside text-xs text-gray-600 space-y-1.5">
-                    <li>Periksa kabel USB sensor sidik jari ZK9500 pada Box PC (cabut lalu colok kembali ke port USB).</li>
+                    <li>Periksa kabel USB sensor sidik jari ZK9500, webcam, dan RFID reader pada Box PC (cabut lalu colok kembali ke port USB).</li>
                     <li>Tunggu sekitar 20 detik (watchdog otomatis menyalakan ulang bridge), lalu klik tombol <strong>Muat ulang</strong> di kanan atas.</li>
                     <li>Bila masih merah, restart Box PC atau klik dua kali file <code class="font-mono">box\mulai-sistem.bat</code> di folder aplikasi.</li>
                 </ol>
@@ -97,4 +148,31 @@
 
         </div>
     </div>
+
+    <script>
+        function statusSistemApp() {
+            return {
+                webcamState: 'checking',
+                webcamCount: 0,
+
+                async cekWebcam() {
+                    try {
+                        if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+                            this.webcamState = 'none';
+                            this.webcamCount = 0;
+                            return;
+                        }
+
+                        const devices = await navigator.mediaDevices.enumerateDevices();
+                        const videoDevices = (devices || []).filter((device) => device.kind === 'videoinput');
+                        this.webcamCount = videoDevices.length;
+                        this.webcamState = videoDevices.length > 0 ? 'detected' : 'none';
+                    } catch {
+                        this.webcamState = 'none';
+                        this.webcamCount = 0;
+                    }
+                },
+            };
+        }
+    </script>
 </x-app-layout>
