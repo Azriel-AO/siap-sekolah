@@ -13,7 +13,7 @@ class DatabaseSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_database_seeder_produksi_menghasilkan_1_admin_33_kelas_dan_0_siswa(): void
+    public function test_database_seeder_produksi_menghasilkan_1_admin_39_kelas_dan_0_siswa(): void
     {
         $this->seed(DatabaseSeeder::class);
 
@@ -24,10 +24,14 @@ class DatabaseSeederTest extends TestCase
         $this->assertSame('admin', $admin->role);
         $this->assertSame('admin@knbi.sch.id', $admin->email);
 
-        // Assert 33 kelas produksi asli (sesuai SchoolClassSeeder)
-        $this->assertSame(33, SchoolClass::count());
+        // Assert 39 kelas produksi asli (sesuai SchoolClassSeeder)
+        $this->assertSame(39, SchoolClass::count());
 
         // Assert 0 siswa demo
         $this->assertSame(0, Student::count());
+
+        // Jalankan seed ke-2 kalinya -> tetap 39 kelas (idempotent, tanpa duplikasi)
+        $this->seed(DatabaseSeeder::class);
+        $this->assertSame(39, SchoolClass::count());
     }
 }

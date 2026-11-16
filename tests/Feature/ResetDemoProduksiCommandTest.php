@@ -72,7 +72,7 @@ class ResetDemoProduksiCommandTest extends TestCase
         $this->assertSame(1, User::where('role', 'admin')->count());
         $this->assertSame('SMK KARYA NUGRAHA BOYOLALI', Setting::get('nama_sekolah'));
 
-        // Kelas demo X-TKJ-1 hilang, diganti 33 kelas asli
+        // Kelas demo X-TKJ-1 hilang, diganti 39 kelas asli
         $this->assertDatabaseMissing('school_classes', ['slug' => 'X-TKJ-1']);
 
         $daftarEkspektasi = [
@@ -82,24 +82,24 @@ class ResetDemoProduksiCommandTest extends TestCase
             '10 TSM 1', '10 TSM 2', '10 TSM 3',
             '10 TKJ 1', '10 TKJ 2', '10 TKJ 3',
             '10 PSY 1',
-            // Kelas 11 (12 kelas)
+            // Kelas 11 (14 kelas)
             '11 TKR 1', '11 TKR 2', '11 TKR 3', '11 TKR 4', '11 TKR 5',
             '11 TBKR 1',
             '11 TSM 1', '11 TSM 2', '11 TSM 3',
-            '11 TKJ 3',
+            '11 TKJ 1', '11 TKJ 2', '11 TKJ 3',
             '11 TTT 1',
-            '11 PS 1',
-            // Kelas 12 (8 kelas)
-            '12 TKR 5',
+            '11 PSY 1',
+            // Kelas 12 (12 kelas)
+            '12 TKR 1', '12 TKR 2', '12 TKR 3', '12 TKR 4', '12 TKR 5',
             '12 TBKR 1',
             '12 TSM 1', '12 TSM 2',
             '12 TKJ 1', '12 TKJ 2',
             '12 TTT 1',
-            '12 PS 1',
+            '12 PSY 1',
         ];
 
-        $this->assertCount(33, $daftarEkspektasi);
-        $this->assertSame(33, SchoolClass::count());
+        $this->assertCount(39, $daftarEkspektasi);
+        $this->assertSame(39, SchoolClass::count());
 
         foreach ($daftarEkspektasi as $namaKelas) {
             $this->assertDatabaseHas('school_classes', [
@@ -110,11 +110,6 @@ class ResetDemoProduksiCommandTest extends TestCase
             ]);
         }
 
-        // Pastikan asumsi 11 TKJ hanya 3 dan 12 TKR hanya 5
-        $this->assertDatabaseMissing('school_classes', ['name' => '11 TKJ 1']);
-        $this->assertDatabaseMissing('school_classes', ['name' => '11 TKJ 2']);
-        $this->assertDatabaseMissing('school_classes', ['name' => '12 TKR 1']);
-        $this->assertDatabaseMissing('school_classes', ['name' => '12 TKR 4']);
-        $this->assertCount(33, ResetDemoProduksiCommand::daftarKelasAsli());
+        $this->assertCount(39, ResetDemoProduksiCommand::daftarKelasAsli());
     }
 }

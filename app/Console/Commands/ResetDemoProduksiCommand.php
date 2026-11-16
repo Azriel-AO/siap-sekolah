@@ -9,6 +9,7 @@ use App\Models\RfidCard;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use Database\Seeders\SchoolClassSeeder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -37,48 +38,7 @@ class ResetDemoProduksiCommand extends Command
      */
     public static function daftarKelasAsli(): array
     {
-        $definisi = [
-            '10' => [
-                ['jurusan' => 'TKR', 'nomor' => [1, 2, 3, 4, 5], 'department' => 'Teknik Kendaraan Ringan'],
-                ['jurusan' => 'TBKR', 'nomor' => [1], 'department' => 'Teknik Bodi Kendaraan Ringan'],
-                ['jurusan' => 'TSM', 'nomor' => [1, 2, 3], 'department' => 'Teknik Sepeda Motor'],
-                ['jurusan' => 'TKJ', 'nomor' => [1, 2, 3], 'department' => 'Teknik Komputer & Jaringan'],
-                ['jurusan' => 'PSY', 'nomor' => [1], 'department' => 'Perbankan Syariah'],
-            ],
-            '11' => [
-                ['jurusan' => 'TKR', 'nomor' => [1, 2, 3, 4, 5], 'department' => 'Teknik Kendaraan Ringan'],
-                ['jurusan' => 'TBKR', 'nomor' => [1], 'department' => 'Teknik Bodi Kendaraan Ringan'],
-                ['jurusan' => 'TSM', 'nomor' => [1, 2, 3], 'department' => 'Teknik Sepeda Motor'],
-                ['jurusan' => 'TKJ', 'nomor' => [3], 'department' => 'Teknik Komputer & Jaringan'],
-                ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Tata Udara & Pendingin'],
-                ['jurusan' => 'PS', 'nomor' => [1], 'department' => 'Perbankan Syariah'],
-            ],
-            '12' => [
-                ['jurusan' => 'TKR', 'nomor' => [5], 'department' => 'Teknik Kendaraan Ringan'],
-                ['jurusan' => 'TBKR', 'nomor' => [1], 'department' => 'Teknik Bodi Kendaraan Ringan'],
-                ['jurusan' => 'TSM', 'nomor' => [1, 2], 'department' => 'Teknik Sepeda Motor'],
-                ['jurusan' => 'TKJ', 'nomor' => [1, 2], 'department' => 'Teknik Komputer & Jaringan'],
-                ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Tata Udara & Pendingin'],
-                ['jurusan' => 'PS', 'nomor' => [1], 'department' => 'Perbankan Syariah'],
-            ],
-        ];
-
-        $hasil = [];
-        foreach ($definisi as $tingkat => $kelompokList) {
-            foreach ($kelompokList as $kelompok) {
-                foreach ($kelompok['nomor'] as $n) {
-                    $name = "{$tingkat} {$kelompok['jurusan']} {$n}";
-                    $slug = "{$tingkat}-{$kelompok['jurusan']}-{$n}";
-                    $hasil[] = [
-                        'name' => $name,
-                        'slug' => $slug,
-                        'department' => $kelompok['department'],
-                    ];
-                }
-            }
-        }
-
-        return $hasil;
+        return SchoolClassSeeder::daftarKelasSmkKnbi();
     }
 
     /**

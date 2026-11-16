@@ -38,15 +38,17 @@ class AdminClassController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-
         $validated = $this->validasi($request);
-        $validated['slug'] = $this->selesaikanSlug($validated['slug'] ?: $validated['name']);
+        $validated['slug'] = $this->selesaikanSlug(($validated['slug'] ?? '') ?: $validated['name']);
+        $validated['department'] = ($validated['department'] ?? '') ?: 'Umum';
+        $validated['entry_time'] = ($validated['entry_time'] ?? '') ?: '07:00';
+        $validated['exit_time'] = ($validated['exit_time'] ?? '') ?: '15:30';
 
         SchoolClass::create($validated);
 
         return redirect()
             ->route('admin.kelas.index')
-            ->with('status', 'Kelas "' . $validated['name'] . '" berhasil ditambahkan (slug: ' . $validated['slug'] . ').');
+            ->with('status', 'Kelas "'.$validated['name'].'" berhasil ditambahkan (slug: '.$validated['slug'].').');
     }
 
     /**
@@ -54,7 +56,6 @@ class AdminClassController extends Controller
      */
     public function edit(Request $request, SchoolClass $class): View
     {
-
         return view('admin.classes.edit', [
             'class' => $class,
         ]);
@@ -65,15 +66,17 @@ class AdminClassController extends Controller
      */
     public function update(Request $request, SchoolClass $class): RedirectResponse
     {
-
         $validated = $this->validasi($request, $class);
-        $validated['slug'] = $this->selesaikanSlug($validated['slug'] ?: $validated['name'], $class->id);
+        $validated['slug'] = $this->selesaikanSlug(($validated['slug'] ?? '') ?: $validated['name'], $class->id);
+        $validated['department'] = ($validated['department'] ?? '') ?: $class->department;
+        $validated['entry_time'] = ($validated['entry_time'] ?? '') ?: substr((string) $class->entry_time, 0, 5);
+        $validated['exit_time'] = ($validated['exit_time'] ?? '') ?: substr((string) $class->exit_time, 0, 5);
 
         $class->update($validated);
 
         return redirect()
             ->route('admin.kelas.index')
-            ->with('status', 'Kelas "' . $validated['name'] . '" berhasil diperbarui.');
+            ->with('status', 'Kelas "'.$validated['name'].'" berhasil diperbarui.');
     }
 
     /**
@@ -82,21 +85,26 @@ class AdminClassController extends Controller
      */
     public function destroy(Request $request, SchoolClass $class): RedirectResponse
     {
-
         $jumlahSiswa = $class->students()->count();
         $jumlahAbsensi = Attendance::where('school_class_id', $class->id)->count();
 
-        if ($jumlahSiswa > 0 || $jumlahAbsensi > 0) {
+        if ($jumlahSiswa > 0) {
             return redirect()
                 ->route('admin.kelas.index')
-                ->with('error', 'Kelas "' . $class->name . '" tidak bisa dihapus: masih ada ' . $jumlahSiswa . ' siswa dan ' . $jumlahAbsensi . ' catatan absensi. Pindahkan dulu siswanya ke kelas lain.');
+                ->with('error', 'Kelas masih memiliki siswa ('.$jumlahSiswa.' siswa aktif). Pindahkan dulu siswanya ke kelas lain sebelum menghapus "'.$class->name.'".');
+        }
+
+        if ($jumlahAbsensi > 0) {
+            return redirect()
+                ->route('admin.kelas.index')
+                ->with('error', 'Kelas "'.$class->name.'" tidak bisa dihapus karena masih memiliki '.$jumlahAbsensi.' catatan absensi.');
         }
 
         $class->delete();
 
         return redirect()
             ->route('admin.kelas.index')
-            ->with('status', 'Kelas "' . $class->name . '" berhasil dihapus.');
+            ->with('status', 'Kelas "'.$class->name.'" berhasil dihapus.');
     }
 
     /**
@@ -107,18 +115,18 @@ class AdminClassController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:50'],
             'slug' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('school_classes', 'slug')->ignore($class?->id)],
-            'department' => ['required', 'string', 'max:50'],
+            'department' => ['nullable', 'string', 'max:50'],
             'wali_kelas' => ['nullable', 'string', 'max:100'],
-            'entry_time' => ['required', 'date_format:H:i'],
-            'exit_time' => ['required', 'date_format:H:i'],
+            'entry_time' => ['nullable', 'date_format:H:i'],
+            'exit_time' => ['nullable', 'date_format:H:i'],
         ], [
             'name.required' => 'Nama kelas wajib diisi.',
-            'slug.regex' => 'Slug hanya boleh huruf, angka, dan tanda minus (contoh: X-TKJ-1). Pola diubah otomatis ke kapital.',
+            'slug.regex' => 'Slug hanya boleh huruf, angka, dan tanda minus (contoh: 10-TKR-1). Pola diubah otomatis ke kapital.',
             'slug.unique' => 'Slug tersebut sudah dipakai kelas lain.',
-            'department.required' => 'Jurusan wajib diisi.',
+            'department.max' => 'Nama jurusan maksimal 50 karakter.',
             'wali_kelas.max' => 'Nama wali kelas maksimal 100 karakter.',
-            'entry_time.required' => 'Jam masuk wajib diisi.',
-            'exit_time.required' => 'Jam pulang wajib diisi.',
+            'entry_time.date_format' => 'Format jam masuk harus HH:MM.',
+            'exit_time.date_format' => 'Format jam pulang harus HH:MM.',
         ]);
     }
 
@@ -136,10 +144,9 @@ class AdminClassController extends Controller
         $slug = $dasar;
         $i = 2;
         while (SchoolClass::where('slug', $slug)->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))->exists()) {
-            $slug = substr($dasar, 0, 45) . '-' . $i++;
+            $slug = substr($dasar, 0, 45).'-'.$i++;
         }
 
         return $slug;
     }
 }
-

@@ -81,6 +81,7 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         Route::post('/admin/kehadiran-manual', [KehadiranManualController::class, 'simpan'])->name('admin.kehadiran.manual.simpan');
 
         // Admin: Data Kelas
+        Route::redirect('/admin/kelas', '/admin/data-kelas');
         Route::get('/admin/data-kelas', [AdminClassController::class, 'index'])->name('admin.kelas.index');
         Route::get('/admin/data-kelas/tambah', [AdminClassController::class, 'create'])->name('admin.kelas.create');
         Route::post('/admin/data-kelas', [AdminClassController::class, 'store'])->name('admin.kelas.store');
