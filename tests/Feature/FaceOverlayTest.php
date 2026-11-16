@@ -41,8 +41,8 @@ class FaceOverlayTest extends TestCase
         $response->assertSee('3. Tengok Kiri');
         $response->assertSee('4. Kedip Mata');
         $response->assertSee('Posisikan wajah di dalam kotak');
-        $response->assertSee('Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.');
-        $response->assertSee('Wajah tertutup. Lepas aksesoris penutup wajah.');
+        $response->assertSee('Pastikan cahaya cukup dan wajah menghadap kamera.');
+        $response->assertDontSee('Lepas kacamata');
         $response->assertSee('Bagus, tahan posisi...');
         $response->assertSee('Wajah tidak terdeteksi dengan baik');
         $response->assertSee('Coba lagi');

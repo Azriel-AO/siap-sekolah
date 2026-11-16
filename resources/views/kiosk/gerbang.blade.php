@@ -71,14 +71,14 @@
                             <div class="face-guide-overlay absolute transition-colors duration-200"
                                  :class="(faceGuideState === 'inside' || faceGuideState === 'matched')
                                      ? 'border-solid border-emerald-400'
-                                     : ((faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown' || faceGuideState === 'obscured' || faceObscured)
+                                     : ((faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown')
                                          ? 'border-dashed border-amber-400'
                                          : 'border-dashed border-white/70')"
                                  style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
                             </div>
                             <div x-show="!verifyingFace"
                                  class="absolute left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-2xl text-[11px] sm:text-xs font-semibold tracking-wide max-w-[92%] sm:max-w-md text-center leading-snug backdrop-blur-sm transition-colors duration-200 border"
-                                 :class="(faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown' || faceGuideState === 'obscured' || faceObscured)
+                                 :class="(faceGuideState === 'outside' || faceGuideState === 'no_face' || faceGuideState === 'unknown')
                                      ? 'bg-amber-950/90 border-amber-400/60 text-amber-200'
                                      : ((faceGuideState === 'inside' || faceGuideState === 'matched')
                                          ? 'bg-emerald-950/90 border-emerald-400/60 text-emerald-200'
@@ -352,7 +352,6 @@
                 faceDetecting: false,
                 faceGuideState: 'idle',
                 faceFeedbackMessage: 'Posisikan wajah di dalam kotak',
-                faceObscured: false,
                 noFaceSince: null,
                 lowScoreSince: null,
                 faceDetectedSince: null,
@@ -857,7 +856,7 @@
                             this._offscreenCanvas = document.createElement('canvas');
                         }
 
-                        let detectionState = { faceDetected: false, insideGuide: false, faceObscured: false };
+                        let detectionState = { faceDetected: false, insideGuide: false };
                         const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas, {
                             onDetectionState: (state) => {
                                 if (state) {
@@ -867,14 +866,8 @@
                         });
 
                         const nowMs = Date.now();
-                        this.faceObscured = Boolean(detectionState.faceObscured);
 
-                        if (this.faceObscured) {
-                            this.faceGuideState = 'obscured';
-                            this.faceDetecting = false;
-                            this.noFaceSince = null;
-                            this.faceFeedbackMessage = 'Wajah tertutup. Lepas aksesoris penutup wajah.';
-                        } else if (detectionState.faceDetected && !detectionState.insideGuide) {
+                        if (detectionState.faceDetected && !detectionState.insideGuide) {
                             this.faceGuideState = 'outside';
                             this.faceDetecting = false;
                             this.noFaceSince = null;
@@ -941,7 +934,7 @@
 
                                     if (this.lowScoreSince && (nowMs - this.lowScoreSince) >= 3000) {
                                         this.faceGuideState = 'unknown';
-                                        this.faceFeedbackMessage = 'Wajah tidak dikenal. Lepas kacamata/topeng dan pastikan wajah menghadap kamera.';
+                                        this.faceFeedbackMessage = 'Wajah tidak dikenali. Pastikan wajah menghadap kamera dan cahaya cukup.';
                                     } else {
                                         this.faceGuideState = 'inside';
                                         this.faceFeedbackMessage = 'Mencocokkan wajah...';
@@ -953,7 +946,7 @@
                                 }
                                 if ((nowMs - this.lowScoreSince) >= 3000) {
                                     this.faceGuideState = 'unknown';
-                                    this.faceFeedbackMessage = 'Wajah tidak dikenal. Lepas kacamata/topeng dan pastikan wajah menghadap kamera.';
+                                    this.faceFeedbackMessage = 'Wajah tidak dikenali. Pastikan wajah menghadap kamera dan cahaya cukup.';
                                 } else {
                                     this.faceGuideState = 'inside';
                                     this.faceFeedbackMessage = 'Mencocokkan wajah...';
@@ -969,7 +962,7 @@
                             }
                             if ((nowMs - this.noFaceSince) >= 3000) {
                                 this.faceGuideState = 'no_face';
-                                this.faceFeedbackMessage = 'Wajah tidak terdeteksi. Pastikan cahaya cukup dan wajah tidak tertutup.';
+                                this.faceFeedbackMessage = 'Wajah tidak terdeteksi. Pastikan cahaya cukup dan wajah menghadap kamera.';
                             } else {
                                 this.faceGuideState = 'idle';
                                 this.faceFeedbackMessage = 'Posisikan wajah di dalam kotak';
@@ -979,7 +972,6 @@
                         // Reset state visual bila model gagal dimuat / error agar UI tidak terjebak
                         this.faceGuideState = 'idle';
                         this.faceDetecting = false;
-                        this.faceObscured = false;
                     } finally {
                         this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                     }
@@ -989,7 +981,6 @@
                     this.result = data;
                     this.faceDetecting = false;
                     this.faceGuideState = 'idle';
-                    this.faceObscured = false;
                     this.noFaceSince = null;
                     this.lowScoreSince = null;
                     this.faceDetectedSince = null;

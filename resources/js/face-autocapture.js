@@ -1,7 +1,4 @@
 import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
-import { checkFaceObscured } from './face-utils.js';
-
-export { checkFaceObscured };
 
 const WASM_PATH = '/vendor/mediapipe/wasm';
 const LANDMARKER_MODEL_PATH = '/vendor/mediapipe/models/face_landmarker.task';
@@ -102,7 +99,6 @@ export function evaluateFacePose(result) {
     if (!landmarks || landmarks.length < 455) {
         return {
             hasFace: false,
-            faceObscured: false,
             centered: false,
             inGuideBox: false,
             faceSize: 0,
@@ -110,8 +106,6 @@ export function evaluateFacePose(result) {
             blinkScore: 0,
         };
     }
-
-    const faceObscured = checkFaceObscured(landmarks);
 
     let minX = 1;
     let maxX = 0;
@@ -161,20 +155,19 @@ export function evaluateFacePose(result) {
 
     return {
         hasFace: true,
-        faceObscured,
         centered,
         inGuideBox: centered,
         sizeOk,
         turnSizeOk,
         faceSize: Number(width.toFixed(3)),
         yawRatio: Number(yawRatio.toFixed(3)),
-        isStraight: !faceObscured && centered && Math.abs(yawRatio) <= YAW_STRAIGHT_MAX,
-        isTurnRight: !faceObscured && turnSizeOk && yawRatio <= -YAW_TURN_MIN,
-        isTurnLeft: !faceObscured && turnSizeOk && yawRatio >= YAW_TURN_MIN,
-        isTurnEither: !faceObscured && turnSizeOk && Math.abs(yawRatio) >= YAW_TURN_MIN,
+        isStraight: centered && Math.abs(yawRatio) <= YAW_STRAIGHT_MAX,
+        isTurnRight: turnSizeOk && yawRatio <= -YAW_TURN_MIN,
+        isTurnLeft: turnSizeOk && yawRatio >= YAW_TURN_MIN,
+        isTurnEither: turnSizeOk && Math.abs(yawRatio) >= YAW_TURN_MIN,
         blinkScore: Number(blinkScore.toFixed(3)),
         minEar: Number(minEar.toFixed(3)),
-        isBlink: !faceObscured && isBlink,
+        isBlink,
     };
 }
 
@@ -364,7 +357,6 @@ export class FaceAutoCaptureSession {
         hint,
         faceDetected = false,
         inGuideBox = false,
-        faceObscured = false,
         dwellElapsedMs = 0,
         stabilityText = '',
         stabilityReady = false,
@@ -375,7 +367,6 @@ export class FaceAutoCaptureSession {
             hint,
             faceDetected,
             inGuideBox,
-            faceObscured,
             dwellElapsedMs,
             dwellTotalMs: DWELL_TIME_MS,
             stabilityText,
@@ -406,7 +397,6 @@ export class FaceAutoCaptureSession {
             hint: 'Siap - Capture!',
             faceDetected: true,
             inGuideBox: true,
-            faceObscured: false,
             dwellElapsedMs: DWELL_TIME_MS,
             stabilityText: 'Siap - Capture!',
             stabilityReady: true,
@@ -498,10 +488,9 @@ export class FaceAutoCaptureSession {
             this.insideGuideSince = null;
             this.poseStableSince = null;
             this.emitState({
-                hint: 'Wajah belum terlihat, posisikan wajah di dalam kotak panduan',
+                hint: 'Wajah tidak terdeteksi. Pastikan cahaya cukup dan wajah menghadap kamera.',
                 faceDetected: false,
                 inGuideBox: false,
-                faceObscured: false,
                 dwellElapsedMs: 0,
                 stabilityText: '',
                 stabilityReady: false,
@@ -515,21 +504,6 @@ export class FaceAutoCaptureSession {
         const overlayInside = isFaceCenterInsideGuideOverlay(rawLandmarks, this.video, guideElement);
         const inGuideBox = overlayInside !== null ? overlayInside : pose.inGuideBox;
 
-        if (pose.faceObscured) {
-            this.poseStableSince = null;
-            this.emitState({
-                hint: 'Wajah tertutup. Lepas aksesoris penutup wajah.',
-                faceDetected: true,
-                inGuideBox,
-                faceObscured: true,
-                dwellElapsedMs: 0,
-                stabilityText: 'Wajah tertutup. Lepas aksesoris penutup wajah.',
-                stabilityReady: false,
-            });
-
-            return;
-        }
-
         if (!inGuideBox) {
             this.insideGuideSince = null;
             this.poseStableSince = null;
@@ -537,7 +511,6 @@ export class FaceAutoCaptureSession {
                 hint: 'Geser wajah ke tengah kotak panduan',
                 faceDetected: true,
                 inGuideBox: false,
-                faceObscured: false,
                 dwellElapsedMs: 0,
                 stabilityText: '',
                 stabilityReady: false,
@@ -563,7 +536,6 @@ export class FaceAutoCaptureSession {
                     hint: ready ? 'Siap - Capture!' : 'Tahan posisi hadap lurus... (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs,
                     stabilityText: progressText,
                     stabilityReady: ready,
@@ -580,7 +552,6 @@ export class FaceAutoCaptureSession {
                     hint: 'Langkah 1/4: Hadap lurus ke arah kamera',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs: 0,
                     stabilityText: 'Menstabilkan...',
                     stabilityReady: false,
@@ -606,7 +577,6 @@ export class FaceAutoCaptureSession {
                     hint: ready ? 'Siap - Capture!' : 'Tahan posisi tengok kanan... (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs,
                     stabilityText: progressText,
                     stabilityReady: ready,
@@ -624,7 +594,6 @@ export class FaceAutoCaptureSession {
                     hint: 'Langkah 2/4: Tengok perlahan ke kanan',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs: 0,
                     stabilityText: 'Menstabilkan...',
                     stabilityReady: false,
@@ -650,7 +619,6 @@ export class FaceAutoCaptureSession {
                     hint: ready ? 'Siap - Capture!' : 'Tahan posisi tengok kiri... (Menstabilkan...)',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs,
                     stabilityText: progressText,
                     stabilityReady: ready,
@@ -667,7 +635,6 @@ export class FaceAutoCaptureSession {
                     hint: 'Langkah 3/4: Tengok perlahan ke arah sebaliknya (kiri)',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs: 0,
                     stabilityText: 'Menstabilkan...',
                     stabilityReady: false,
@@ -687,7 +654,6 @@ export class FaceAutoCaptureSession {
                     hint: 'Selesai! Kedipan terdeteksi & 3 foto tersimpan.',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs: DWELL_TIME_MS,
                     stabilityText: 'Siap - Capture!',
                     stabilityReady: true,
@@ -700,7 +666,6 @@ export class FaceAutoCaptureSession {
                     hint: 'Langkah 4/4: Kedipkan kedua mata Anda untuk verifikasi',
                     faceDetected: true,
                     inGuideBox: true,
-                    faceObscured: false,
                     dwellElapsedMs: 0,
                     stabilityText: '',
                     stabilityReady: false,

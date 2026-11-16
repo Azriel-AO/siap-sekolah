@@ -116,26 +116,6 @@
                     </div>
                     <p class="text-[11px] text-gray-400 ml-10 mb-3">Kamera menyala setelah Anda mencentang persetujuan di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
 
-                    {{-- Peringatan visual sebelum proses capture dimulai --}}
-                    <div class="mb-3 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 flex items-start gap-2.5">
-                        <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <div>
-                            <p class="font-bold">Persiapan Sebelum Pemindaian Wajah</p>
-                            <p class="text-[11px] text-amber-800 mt-0.5">Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.</p>
-                        </div>
-                    </div>
-
-                    {{-- Peringatan real-time bila area mata/wajah tertutup --}}
-                    <div x-show="faceObscured" x-cloak
-                         class="mb-3 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-bold text-rose-800 flex items-center gap-2">
-                        <svg class="w-4 h-4 text-rose-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <span>Wajah tertutup. Lepas aksesoris penutup wajah.</span>
-                    </div>
-
                     {{-- Indikator 4 langkah otomatis: Hadap Lurus -> Tengok Kanan -> Tengok Kiri -> Kedip --}}
                     <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak class="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
                         <div class="grid grid-cols-4 gap-1.5 text-[11px] font-bold text-center">
@@ -196,23 +176,21 @@
                              aria-hidden="true"
                              class="pointer-events-none absolute inset-0 z-10 overflow-hidden">
                             <div class="face-guide-overlay absolute transition-colors duration-200"
-                                 :class="(faceGuideState === 'inside' && !faceObscured)
+                                 :class="faceGuideState === 'inside'
                                      ? 'border-solid border-emerald-400'
-                                     : ((faceGuideState === 'outside' || faceObscured)
+                                     : (faceGuideState === 'outside'
                                          ? 'border-dashed border-amber-400'
                                          : 'border-dashed border-white/70')"
                                  style="top: 50%; left: 50%; transform: translate(-50%, -50%); height: min(64%, 280px); aspect-ratio: 3 / 4; border-width: 3px; border-radius: 50%; box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);">
                             </div>
                             <div class="absolute left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-2xl text-[11px] sm:text-xs font-semibold tracking-wide max-w-[92%] sm:max-w-md text-center leading-snug backdrop-blur-sm transition-colors duration-200 border"
-                                 :class="faceObscured
-                                     ? 'bg-rose-950/90 border-rose-400/60 text-rose-200'
-                                     : (faceGuideState === 'outside'
-                                         ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
-                                         : (faceGuideState === 'inside'
-                                             ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
-                                             : 'bg-slate-950/75 border-white/20 text-slate-100'))"
+                                 :class="faceGuideState === 'outside'
+                                     ? 'bg-amber-950/85 border-amber-400/60 text-amber-300'
+                                     : (faceGuideState === 'inside'
+                                         ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-300'
+                                         : 'bg-slate-950/75 border-white/20 text-slate-100')"
                                  style="top: calc(50% + min(32%, 140px) + 8px);">
-                                <span x-text="faceObscured ? 'Wajah tertutup. Lepas aksesoris penutup wajah.' : (faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai, ikuti instruksi pose' : 'Posisikan wajah di dalam kotak'))">Posisikan wajah di dalam kotak</span>
+                                <span x-text="faceGuideState === 'outside' ? 'Geser wajah ke tengah' : (faceGuideState === 'inside' ? 'Wajah sesuai, ikuti instruksi pose' : 'Posisikan wajah di dalam kotak')">Posisikan wajah di dalam kotak</span>
                             </div>
                         </div>
 
@@ -234,7 +212,7 @@
                     </div>
 
                     <p class="mt-2 text-center text-xs font-medium text-gray-600">
-                        Pastikan wajah terlihat jelas. Lepas kacamata, masker, atau penutup wajah lainnya untuk pemindaian wajah asli.
+                        Pastikan cahaya cukup dan wajah menghadap kamera.
                     </p>
 
                     <div class="grid grid-cols-3 gap-3 mt-3">
@@ -345,7 +323,6 @@
                 autoHint: 'Langkah 1/4: Hadap lurus ke tengah kamera',
                 faceDetected: false,
                 faceInGuide: false,
-                faceObscured: false,
                 faceGuideState: 'idle',
                 stabilityText: '',
                 stabilityReady: false,
@@ -384,7 +361,6 @@
                     }
                     this.faceDetected = false;
                     this.faceInGuide = false;
-                    this.faceObscured = false;
                     this.faceGuideState = 'idle';
                     this.stabilityReady = false;
                 },
@@ -434,15 +410,12 @@
 
                     this.autoSession = new window.FaceAutoCapture.FaceAutoCaptureSession({
                         video: this.$refs.cameraPreview,
-                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, faceObscured, stabilityText, stabilityReady, timedOut }) => {
+                        onStateChange: ({ stepIndex, hint, faceDetected, inGuideBox, stabilityText, stabilityReady, timedOut }) => {
                             this.autoStep = stepIndex;
                             this.autoHint = hint;
                             this.faceDetected = Boolean(faceDetected);
                             this.faceInGuide = Boolean(inGuideBox);
-                            this.faceObscured = Boolean(faceObscured);
-                            this.faceGuideState = this.faceObscured
-                                ? 'obscured'
-                                : (this.faceInGuide ? 'inside' : (this.faceDetected ? 'outside' : 'idle'));
+                            this.faceGuideState = this.faceInGuide ? 'inside' : (this.faceDetected ? 'outside' : 'idle');
                             this.stabilityText = stabilityText || '';
                             this.stabilityReady = Boolean(stabilityReady);
                             this.stepTimedOut = Boolean(timedOut);
