@@ -8,6 +8,8 @@
     <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="preload" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" as="style">
+    <link rel="preload" href="{{ asset('images/logo-sekolah.png') }}" as="image">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -209,7 +211,7 @@
                      }">
 
                     <!-- Foto preview (bila kamera sempat menangkap) -->
-                    <img x-show="fotoBukti" :src="fotoBukti" alt="Foto bukti" class="w-32 h-20 object-cover rounded-xl border-2 border-white/20 mx-auto mb-4 shadow-lg">
+                    <img x-show="fotoBukti" :src="fotoBukti" loading="lazy" decoding="async" alt="Foto bukti" class="w-32 h-20 object-cover rounded-xl border-2 border-white/20 bg-slate-800 mx-auto mb-4 shadow-lg transition-all duration-200">
 
                     <!-- Icon Status -->
                     <div class="w-16 h-16 mx-auto rounded-2xl flex items-center justify-center mb-4 shadow-lg"

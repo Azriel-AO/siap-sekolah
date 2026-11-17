@@ -8,6 +8,7 @@ use App\Services\RekapPeriodeHelper;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -28,44 +29,7 @@ class KehadiranManualController extends Controller
             ? $classes->firstWhere('slug', $slug)
             : $classes->first();
 
-        $rows = collect();
-        if ($kelasDipilih) {
-            $students = $kelasDipilih->students()
-                ->with([
-                    'attendances' => fn ($q) => $q->where('date', $tanggal),
-                    'izinSakits' => fn ($q) => $q->where('tanggal', $tanggal),
-                ])
-                ->orderBy('name')
-                ->get();
-
-            $rows = $students->map(function ($student) {
-                $att = $student->attendances->first();
-                $izinSakit = $student->izinSakits->first();
-
-                if ($izinSakit) {
-                    $status = ucfirst($izinSakit->status);
-                    $statusJenis = $izinSakit->status; // izin | sakit
-                } elseif ($att) {
-                    $status = $att->status === 'HADIR' ? 'Hadir' : 'Terlambat';
-                    $statusJenis = $att->status === 'HADIR' ? 'hadir' : 'terlambat';
-                } else {
-                    $status = '—';
-                    $statusJenis = 'kosong';
-                }
-
-                return [
-                    'id' => $student->id,
-                    'nis' => $student->nis,
-                    'induk' => $student->induk,
-                    'nisn' => $student->nisn,
-                    'name' => $student->name,
-                    'status' => $status,
-                    'statusJenis' => $statusJenis,
-                    'keterangan' => $izinSakit?->keterangan,
-                    'hasIzinSakit' => (bool) $izinSakit,
-                ];
-            });
-        }
+        $rows = $kelasDipilih ? $this->buildStudentStatusRows($kelasDipilih, $tanggal) : collect();
 
         return view('admin.kehadiran-manual.index', [
             'tanggal' => $tanggal,
@@ -74,6 +38,50 @@ class KehadiranManualController extends Controller
             'kelasDipilih' => $kelasDipilih,
             'rows' => $rows,
         ]);
+    }
+
+    /**
+     * Muat status kehadiran atau izin/sakit seluruh siswa kelas terpilih pada tanggal acuan.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function buildStudentStatusRows(SchoolClass $kelasDipilih, string $tanggal): Collection
+    {
+        $students = $kelasDipilih->students()
+            ->with([
+                'attendances' => fn ($q) => $q->where('date', $tanggal),
+                'izinSakits' => fn ($q) => $q->where('tanggal', $tanggal),
+            ])
+            ->orderBy('name')
+            ->get();
+
+        return $students->map(function ($student): array {
+            $att = $student->attendances->first();
+            $izinSakit = $student->izinSakits->first();
+
+            if ($izinSakit) {
+                $status = ucfirst($izinSakit->status);
+                $statusJenis = $izinSakit->status;
+            } elseif ($att) {
+                $status = $att->status === 'HADIR' ? 'Hadir' : 'Terlambat';
+                $statusJenis = $att->status === 'HADIR' ? 'hadir' : 'terlambat';
+            } else {
+                $status = '—';
+                $statusJenis = 'kosong';
+            }
+
+            return [
+                'id' => $student->id,
+                'nis' => $student->nis,
+                'induk' => $student->induk,
+                'nisn' => $student->nisn,
+                'name' => $student->name,
+                'status' => $status,
+                'statusJenis' => $statusJenis,
+                'keterangan' => $izinSakit?->keterangan,
+                'hasIzinSakit' => (bool) $izinSakit,
+            ];
+        });
     }
 
     /**

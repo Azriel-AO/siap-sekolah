@@ -8,6 +8,8 @@
     <link rel="icon" type="image/png" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('images/logo-sekolah.png') }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="preload" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" as="style">
+    <link rel="preload" href="{{ asset('images/logo-sekolah.png') }}" as="image">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -30,7 +32,7 @@
         {{-- Pendaftaran SELALU terbuka dalam pengawasan guru piket --}}
 
         {{-- Daftar error dari server --}}
-            <div x-show="message" x-cloak class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <div x-show="message" x-cloak x-transition.duration.200ms class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
                 <p class="font-semibold" x-text="message"></p>
                 <ul x-show="errorList.length" class="list-disc list-inside mt-1">
                     <template x-for="e in errorList" :key="e"><li x-text="e"></li></template>
@@ -140,7 +142,7 @@
                     <p class="text-[11px] text-gray-400 ml-10 mb-3">Kamera menyala setelah Anda mencentang persetujuan di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
 
                     {{-- Indikator 4 langkah otomatis: Hadap Lurus -> Tengok Kanan -> Tengok Kiri -> Kedip --}}
-                    <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak class="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
+                    <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak x-transition.duration.200ms class="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
                         <div class="grid grid-cols-4 gap-1.5 text-[11px] font-bold text-center">
                             <div class="px-2 py-1.5 rounded-lg border transition"
                                  :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
@@ -169,7 +171,7 @@
                     </div>
 
                     {{-- Banner peringatan bila timeout 10 detik per step tercapai --}}
-                    <div x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" x-cloak
+                    <div x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" x-cloak x-transition.duration.200ms
                          class="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div>
                             <p class="font-extrabold">Wajah tidak terdeteksi dengan baik</p>
@@ -242,7 +244,13 @@
                         <template x-for="(foto, i) in photos" :key="i">
                             <div class="rounded-xl border-2 overflow-hidden" :class="foto ? 'border-emerald-400' : 'border-dashed border-gray-300 bg-gray-50'">
                                 <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-                                    <img x-show="foto" :src="foto" class="w-full h-full object-cover" alt="Foto wajah">
+                                    <img x-show="foto" :src="foto"
+                                         loading="lazy" decoding="async"
+                                         x-data="{ loaded: false }"
+                                         x-init="$nextTick(() => { if ($el.complete) loaded = true })"
+                                         @load="loaded = true"
+                                         :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
+                                         class="w-full h-full object-cover bg-slate-200 transition-all duration-200" alt="Foto wajah">
                                     <span x-show="!foto" class="text-2xl font-black text-gray-300" x-text="i + 1"></span>
                                 </div>
                                 <div class="p-1.5 flex items-center justify-between bg-white border-t border-gray-100">

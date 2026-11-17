@@ -4,17 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\FaceEnrollment;
 use App\Models\Student;
+use App\Services\FaceEnrollmentService;
 use App\Services\FaceTemplateService;
-use Carbon\Carbon;
+use App\Services\PhotoUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class FaceEnrollmentController extends Controller
 {
+    public function __construct(
+        private readonly FaceEnrollmentService $enrollmentService,
+        private readonly FaceTemplateService $faceTemplates,
+        private readonly PhotoUploadService $photoService
+    ) {}
+
     /**
      * Halaman pendaftaran wajah mandiri (hanya peran siswa).
      */
@@ -69,11 +74,8 @@ class FaceEnrollmentController extends Controller
 
     /**
      * Simpan pendaftaran wajah (tepat 3 foto + persetujuan orang tua/wali).
-     * Identitas siswa SELALU dari sesi login — klien tidak mengirim student_id.
-     * Semua validasi dilakukan sebelum file apa pun ditulis ke storage
-     * (all-or-nothing). Waktu SELALU dari server (Konstitusi II).
      */
-    public function store(Request $request, FaceTemplateService $faceTemplates): JsonResponse
+    public function store(Request $request): JsonResponse
     {
         $this->pastikanSiswa($request);
 
@@ -82,26 +84,14 @@ class FaceEnrollmentController extends Controller
             return $this->gagal('Akun siswa Anda belum tertaut dengan data siswa. Hubungi petugas sekolah.', 422);
         }
 
-        // Persetujuan orang tua/wali wajib ada (FR-012)
-        if ($request->input('consent') !== true && $request->input('consent') !== 'true' && $request->input('consent') !== 1) {
+        $consent = $request->input('consent');
+        if ($consent !== true && $consent !== 'true' && $consent !== 1) {
             return $this->gagal('Anda harus menyetujui pernyataan izin orang tua/wali sebelum menyimpan.', 422);
         }
 
-        $sanitizedTemplate = $faceTemplates->sanitizeVector($request->input('face_template'));
-
-        $photos = $request->input('photos');
+        $photos = $request->all()['photos'] ?? $request->input('photos');
         if (isDebugMode() && $request->boolean('bypass_camera')) {
-            $photosArray = is_array($photos) ? array_values($photos) : [];
-            $mergedPhotos = [];
-            for ($i = 0; $i < 3; $i++) {
-                $existingPhoto = $photosArray[$i] ?? null;
-                if (is_string($existingPhoto) && trim($existingPhoto) !== '' && $this->decodeDataUrlJpeg($existingPhoto) !== null) {
-                    $mergedPhotos[$i] = $existingPhoto;
-                } else {
-                    $mergedPhotos[$i] = generateDummyJpegDataUrl('DBG'.($i + 1));
-                }
-            }
-            $photos = $mergedPhotos;
+            $photos = $this->photoService->mergeDebugBypassPhotos($photos);
         }
 
         if (! is_array($photos) || count($photos) !== 3) {
@@ -110,94 +100,14 @@ class FaceEnrollmentController extends Controller
             return $this->gagal("Foto wajah wajib lengkap 3 foto. Saat ini baru {$jumlah} foto sah.", 422);
         }
 
-        // Decode + validasi ketiga foto DULU; baru tulis file setelah semuanya sah
-        $binaries = [];
-        foreach ($photos as $index => $dataUrl) {
-            $slot = $index + 1;
-            $binary = $this->decodeDataUrlJpeg($dataUrl);
-            if ($binary === null) {
-                return $this->gagal("Foto ke-{$slot} tidak sah. Ambil ulang foto tersebut.", 422);
-            }
-            $binaries[$slot] = $binary;
+        $sanitizedTemplate = $this->faceTemplates->sanitizeVector($request->input('face_template'));
+        $result = $this->enrollmentService->saveEnrollment($student, $photos, $sanitizedTemplate);
+
+        if (! $result['ok']) {
+            return $this->gagal((string) $result['message'], 422);
         }
 
-        $existing = $student->faceEnrollment;
-
-        // Waktu dari server (Konstitusi II)
-        $now = Carbon::now('Asia/Jakarta');
-        $stamp = $now->format('YmdHis');
-
-        $paths = [];
-        foreach ($binaries as $slot => $binary) {
-            $paths[$slot] = "face-photos/{$student->id}/face-{$student->id}-{$slot}-{$stamp}.jpg";
-        }
-
-        // Daftar ulang (US2): hapus 3 file lama, timpa kolom path, satu transaksi DB
-        if ($existing) {
-            try {
-                $enrollment = DB::transaction(function () use ($existing, $paths, $binaries, $now) {
-                    foreach ([$existing->photo_1_path, $existing->photo_2_path, $existing->photo_3_path] as $oldPath) {
-                        if ($oldPath) {
-                            Storage::disk('local')->delete($oldPath);
-                        }
-                    }
-
-                    foreach ($paths as $slot => $path) {
-                        Storage::disk('local')->put($path, $binaries[$slot]);
-                    }
-
-                    $existing->update([
-                        'photo_1_path' => $paths[1],
-                        'photo_2_path' => $paths[2],
-                        'photo_3_path' => $paths[3],
-                        'consented_at' => $now,
-                        'last_reenrolled_at' => $now,
-                    ]);
-
-                    return $existing->fresh();
-                });
-            } catch (\Throwable $e) {
-                foreach ($paths as $path) {
-                    Storage::disk('local')->delete($path);
-                }
-
-                return $this->gagal('Gagal menyimpan pendaftaran ulang. Coba lagi.', 422);
-            }
-        } else {
-            // Tulis ketiga file; bila ada yang gagal di tengah, bersihkan sisanya
-            $written = [];
-            try {
-                $enrollment = DB::transaction(function () use ($paths, $binaries, $student, $now, &$written) {
-                    foreach ($paths as $slot => $path) {
-                        Storage::disk('local')->put($path, $binaries[$slot]);
-                        $written[] = $path;
-                    }
-
-                    return FaceEnrollment::create([
-                        'student_id' => $student->id,
-                        'photo_1_path' => $paths[1],
-                        'photo_2_path' => $paths[2],
-                        'photo_3_path' => $paths[3],
-                        'consented_at' => $now,
-                        'last_reenrolled_at' => null,
-                    ]);
-                });
-            } catch (\Throwable $e) {
-                foreach ($written as $path) {
-                    Storage::disk('local')->delete($path);
-                }
-
-                return $this->gagal('Gagal menyimpan pendaftaran. Coba lagi.', 422);
-            }
-        }
-
-        Cache::forget(FaceTemplateService::CACHE_KEY);
-
-        if ($sanitizedTemplate !== null) {
-            $faceTemplates->storeForStudent((int) $student->id, $sanitizedTemplate, 'face_enrollment');
-        } else {
-            $faceTemplates->clearForStudent((int) $student->id);
-        }
+        $enrollment = $result['enrollment'];
 
         return response()->json([
             'success' => true,
@@ -208,9 +118,6 @@ class FaceEnrollmentController extends Controller
         ]);
     }
 
-    /**
-     * Hanya peran siswa yang boleh membuka halaman/aksi ini (guru/admin → 403).
-     */
     private function pastikanSiswa(Request $request): void
     {
         if ($request->user()->role !== 'siswa') {
@@ -218,21 +125,12 @@ class FaceEnrollmentController extends Controller
         }
     }
 
-    /**
-     * Ambil record siswa yang tertaut dengan akun login.
-     * (Pola demo sama seperti riwayat absensi: fallback ke siswa pertama
-     * bila akun belum tertaut — hanya memengaruhi data demo.)
-     */
     private function siswaMilikAkun(Request $request): ?Student
     {
         return Student::where('user_id', $request->user()->id)->first()
             ?? Student::first();
     }
 
-    /**
-     * Pendaftaran dianggap valid ("Terdaftar") bila baris ada, ketiga path
-     * terisi, dan ketiga file fisik ada di disk (R3 research.md).
-     */
     private function pendaftaranValid(?FaceEnrollment $enrollment): bool
     {
         if (! $enrollment || ! $enrollment->photo_1_path || ! $enrollment->photo_2_path || ! $enrollment->photo_3_path) {
@@ -245,63 +143,17 @@ class FaceEnrollmentController extends Controller
     }
 
     /**
-     * Foto hanya disajikan sebagai base64 embedded di halaman wajib login
-     * (tidak pernah lewat URL publik). Gagal baca → null.
+     * @return list<string|null>
      */
     private function fotoEmbedded(FaceEnrollment $enrollment): array
     {
-        $photos = [];
-        foreach ([$enrollment->photo_1_path, $enrollment->photo_2_path, $enrollment->photo_3_path] as $path) {
-            try {
-                $binary = $path && Storage::disk('local')->exists($path)
-                    ? Storage::disk('local')->get($path)
-                    : null;
-                $photos[] = $binary ? 'data:image/jpeg;base64,'.base64_encode($binary) : null;
-            } catch (\Throwable) {
-                $photos[] = null;
-            }
-        }
-
-        return $photos;
+        return [
+            $this->photoService->readLocalPhotoDataUrl($enrollment->photo_1_path),
+            $this->photoService->readLocalPhotoDataUrl($enrollment->photo_2_path),
+            $this->photoService->readLocalPhotoDataUrl($enrollment->photo_3_path),
+        ];
     }
 
-    /**
-     * Decode data URL "data:image/jpeg;base64,..." dengan strict mode.
-     * Mengembalikan binary JPEG (100 B–500 KB) atau null bila tidak sah.
-     */
-    private function decodeDataUrlJpeg(mixed $dataUrl): ?string
-    {
-        if (! is_string($dataUrl)) {
-            return null;
-        }
-
-        $prefix = 'data:image/jpeg;base64,';
-        if (! str_starts_with($dataUrl, $prefix)) {
-            return null;
-        }
-
-        $encoded = substr($dataUrl, strlen($prefix));
-        $binary = base64_decode($encoded, true);
-        if ($binary === false) {
-            return null;
-        }
-
-        $size = strlen($binary);
-        if ($size < 100 || $size > 500 * 1024) {
-            return null;
-        }
-
-        // Pastikan benar-benar JPEG (SOI FFD8 ... EOI FFD9)
-        if (substr($binary, 0, 2) !== "\xFF\xD8" || substr($binary, -2) !== "\xFF\xD9") {
-            return null;
-        }
-
-        return $binary;
-    }
-
-    /**
-     * Respons gagal dengan pesan Bahasa Indonesia.
-     */
     private function gagal(string $message, int $status): JsonResponse
     {
         return response()->json([

@@ -117,11 +117,13 @@ Layanan jembatan sensor ZKTeco ZK9500 dikompilasi langsung dari kode sumber `bri
    ```
 4. Uji jalankan `bridge\fingerbridge.exe` dan pastikan muncul status `Sensor: TERHUBUNG`, atau buka `http://127.0.0.1:8787/estado` di browser hingga menampilkan `{"conectado":true,"modelo":"ZK9500"}`.
 
-### 6. Bersihkan Cache & Jalankan Server
+### 6. Optimasi Produksi & Jalankan Server
+Untuk memaksimalkan kecepatan aplikasi di lingkungan produksi (cache config, event, route, dan view Blade):
 ```powershell
-php artisan config:clear
+php artisan optimize
 php artisan serve --host=0.0.0.0 --port=8000
 ```
+> **Catatan Pengembangan / Testing**: Jika Anda mengubah `.env`, route, atau menjalankan pengujian otomatis (`php artisan test`), jalankan `php artisan optimize:clear` terlebih dahulu agar konfigurasi cache produksi tidak menimpa pengaturan pengujian/pengembangan.
 
 ---
 
@@ -175,7 +177,7 @@ Agar seluruh layanan menyala otomatis tanpa perlu membuka PowerShell setiap kali
    - Cari baris `;extension=zip`, hapus tanda titik koma (`;`) di depannya menjadi `extension=zip`, simpan file, lalu nyalakan ulang server PHP.
 
 4. **Tampilan halaman tidak rapi / CSS tidak muncul setelah update?**
-   - Jalankan `npm run build` dan `php artisan view:clear` untuk memperbarui bundel aset tampilan.
+   - Jalankan `npm run build`, `php artisan optimize:clear`, dan `php artisan optimize` (untuk produksi) guna memperbarui bundel aset tampilan dan cache.
 
 ---
 

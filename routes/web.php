@@ -36,15 +36,25 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang');
 Route::get('/kiosk/face-templates', [KioskController::class, 'faceTemplates'])->name('kiosk.face.templates');
 Route::post('/kiosk/face-templates', [KioskController::class, 'syncFaceTemplate'])->name('kiosk.face.templates.sync');
-Route::post('/kiosk/tap', [KioskController::class, 'tap'])->name('kiosk.tap');
-Route::post('/kiosk/face-checkin', [KioskController::class, 'faceCheckin'])->name('kiosk.face.checkin');
-Route::post('/kiosk/face-verify', [KioskController::class, 'faceVerify'])->name('kiosk.face.verify');
-Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])->name('kiosk.fingerprint.identificar');
+Route::post('/kiosk/tap', [KioskController::class, 'tap'])
+    ->middleware('throttle:kiosk-tap')
+    ->name('kiosk.tap');
+Route::post('/kiosk/face-checkin', [KioskController::class, 'faceCheckin'])
+    ->middleware('throttle:kiosk-face')
+    ->name('kiosk.face.checkin');
+Route::post('/kiosk/face-verify', [KioskController::class, 'faceVerify'])
+    ->middleware('throttle:kiosk-face')
+    ->name('kiosk.face.verify');
+Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])
+    ->middleware('throttle:kiosk-sensor')
+    ->name('kiosk.fingerprint.identificar');
 Route::post('/kiosk/debug/simulate', [KioskController::class, 'debugSimulate'])->name('kiosk.debug.simulate');
 
 // Terminal Pendaftaran Mandiri (guest; SELALU terbuka — pengawasan guru piket)
 Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaftaran.index');
-Route::post('/pendaftaran', [PendaftaranController::class, 'store'])->name('pendaftaran.simpan');
+Route::post('/pendaftaran', [PendaftaranController::class, 'store'])
+    ->middleware('throttle:enrollment')
+    ->name('pendaftaran.simpan');
 Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])->name('pendaftaran.fingerprint.enrolar');
 Route::get('/pendaftaran/berhasil', [PendaftaranController::class, 'berhasil'])->name('pendaftaran.berhasil');
 
@@ -105,7 +115,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Pendaftaran Wajah Mandiri Siswa (US-10 tahap 1, PRD F3) — tanpa pengenalan wajah
     Route::get('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'show'])->name('siswa.wajah');
     Route::get('/siswa/pendaftaran-wajah/status', [FaceEnrollmentController::class, 'status'])->name('siswa.wajah.status');
-    Route::post('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'store'])->name('siswa.wajah.simpan');
+    Route::post('/siswa/pendaftaran-wajah', [FaceEnrollmentController::class, 'store'])
+        ->middleware('throttle:enrollment')
+        ->name('siswa.wajah.simpan');
 });
 
 require __DIR__.'/auth.php';

@@ -168,12 +168,22 @@
                                     <td class="py-3 px-4">
                                         <div class="flex items-center justify-center gap-1.5">
                                             <img x-show="s.photo_in" :src="s.photo_in" @click="lightbox = s.photo_in"
-                                                 class="w-14 h-9 object-cover rounded-md border border-emerald-400 cursor-zoom-in hover:scale-110 transition"
+                                                 loading="lazy" decoding="async"
+                                                 x-data="{ loaded: false }"
+                                                 x-init="$nextTick(() => { if ($el.complete) loaded = true })"
+                                                 @load="loaded = true"
+                                                 :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
+                                                 class="w-14 h-9 object-cover rounded-md border border-emerald-400 bg-slate-200 cursor-zoom-in hover:scale-110 transition-all duration-200"
                                                  alt="Foto masuk" title="Klik untuk perbesar (foto masuk)" />
                                             <span x-show="!s.photo_in"
                                                   class="inline-flex items-center justify-center w-14 h-9 rounded-md border border-dashed border-gray-300 text-[9px] font-bold text-gray-400">M: -</span>
                                             <img x-show="s.photo_out" :src="s.photo_out" @click="lightbox = s.photo_out"
-                                                 class="w-14 h-9 object-cover rounded-md border border-blue-400 cursor-zoom-in hover:scale-110 transition"
+                                                 loading="lazy" decoding="async"
+                                                 x-data="{ loaded: false }"
+                                                 x-init="$nextTick(() => { if ($el.complete) loaded = true })"
+                                                 @load="loaded = true"
+                                                 :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
+                                                 class="w-14 h-9 object-cover rounded-md border border-blue-400 bg-slate-200 cursor-zoom-in hover:scale-110 transition-all duration-200"
                                                  alt="Foto pulang" title="Klik untuk perbesar (foto pulang)" />
                                             <span x-show="!s.photo_out"
                                                   class="inline-flex items-center justify-center w-14 h-9 rounded-md border border-dashed border-gray-300 text-[9px] font-bold text-gray-400">P: -</span>
@@ -260,9 +270,17 @@
             </div>
 
             <!-- Lightbox: klik thumbnail untuk memperbesar (hanya di halaman guru) -->
-            <div x-show="lightbox" x-cloak @click="lightbox = ''"
-                 class="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6 cursor-zoom-out">
-                <img :src="lightbox" class="max-w-full max-h-[85vh] rounded-xl shadow-2xl border-4 border-white/10" alt="Foto bukti absen diperbesar" />
+            <div x-show="lightbox" x-cloak
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 @click="lightbox = ''"
+                 class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 cursor-zoom-out">
+                <img :src="lightbox" loading="lazy" decoding="async"
+                     class="max-w-full max-h-[85vh] rounded-xl shadow-2xl border-4 border-white/10 transition-transform duration-200" alt="Foto bukti absen diperbesar" />
                 <div class="absolute top-5 right-6 px-3 py-1.5 rounded-lg bg-white/10 text-white/90 text-xs font-semibold">
                     Klik di mana saja untuk menutup
                 </div>

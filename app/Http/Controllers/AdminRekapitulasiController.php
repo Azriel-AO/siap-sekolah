@@ -9,6 +9,7 @@ use App\Services\RekapRingkasanPeriode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class AdminRekapitulasiController extends Controller
@@ -48,8 +49,7 @@ class AdminRekapitulasiController extends Controller
     public function grafik(Request $request): JsonResponse
     {
         $periode = RekapPeriodeHelper::ambilPeriodeDariRequest($request);
-        $tanggal = $this->tanggalDipilih($request);
-        $rentang = RekapPeriodeHelper::hitungRentang($periode, $tanggal);
+        $rentang = RekapPeriodeHelper::hitungRentang($periode, $this->tanggalDipilih($request));
         $kelasDipilih = $this->kelasDipilih($request);
 
         $studentsQuery = Student::query();
@@ -67,24 +67,7 @@ class AdminRekapitulasiController extends Controller
             $rentang['hari_sekolah']
         );
 
-        $h = 0;
-        $t = 0;
-        $i = 0;
-        $s = 0;
-        $a = 0;
-
-        foreach ($students as $siswa) {
-            $ringkasan = $perSiswa[$siswa->id] ?? null;
-            if (! $ringkasan) {
-                continue;
-            }
-            $h += $ringkasan['hadir'];
-            $t += $ringkasan['terlambat'];
-            $i += $ringkasan['izin'];
-            $s += $ringkasan['sakit'];
-            $a += $ringkasan['alpa'];
-        }
-
+        $totals = $this->summarizePeriodTotals($students, $perSiswa);
         $label = $kelasDipilih ? $kelasDipilih->name : 'Semua Kelas';
 
         return response()->json([
@@ -96,12 +79,38 @@ class AdminRekapitulasiController extends Controller
             'kelas' => $kelasDipilih?->slug ?? 'semua',
             'kelas_label' => $label,
             'labels' => [$label],
-            'hadir' => [$h],
-            'terlambat' => [$t],
-            'izin' => [$i],
-            'sakit' => [$s],
-            'alpa' => [$a],
+            'hadir' => [$totals['hadir']],
+            'terlambat' => [$totals['terlambat']],
+            'izin' => [$totals['izin']],
+            'sakit' => [$totals['sakit']],
+            'alpa' => [$totals['alpa']],
         ]);
+    }
+
+    /**
+     * Akumulasikan jumlah Hadir, Terlambat, Izin, Sakit, dan Alpa untuk seluruh siswa terpilih.
+     *
+     * @param  Collection<int, Student>  $students
+     * @param  array<int, array<string, mixed>>  $perSiswa
+     * @return array{hadir: int, terlambat: int, izin: int, sakit: int, alpa: int}
+     */
+    private function summarizePeriodTotals(Collection $students, array $perSiswa): array
+    {
+        $totals = ['hadir' => 0, 'terlambat' => 0, 'izin' => 0, 'sakit' => 0, 'alpa' => 0];
+
+        foreach ($students as $siswa) {
+            $ringkasan = $perSiswa[$siswa->id] ?? null;
+            if (! $ringkasan) {
+                continue;
+            }
+            $totals['hadir'] += $ringkasan['hadir'];
+            $totals['terlambat'] += $ringkasan['terlambat'];
+            $totals['izin'] += $ringkasan['izin'];
+            $totals['sakit'] += $ringkasan['sakit'];
+            $totals['alpa'] += $ringkasan['alpa'];
+        }
+
+        return $totals;
     }
 
     private function kelasDipilih(Request $request): ?SchoolClass

@@ -3,16 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
+use App\Models\Student;
+use App\Services\PhotoUploadService;
 use App\Services\RekapPeriodeHelper;
 use App\Services\RekapRingkasanPeriode;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class TeacherAttendanceController extends Controller
 {
+    public function __construct(private readonly PhotoUploadService $photoService) {}
+
     /**
      * Tampilkan halaman rekap absensi harian kelas binaan.
      */
@@ -84,76 +89,31 @@ class TeacherAttendanceController extends Controller
 
     /**
      * Helper untuk mengambil dan memformat kehadiran seluruh siswa kelas.
+     *
+     * @return array<string, mixed>
      */
     protected function getAttendanceData(SchoolClass $schoolClass, string $today): array
     {
         $students = $schoolClass->students()
-            ->with(['attendances' => function ($query) use ($today) {
+            ->with(['attendances' => function ($query) use ($today): void {
                 $query->where('date', $today);
             }, 'rfidCard', 'faceEnrollment', 'schoolClass'])
             ->orderBy('name')
             ->get();
 
-        $hadirCount = 0;
-        $terlambatCount = 0;
-        $belumAbsenCount = 0;
-
-        $formatted = $students->map(function ($student) {
-            $att = $student->attendances->first();
-
-            $status = $att ? $att->status : 'BELUM_ABSEN';
-            $checkIn = $att && $att->check_in_at ? substr($att->check_in_at, 0, 5) : '-';
-            $checkOut = $att && $att->check_out_at ? substr($att->check_out_at, 0, 5) : '-';
-
-            return [
-                'id' => $student->id,
-                'nis' => $student->nis,
-                'nisn' => $student->nisn ?? '-',
-                'name' => $student->name,
-                'gender' => $student->gender,
-                'card_uid' => $student->rfidCard?->card_uid ?? '-',
-                'card_label' => $student->card_label ?? '-',
-                'status' => $status,
-                'status_label' => match ($status) {
-                    'HADIR' => 'Hadir',
-                    'TERLAMBAT' => 'Terlambat',
-                    'ALPA' => 'Alpa',
-                    default => 'Belum Absen',
-                },
-                'check_in' => $checkIn,
-                'check_out' => $checkOut,
-                'metode' => $this->metodeLabel($att?->kiosk_device),
-                'photo_in' => $this->fotoDataUrl($att?->photo_in_path),
-                'photo_out' => $this->fotoDataUrl($att?->photo_out_path),
-                'face' => $this->wajahStatus($student->faceEnrollment),
-            ];
-        });
-
-        foreach ($formatted as $row) {
-            if ($row['status'] === 'HADIR') {
-                $hadirCount++;
-            } elseif ($row['status'] === 'TERLAMBAT') {
-                $terlambatCount++;
-            } else {
-                $belumAbsenCount++;
-            }
-        }
+        $formatted = $students->map(fn (Student $student): array => $this->formatDailyStudentRow($student));
 
         return [
-            'summary' => [
-                'total' => $students->count(),
-                'hadir' => $hadirCount,
-                'terlambat' => $terlambatCount,
-                'belum_absen' => $belumAbsenCount,
-            ],
+            'summary' => $this->summarizeDailyCounts($formatted, $students->count()),
             'students' => $formatted,
         ];
     }
 
     /**
-     * Ringkasan per siswa untuk periode Minggu/Bulan:
-     * Hadir / Terlambat / Tidak Hadir (jumlah hari) + Persentase kehadiran.
-     * Hari sekolah = Senin–Jumat (RekapPeriodeHelper).
+     * Ringkasan per siswa untuk periode Minggu/Bulan: Hadir / Terlambat / Tidak Hadir + Persentase.
+     *
+     * @param  array<string, mixed>  $rentang
+     * @return array<string, mixed>
      */
     protected function getRingkasanData(SchoolClass $schoolClass, array $rentang): array
     {
@@ -169,8 +129,8 @@ class TeacherAttendanceController extends Controller
             $rentang['hari_sekolah']
         );
 
-        $formatted = $students->map(function ($student) use ($perSiswa) {
-            $r = $perSiswa[$student->id];
+        $formatted = $students->map(function (Student $student) use ($perSiswa): array {
+            $ringkasan = $perSiswa[$student->id];
 
             return [
                 'id' => $student->id,
@@ -178,33 +138,91 @@ class TeacherAttendanceController extends Controller
                 'nisn' => $student->nisn ?? '-',
                 'name' => $student->name,
                 'gender' => $student->gender,
-                'hadir' => $r['hadir'],
-                'terlambat' => $r['terlambat'],
-                'izin' => $r['izin'],
-                'sakit' => $r['sakit'],
-                'alpa' => $r['alpa'],
-                'persentase' => $r['persentase'],
+                'hadir' => $ringkasan['hadir'],
+                'terlambat' => $ringkasan['terlambat'],
+                'izin' => $ringkasan['izin'],
+                'sakit' => $ringkasan['sakit'],
+                'alpa' => $ringkasan['alpa'],
+                'persentase' => $ringkasan['persentase'],
                 'face' => $this->wajahStatus($student->faceEnrollment),
             ];
         });
 
-        $hadirSum = (int) $formatted->sum('hadir');
-        $terlambatSum = (int) $formatted->sum('terlambat');
-        $alpaSum = (int) $formatted->sum('alpa');
-        $persenValues = $formatted->pluck('persentase')->filter(fn ($p) => $p !== null);
-        $rataPersen = $persenValues->count() > 0
-            ? (int) round($persenValues->avg())
-            : null;
+        $persenValues = $formatted->pluck('persentase')->filter(fn ($p): bool => $p !== null);
 
         return [
             'summary' => [
                 'total' => $formatted->count(),
-                'hadir' => $hadirSum,
-                'terlambat' => $terlambatSum,
-                'alpa' => $alpaSum,
-                'rata_persen' => $rataPersen,
+                'hadir' => (int) $formatted->sum('hadir'),
+                'terlambat' => (int) $formatted->sum('terlambat'),
+                'alpa' => (int) $formatted->sum('alpa'),
+                'rata_persen' => $persenValues->count() > 0 ? (int) round($persenValues->avg()) : null,
             ],
             'students' => $formatted,
+        ];
+    }
+
+    /**
+     * Format satu baris data absensi harian siswa beserta foto bukti.
+     *
+     * @return array<string, mixed>
+     */
+    private function formatDailyStudentRow(Student $student): array
+    {
+        $att = $student->attendances->first();
+        $status = $att ? $att->status : 'BELUM_ABSEN';
+
+        return [
+            'id' => $student->id,
+            'nis' => $student->nis,
+            'nisn' => $student->nisn ?? '-',
+            'name' => $student->name,
+            'gender' => $student->gender,
+            'card_uid' => $student->rfidCard?->card_uid ?? '-',
+            'card_label' => $student->card_label ?? '-',
+            'status' => $status,
+            'status_label' => match ($status) {
+                'HADIR' => 'Hadir',
+                'TERLAMBAT' => 'Terlambat',
+                'ALPA' => 'Alpa',
+                default => 'Belum Absen',
+            },
+            'check_in' => $att && $att->check_in_at ? substr($att->check_in_at, 0, 5) : '-',
+            'check_out' => $att && $att->check_out_at ? substr($att->check_out_at, 0, 5) : '-',
+            'metode' => $this->metodeLabel($att?->kiosk_device),
+            'photo_in' => $this->photoService->readLocalPhotoDataUrl($att?->photo_in_path),
+            'photo_out' => $this->photoService->readLocalPhotoDataUrl($att?->photo_out_path),
+            'face' => $this->wajahStatus($student->faceEnrollment),
+        ];
+    }
+
+    /**
+     * Hitung jumlah siswa hadir, terlambat, dan belum absen pada hari terpilih.
+     *
+     * @param  Collection<int, array<string, mixed>>  $formatted
+     * @return array<string, int>
+     */
+    private function summarizeDailyCounts(Collection $formatted, int $totalStudents): array
+    {
+        $hadirCount = 0;
+        $terlambatCount = 0;
+        $belumAbsenCount = 0;
+
+        foreach ($formatted as $row) {
+            if ($row['status'] === 'HADIR') {
+                $hadirCount++;
+            } elseif ($row['status'] === 'TERLAMBAT') {
+                $terlambatCount++;
+            } else {
+                $belumAbsenCount++;
+            }
+        }
+
+        return [
+            'total' => $totalStudents,
+            'hadir' => $hadirCount,
+            'terlambat' => $terlambatCount,
+            'belum_absen' => $belumAbsenCount,
         ];
     }
 
@@ -289,30 +307,5 @@ class TeacherAttendanceController extends Controller
         }
 
         return $lengkap ? 'TERDAFTAR' : 'BELUM';
-    }
-
-    /**
-     * Foto bukti absen (PRD F1) disimpan di disk 'local' (storage privat,
-     * tidak bisa diakses publik). Foto dikirim sebagai data URL base64 dan
-     * hanya menempel pada halaman rekap yang wajib login. Gagal membaca
-     * file atau foto tidak ada -> null (kolom foto tampil kosong).
-     */
-    private function fotoDataUrl(?string $path): ?string
-    {
-        if (! $path) {
-            return null;
-        }
-
-        try {
-            if (! Storage::disk('local')->exists($path)) {
-                return null;
-            }
-
-            $binary = Storage::disk('local')->get($path);
-
-            return $binary ? 'data:image/jpeg;base64,'.base64_encode($binary) : null;
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }

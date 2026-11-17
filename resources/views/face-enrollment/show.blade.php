@@ -46,7 +46,14 @@
                         <template x-for="(foto, index) in photosEmbedded" :key="index">
                             <div class="rounded-xl border border-gray-200 overflow-hidden">
                                 <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-                                    <img x-show="foto" :src="foto" class="w-full h-full object-cover" :alt="'Foto wajah terdaftar ke-' + (index + 1)">
+                                    <img x-show="foto" :src="foto"
+                                         loading="lazy" decoding="async"
+                                         x-data="{ loaded: false }"
+                                         x-init="$nextTick(() => { if ($el.complete) loaded = true })"
+                                         @load="loaded = true"
+                                         :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
+                                         class="w-full h-full object-cover bg-slate-200 transition-all duration-200"
+                                         :alt="'Foto wajah terdaftar ke-' + (index + 1)">
                                     <span x-show="!foto" class="text-xs text-gray-400 font-semibold">Foto tidak tersedia</span>
                                 </div>
                                 <div class="p-2 bg-white border-t border-gray-100 text-center text-xs font-bold text-gray-600" x-text="'Foto ' + (index + 1)"></div>
@@ -70,9 +77,22 @@
 
             {{-- Dialog konfirmasi Daftar Ulang --}}
             <div x-show="showConfirmDaftarUlang" x-cloak
-                 class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-6"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
                  @keydown.escape.window="showConfirmDaftarUlang = false">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" @click.outside="showConfirmDaftarUlang = false">
+                <div x-show="showConfirmDaftarUlang"
+                     x-transition:enter="transition-all ease-out duration-200"
+                     x-transition:enter-start="opacity-0 scale-95"
+                     x-transition:enter-end="opacity-100 scale-100"
+                     x-transition:leave="transition-all ease-in duration-150"
+                     x-transition:leave-start="opacity-100 scale-100"
+                     x-transition:leave-end="opacity-0 scale-95"
+                     class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" @click.outside="showConfirmDaftarUlang = false">
                     <h3 class="text-lg font-extrabold text-gray-900">Daftar Ulang Wajah?</h3>
                     <p class="text-sm text-gray-600 leading-relaxed">
                         Seluruh foto wajah lama Anda akan <strong>dihapus permanen</strong> dan diganti dengan
@@ -201,7 +221,14 @@
                                 <div class="rounded-xl border-2 overflow-hidden"
                                      :class="foto ? 'border-emerald-400' : 'border-dashed border-gray-300 bg-gray-50'">
                                     <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-                                        <img x-show="foto" :src="foto" class="w-full h-full object-cover" :alt="'Foto wajah ke-' + (index + 1)">
+                                        <img x-show="foto" :src="foto"
+                                             loading="lazy" decoding="async"
+                                             x-data="{ loaded: false }"
+                                             x-init="$nextTick(() => { if ($el.complete) loaded = true })"
+                                             @load="loaded = true"
+                                             :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
+                                             class="w-full h-full object-cover bg-slate-200 transition-all duration-200"
+                                             :alt="'Foto wajah ke-' + (index + 1)">
                                         <div x-show="!foto" class="text-center text-gray-400">
                                             <div class="text-3xl font-black" x-text="index + 1"></div>
                                             <div class="text-[10px] font-semibold uppercase tracking-wider mt-1">Belum ada foto</div>
