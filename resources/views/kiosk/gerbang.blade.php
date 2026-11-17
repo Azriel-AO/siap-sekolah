@@ -859,10 +859,74 @@
                             const data = await res.json();
                             if (Array.isArray(data)) {
                                 this.faceTemplates = data;
+                                void this.hidrasiFaceTemplates(data);
                             }
                         }
                     } catch {
                         // Gagal memuat template ditangani hening agar kiosk tetap jalan
+                    }
+                },
+
+                async tungguVerifierWajah() {
+                    if (window.FaceVerification && typeof window.FaceVerification.extractTemplateFromPhotoDataUrls === 'function') {
+                        return window.FaceVerification;
+                    }
+                    for (let i = 0; i < 25; i++) {
+                        await new Promise((resolve) => setTimeout(resolve, 200));
+                        if (window.FaceVerification && typeof window.FaceVerification.extractTemplateFromPhotoDataUrls === 'function') {
+                            return window.FaceVerification;
+                        }
+                    }
+                    return null;
+                },
+
+                async hidrasiFaceTemplates(items) {
+                    const pending = (items || []).filter((item) => item && item.needs_extraction && Array.isArray(item.face_photos) && item.face_photos.length === 3);
+                    if (pending.length === 0) return;
+
+                    const verifier = await this.tungguVerifierWajah();
+                    if (!verifier) return;
+
+                    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+                    for (const item of pending) {
+                        try {
+                            const extracted = await verifier.extractTemplateFromPhotoDataUrls(item.face_photos);
+                            item.needs_extraction = false;
+                            delete item.face_photos;
+
+                            if (Array.isArray(extracted) && extracted.length === 1434) {
+                                item.template = extracted;
+                                await fetch("{{ route('kiosk.face.templates.sync') }}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': csrf,
+                                    },
+                                    body: JSON.stringify({
+                                        student_id: item.student_id,
+                                        status: 'ok',
+                                        template: extracted,
+                                    }),
+                                });
+                            } else {
+                                await fetch("{{ route('kiosk.face.templates.sync') }}", {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json',
+                                        'X-CSRF-TOKEN': csrf,
+                                    },
+                                    body: JSON.stringify({
+                                        student_id: item.student_id,
+                                        status: 'unextractable',
+                                    }),
+                                });
+                            }
+                        } catch {
+                            // Biarkan kiosk tetap berjalan walau satu hidrasi gagal
+                        }
                     }
                 },
 
@@ -898,7 +962,7 @@
                             this._offscreenCanvas = document.createElement('canvas');
                         }
 
-                        let detectionState = { faceDetected: false, insideGuide: false };
+                        let detectionState = { faceDetected: false, insideGuide: false, yawRatio: 0 };
                         const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas, {
                             onDetectionState: (state) => {
                                 if (state) {
@@ -917,18 +981,25 @@
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
                             this.faceFeedbackMessage = 'Geser wajah ke tengah kotak panduan';
+                        } else if (liveVector && Math.abs(detectionState.yawRatio ?? 0) > 0.30) {
+                            this.faceGuideState = 'outside';
+                            this.faceDetecting = false;
+                            this.noFaceSince = null;
+                            this.lowScoreSince = null;
+                            this.faceFeedbackMessage = 'Hadapkan wajah lurus ke kamera.';
                         } else if (liveVector) {
                             this.noFaceSince = null;
                             this.faceDetecting = true;
 
-                            if (this.faceTemplates.length > 0) {
+                            const readyTemplates = this.faceTemplates.filter((item) => item && Array.isArray(item.template) && item.template.length === 1434);
+                            if (readyTemplates.length > 0) {
                                 if (!this.faceDetectedSince) {
                                     this.faceDetectedSince = nowMs;
                                 } else if (nowMs - this.faceDetectedSince >= 10000) {
                                     this.showUnmatchedHint = true;
                                 }
 
-                                const match = verifier.findBestFaceMatch(liveVector, this.faceTemplates, 0.75);
+                                const match = verifier.findBestFaceMatch(liveVector, readyTemplates, 0.75);
                                 const bestSim = Number(match?.bestSimilarity ?? 0);
 
                                 if (match && match.matched && match.bestMatch && !this.tapInFlight && !this.verifyingFace && !this.result) {

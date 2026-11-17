@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Attendance;
 use App\Models\RfidCard;
 use App\Models\Student;
+use App\Services\FaceTemplateService;
 use App\Services\FingerprintService;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class KioskController extends Controller
 {
+    public const FACE_TEMPLATE_VERSION = FaceTemplateService::TEMPLATE_VERSION;
+
     /**
      * Layar Kiosk Gerbang Tunggal (absen masuk/pulang lewat kartu / sidik jari).
      * Dua kanal selalu aktif bersamaan — tanpa tombol pilih di layar.
@@ -176,17 +179,18 @@ class KioskController extends Controller
     /**
      * Endpoint publik Kiosk untuk mengambil kumpulan template landmark wajah (1434 float)
      * semua siswa yang memiliki enrollment wajah sah.
-     * Response di-cache 5 menit (300 detik) untuk efisiensi performa kios & jaringan.
+     * Bila template versi Procrustes terbaru belum ada namun 3 foto wajah tersedia di disk,
+     * kirimkan `needs_extraction` + `face_photos` agar browser mengekstrak vektor asli 1x dan menyinkronkannya.
      */
-    public function faceTemplates(Request $request): JsonResponse
+    public function faceTemplates(Request $request, FaceTemplateService $faceTemplates): JsonResponse
     {
-        $cacheKey = 'kiosk_face_templates';
+        $cacheKey = FaceTemplateService::CACHE_KEY;
 
         if ($request->boolean('fresh')) {
             Cache::forget($cacheKey);
         }
 
-        $templates = Cache::remember($cacheKey, 300, function () {
+        $templates = Cache::remember($cacheKey, 300, function () use ($faceTemplates): array {
             $students = Student::with('faceEnrollment')
                 ->has('faceEnrollment')
                 ->orderBy('name')
@@ -201,20 +205,46 @@ class KioskController extends Controller
                     continue;
                 }
 
-                $template = null;
-                $templatePath = "face-photos/{$student->id}/template.json";
+                $meta = $faceTemplates->readMeta((int) $student->id);
+                $hasCurrentVersion = is_array($meta) && ($meta['version'] ?? null) === self::FACE_TEMPLATE_VERSION;
 
-                if ($disk->exists($templatePath)) {
-                    $decoded = json_decode((string) $disk->get($templatePath), true);
-                    if (is_array($decoded) && count($decoded) === 1434) {
-                        $template = $decoded;
+                if ($hasCurrentVersion) {
+                    if (($meta['status'] ?? 'ok') === 'unextractable') {
+                        continue;
+                    }
+
+                    $storedVector = $faceTemplates->readVector((int) $student->id);
+                    if ($storedVector !== null) {
+                        $list[] = [
+                            'student_id' => $student->id,
+                            'nama' => $student->name,
+                            'template' => $storedVector,
+                        ];
+
+                        continue;
                     }
                 }
 
+                $photos = $this->ambilFotoEnrollmentBase64($student);
+
+                if (count($photos) === 3) {
+                    $list[] = [
+                        'student_id' => $student->id,
+                        'nama' => $student->name,
+                        'template' => null,
+                        'needs_extraction' => true,
+                        'face_photos' => $photos,
+                    ];
+
+                    continue;
+                }
+
+                // Fallback hanya untuk enrollment sintetis tanpa file foto fisik di disk
+                $template = $faceTemplates->readVector((int) $student->id);
                 if ($template === null) {
                     $template = $this->generateDeterministicTemplate((int) $student->id);
                     try {
-                        $disk->put($templatePath, json_encode($template));
+                        $disk->put($faceTemplates->templatePath((int) $student->id), json_encode($template));
                     } catch (\Throwable) {
                         // Abaikan kegagalan penulisan disk, template tetap dikembalikan
                     }
@@ -231,6 +261,61 @@ class KioskController extends Controller
         });
 
         return response()->json($templates);
+    }
+
+    /**
+     * Sinkronkan hasil ekstraksi vektor wajah 1434 float dari foto pendaftaran yang sudah ada
+     * bila siswa belum memiliki template versi Procrustes terbaru di disk.
+     * Menolak penimpaan (no-op aman) bila template versi terbaru sudah tersimpan.
+     */
+    public function syncFaceTemplate(Request $request, FaceTemplateService $faceTemplates): JsonResponse
+    {
+        $validated = $request->validate([
+            'student_id' => ['required', 'integer', 'exists:students,id'],
+            'status' => ['nullable', 'string', 'in:ok,unextractable'],
+            'template' => ['nullable', 'array', 'size:1434'],
+            'template.*' => ['numeric'],
+        ]);
+
+        $student = Student::with('faceEnrollment')->findOrFail((int) $validated['student_id']);
+        if (! $student->faceEnrollment) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Siswa belum memiliki pendaftaran wajah.',
+            ], 422);
+        }
+
+        if ($faceTemplates->hasCurrentVersion((int) $student->id)) {
+            return response()->json([
+                'ok' => true,
+                'already_synced' => true,
+            ]);
+        }
+
+        if (($validated['status'] ?? 'ok') === 'unextractable') {
+            $faceTemplates->markUnextractable((int) $student->id, 'kiosk_hydration');
+
+            return response()->json([
+                'ok' => true,
+                'status' => 'unextractable',
+            ]);
+        }
+
+        $sanitized = $faceTemplates->sanitizeVector($validated['template'] ?? null);
+        if ($sanitized === null) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Vektor template wajah tidak sah atau wajib berisi tepat 1434 angka berhingga.',
+            ], 422);
+        }
+
+        $faceTemplates->storeForStudent((int) $student->id, $sanitized, 'kiosk_hydration');
+        Cache::forget(FaceTemplateService::CACHE_KEY);
+
+        return response()->json([
+            'ok' => true,
+            'status' => 'ok',
+        ]);
     }
 
     /**

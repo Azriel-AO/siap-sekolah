@@ -14,7 +14,7 @@ if (document.querySelector('[data-face-autocapture] canvas[data-face-overlay]'))
 }
 
 // Modul auto-capture + liveness (FaceLandmarker + blendshapes) untuk pendaftaran wajah.
-if (document.querySelector('[data-face-autocapture]')) {
+if (document.querySelector('[data-face-autocapture], [data-face-enrollment]')) {
     import('./face-autocapture.js')
         .then((mod) => {
             window.FaceAutoCapture = mod;
@@ -26,8 +26,8 @@ if (document.querySelector('[data-face-autocapture]')) {
         });
 }
 
-// Modul verifikasi wajah 1:1 (FaceLandmarker 478 landmarks + Euclidean distance) untuk Kiosk Gerbang.
-if (document.querySelector('[data-kiosk-face-verify]')) {
+// Modul verifikasi wajah 1:1 & ekstraksi vektor 478 landmarks (dipakai di Kiosk & Pendaftaran Wajah).
+if (document.querySelector('[data-kiosk-face-verify], [data-face-autocapture], [data-face-enrollment]')) {
     import('./face-utils.js')
         .then((mod) => {
             window.FaceVerification = mod;

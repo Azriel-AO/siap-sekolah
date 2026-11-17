@@ -6,6 +6,7 @@ use App\Models\FaceEnrollment;
 use App\Models\RfidCard;
 use App\Models\SchoolClass;
 use App\Models\Student;
+use App\Services\FaceTemplateService;
 use App\Services\FingerprintService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -73,7 +74,7 @@ class PendaftaranController extends Controller
      * Pada Debug Mode, mendukung bypass granular per device (`bypass_camera`, `bypass_rfid`, `bypass_fingerprint`)
      * yang HANYA mengisi bagian yang kosong tanpa menimpa data asli yang sudah ada.
      */
-    public function store(Request $request): JsonResponse|RedirectResponse
+    public function store(Request $request, FaceTemplateService $faceTemplates): JsonResponse|RedirectResponse
     {
         if (isDebugMode()) {
             $this->applyGranularDebugBypasses($request);
@@ -89,6 +90,8 @@ class PendaftaranController extends Controller
             'fingerprint_id' => ['nullable', 'string', 'max:100'],
             'photos' => ['required', 'array', 'size:3'],
             'photos.*' => ['required', 'string'],
+            'face_template' => ['nullable', 'array', 'size:1434'],
+            'face_template.*' => ['numeric'],
         ], [
             'name.required' => 'Nama wajib diisi.',
             'name.not_regex' => 'Nama tidak boleh mengandung tag HTML atau karakter < dan >.',
@@ -128,10 +131,11 @@ class PendaftaranController extends Controller
 
         $now = Carbon::now('Asia/Jakarta');
         $fingerprintId = trim((string) ($validated['fingerprint_id'] ?? '')) ?: null;
+        $sanitizedTemplate = $faceTemplates->sanitizeVector($validated['face_template'] ?? null);
         $paths = [];
 
         try {
-            $student = DB::transaction(function () use ($validated, $cardUid, $kartuTerpakai, $binaries, $now, $fingerprintId, &$paths) {
+            $student = DB::transaction(function () use ($validated, $cardUid, $kartuTerpakai, $binaries, $now, $fingerprintId, $sanitizedTemplate, $faceTemplates, &$paths) {
                 $siswa = Student::create([
                     'school_class_id' => $validated['school_class_id'],
                     // Siswa baru belum punya NIS dari sekolah; pakai NISN sementara.
@@ -161,6 +165,12 @@ class PendaftaranController extends Controller
                     Storage::disk('local')->put($path, $binaries[$i]);
                 }
 
+                if ($sanitizedTemplate !== null) {
+                    foreach ($faceTemplates->storeForStudent($siswa->id, $sanitizedTemplate, 'pendaftaran') as $tplPath) {
+                        $paths[] = $tplPath;
+                    }
+                }
+
                 FaceEnrollment::create([
                     'student_id' => $siswa->id,
                     'photo_1_path' => $paths[0],
@@ -173,7 +183,7 @@ class PendaftaranController extends Controller
                 return $siswa;
             });
 
-            Cache::forget('kiosk_face_templates');
+            Cache::forget(FaceTemplateService::CACHE_KEY);
         } catch (ValidationException $e) {
             foreach ($paths as $path) {
                 Storage::disk('local')->delete($path);

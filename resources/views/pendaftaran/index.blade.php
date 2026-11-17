@@ -718,6 +718,19 @@
                     }
                     this.saving = true;
                     try {
+                        let faceTemplate = null;
+                        let skipExtract = false;
+                        @if(isDebugMode())
+                        skipExtract = Boolean(this.debugBypass.camera);
+                        @endif
+                        if (!skipExtract && window.FaceVerification && typeof window.FaceVerification.extractTemplateFromPhotoDataUrls === 'function') {
+                            try {
+                                faceTemplate = await window.FaceVerification.extractTemplateFromPhotoDataUrls(this.photos);
+                            } catch {
+                                faceTemplate = null;
+                            }
+                        }
+
                         const res = await fetch("{{ route('pendaftaran.simpan') }}", {
                             method: 'POST',
                             headers: {
@@ -728,6 +741,7 @@
                             body: JSON.stringify({
                                 ...this.form,
                                 photos: this.photos,
+                                face_template: faceTemplate,
                                 @if(isDebugMode())
                                 bypass_camera: this.debugBypass.camera,
                                 bypass_fingerprint: this.debugBypass.fingerprint,

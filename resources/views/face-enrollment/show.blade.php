@@ -15,7 +15,7 @@
         </div>
     </x-slot>
 
-    <div class="py-8" x-data="faceEnrollmentApp()" x-init="init()">
+    <div class="py-8" x-data="faceEnrollmentApp()" x-init="init()" data-face-enrollment>
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
             {{-- Pesan hasil simpan --}}
@@ -484,6 +484,15 @@
 
                     this.saving = true;
                     try {
+                        let faceTemplate = null;
+                        if (window.FaceVerification && typeof window.FaceVerification.extractTemplateFromPhotoDataUrls === 'function') {
+                            try {
+                                faceTemplate = await window.FaceVerification.extractTemplateFromPhotoDataUrls(this.photos);
+                            } catch {
+                                faceTemplate = null;
+                            }
+                        }
+
                         const res = await fetch("{{ route('siswa.wajah.simpan') }}", {
                             method: 'POST',
                             headers: {
@@ -491,7 +500,11 @@
                                 'Accept': 'application/json',
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             },
-                            body: JSON.stringify({ consent: this.consent, photos: this.photos })
+                            body: JSON.stringify({
+                                consent: this.consent,
+                                photos: this.photos,
+                                face_template: faceTemplate,
+                            })
                         });
 
                         const data = await res.json();

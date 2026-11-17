@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\FaceEnrollment;
 use App\Models\Student;
+use App\Services\FaceTemplateService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -72,7 +73,7 @@ class FaceEnrollmentController extends Controller
      * Semua validasi dilakukan sebelum file apa pun ditulis ke storage
      * (all-or-nothing). Waktu SELALU dari server (Konstitusi II).
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, FaceTemplateService $faceTemplates): JsonResponse
     {
         $this->pastikanSiswa($request);
 
@@ -85,6 +86,8 @@ class FaceEnrollmentController extends Controller
         if ($request->input('consent') !== true && $request->input('consent') !== 'true' && $request->input('consent') !== 1) {
             return $this->gagal('Anda harus menyetujui pernyataan izin orang tua/wali sebelum menyimpan.', 422);
         }
+
+        $sanitizedTemplate = $faceTemplates->sanitizeVector($request->input('face_template'));
 
         $photos = $request->input('photos');
         if (isDebugMode() && $request->boolean('bypass_camera')) {
@@ -188,7 +191,13 @@ class FaceEnrollmentController extends Controller
             }
         }
 
-        Cache::forget('kiosk_face_templates');
+        Cache::forget(FaceTemplateService::CACHE_KEY);
+
+        if ($sanitizedTemplate !== null) {
+            $faceTemplates->storeForStudent((int) $student->id, $sanitizedTemplate, 'face_enrollment');
+        } else {
+            $faceTemplates->clearForStudent((int) $student->id);
+        }
 
         return response()->json([
             'success' => true,
