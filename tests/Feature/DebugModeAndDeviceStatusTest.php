@@ -121,49 +121,25 @@ class DebugModeAndDeviceStatusTest extends TestCase
         $this->assertSame('debug', $attendance->kiosk_device);
     }
 
-    public function test_status_sistem_mendeteksi_rfid_reader_aktif_dan_belum_terdeteksi_serta_webcam(): void
+    public function test_status_sistem_menampilkan_rfid_standby_dan_tombol_tes_tanpa_penalti_24_jam(): void
     {
         $this->seed([DatabaseSeeder::class, DemoAttendanceSeeder::class]);
         Attendance::query()->delete();
 
         $admin = $this->admin();
-        $kelas = SchoolClass::firstOrFail();
-        $student = Student::firstOrFail();
 
-        $responseBelum = $this->actingAs($admin)->get(route('admin.status-sistem'));
-        $responseBelum->assertOk();
-        $responseBelum->assertSee('RFID Reader: Belum terdeteksi');
-        $responseBelum->assertSee('enumerateDevices');
-
-        // Tap lama (> 24 jam) atau metode non-RFID ('debug') tidak boleh mengaktifkan status RFID Reader
-        Attendance::create([
-            'student_id' => $student->id,
-            'school_class_id' => $kelas->id,
-            'date' => Carbon::now('Asia/Jakarta')->subDays(2)->toDateString(),
-            'check_in_at' => '06:50:00',
-            'status' => 'HADIR',
-            'last_tap_at' => Carbon::now('Asia/Jakarta')->subHours(30),
-            'kiosk_device' => 'gerbang-kartu',
-        ]);
-
-        $responseLama = $this->actingAs($admin)->get(route('admin.status-sistem'));
-        $responseLama->assertOk();
-        $responseLama->assertSee('RFID Reader: Belum terdeteksi');
-
-        // Tap kartu dalam 24 jam terakhir -> RFID Reader: Aktif
-        Attendance::create([
-            'student_id' => $student->id,
-            'school_class_id' => $kelas->id,
-            'date' => Carbon::now('Asia/Jakarta')->toDateString(),
-            'check_in_at' => '06:50:00',
-            'status' => 'HADIR',
-            'last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(5),
-            'kiosk_device' => 'gerbang-kartu',
-        ]);
-
-        $responseAktif = $this->actingAs($admin)->get(route('admin.status-sistem'));
-        $responseAktif->assertOk();
-        $responseAktif->assertSee('RFID Reader: Aktif');
+        // Walaupun tidak ada tap kartu sama sekali, RFID Reader tetap Standby (bukan "Mati" atau "Rusak")
+        $responseKosong = $this->actingAs($admin)->get(route('admin.status-sistem'));
+        $responseKosong->assertOk();
+        $responseKosong->assertSee('Siap / Standby (Menunggu Tap)');
+        $responseKosong->assertSee('Tes RFID');
+        $responseKosong->assertSee('Terhubung / Berfungsi');
+        $responseKosong->assertSee('Standby (Belum ada tap yang terdeteksi)');
+        $responseKosong->assertSee('Semua Layanan Operasional');
+        $responseKosong->assertSee('100.0%');
+        $responseKosong->assertSee('enumerateDevices');
+        $responseKosong->assertDontSee('RFID Reader: Belum terdeteksi');
+        $responseKosong->assertDontSee('Belum ada tap kartu dalam 24 jam terakhir.');
     }
 
     public function test_granular_debug_mode_bypass_satu_device_tidak_menimpa_data_asli_device_lain(): void

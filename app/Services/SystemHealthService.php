@@ -24,18 +24,9 @@ class SystemHealthService
         $statusSensor = FingerprintService::dariConfig()->status();
 
         $now = Carbon::now('Asia/Jakarta');
-        $lastCardTapRaw = Attendance::whereNotNull('last_tap_at')
-            ->where(function ($query): void {
-                $query->where('kiosk_device', 'gerbang-kartu')
-                    ->orWhere('kiosk_device', 'like', 'kiosk-%');
-            })
-            ->max('last_tap_at');
-
-        $lastCardTapAt = $lastCardTapRaw ? Carbon::parse($lastCardTapRaw, 'Asia/Jakarta') : null;
-        $rfidAktif = $lastCardTapAt !== null && $lastCardTapAt->greaterThanOrEqualTo($now->copy()->subHours(24));
         $bridgeUp = (bool) ($statusSensor['conectado'] ?? false);
 
-        $slots72 = $this->buildHourlySlots($now, $bridgeUp, $rfidAktif);
+        $slots72 = $this->buildHourlySlots($now, $bridgeUp);
         $downCount = collect($slots72)->where('status', 'down')->count();
         $slots24 = array_slice($slots72, -24);
         $chartData = $this->buildSvgChartData($slots24);
@@ -46,8 +37,8 @@ class SystemHealthService
             'statusSensor' => $statusSensor,
             'jumlahKelas' => SchoolClass::count(),
             'jumlahSiswa' => Student::count(),
-            'rfidAktif' => $rfidAktif,
-            'lastCardTapAt' => $lastCardTapAt,
+            'rfidStatus' => 'standby',
+            'rfidMode' => 'USB HID (Keyboard Wedge)',
             'uptime3d' => round(((72 - $downCount) / 72) * 100, 1),
             'availability3d' => round(collect($slots72)->avg('availability'), 1),
             'daysGrid' => [
@@ -65,7 +56,7 @@ class SystemHealthService
     /**
      * @return list<array{date_key: string, day_label: string, hour_label: string, status: string, availability: int, note: string}>
      */
-    private function buildHourlySlots(Carbon $now, bool $bridgeUp, bool $rfidAktif): array
+    private function buildHourlySlots(Carbon $now, bool $bridgeUp): array
     {
         $currentHour = $now->copy()->startOfHour();
         $start72h = $currentHour->copy()->subHours(71);
@@ -84,12 +75,11 @@ class SystemHealthService
             $isSchoolHour = $slotTime->isWeekday() && $slotTime->hour >= 6 && $slotTime->hour <= 17;
 
             if ($offset === 0) {
-                $issues = ($bridgeUp ? 0 : 1) + ($rfidAktif ? 0 : 1);
-                $status = $issues === 0 ? 'up' : 'degraded';
-                $availability = $issues === 0 ? 100 : ($issues === 1 ? 75 : 50);
-                $note = $issues === 0
-                    ? 'Semua device aktif'
-                    : ($bridgeUp ? 'RFID belum terdeteksi' : ($rfidAktif ? 'Sensor sidik jari terputus' : 'Sensor & RFID belum aktif'));
+                $status = $bridgeUp ? 'up' : 'degraded';
+                $availability = $bridgeUp ? 100 : 75;
+                $note = $bridgeUp
+                    ? 'Semua layanan operasional (RFID standby USB HID)'
+                    : 'Sensor sidik jari terputus';
             } elseif (! $bridgeUp && $isSchoolHour && ! $hasActivity) {
                 $status = 'degraded';
                 $availability = 75;

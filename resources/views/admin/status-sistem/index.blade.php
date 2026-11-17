@@ -34,9 +34,9 @@
                             </div>
                         </div>
                     </div>
-                    <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold {{ $statusSensor['conectado'] && $rfidAktif ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' }}">
-                        <span class="w-2.5 h-2.5 rounded-full {{ $statusSensor['conectado'] && $rfidAktif ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
-                        <span>{{ $statusSensor['conectado'] && $rfidAktif ? 'Semua Layanan Operasional' : 'Sebagian Perangkat Perlu Perhatian' }}</span>
+                    <div class="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold {{ $statusSensor['conectado'] ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800' }}">
+                        <span class="w-2.5 h-2.5 rounded-full {{ $statusSensor['conectado'] ? 'bg-emerald-500' : 'bg-amber-500' }}"></span>
+                        <span>{{ $statusSensor['conectado'] ? 'Semua Layanan Operasional' : 'Sebagian Perangkat Perlu Perhatian' }}</span>
                     </div>
                 </div>
 
@@ -217,39 +217,97 @@
                     </p>
                 </div>
 
-                {{-- Device 4: RFID Reader --}}
-                <div class="bg-white dark:bg-slate-800 rounded-xl border {{ $rfidAktif ? 'border-emerald-200 dark:border-emerald-800/60' : 'border-rose-300 dark:border-rose-800/60' }} shadow-sm p-5 space-y-2.5">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full {{ $rfidAktif ? 'bg-emerald-500' : 'bg-rose-500' }} shrink-0"></span>
-                            <span class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-slate-300">RFID Reader</span>
+                {{-- Device 4: RFID Reader (USB HID Keyboard Wedge) --}}
+                <div class="bg-white dark:bg-slate-800 rounded-xl border shadow-sm p-5 space-y-2.5 transition-colors"
+                     :class="{
+                         'border-emerald-200 dark:border-emerald-800/60': rfidState === 'verified',
+                         'border-amber-300 dark:border-amber-700/70': rfidState === 'listening' || rfidState === 'no_tap',
+                         'border-sky-200 dark:border-sky-800/60': rfidState === 'standby'
+                     }">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full shrink-0"
+                                  :class="{
+                                      'bg-emerald-500': rfidState === 'verified',
+                                      'bg-amber-500 animate-pulse': rfidState === 'listening',
+                                      'bg-amber-400': rfidState === 'no_tap',
+                                      'bg-sky-500': rfidState === 'standby'
+                                  }"></span>
+                            <span class="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-slate-300 truncate">RFID Reader</span>
                         </div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold {{ $rfidAktif ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300' : 'bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-300' }}">
-                            {{ $rfidAktif ? 'Aktif' : 'Mati' }}
-                        </span>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold"
+                                  :class="{
+                                      'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300': rfidState === 'verified',
+                                      'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300': rfidState === 'listening' || rfidState === 'no_tap',
+                                      'bg-sky-100 dark:bg-sky-900/50 text-sky-800 dark:text-sky-300': rfidState === 'standby'
+                                  }"
+                                  x-text="rfidState === 'verified' ? 'Aktif' : (rfidState === 'listening' ? ('Listening (' + rfidCountdown + 's)') : 'Standby')">
+                                Standby
+                            </span>
+                            <button type="button"
+                                    @click="mulaiTesRfid()"
+                                    :disabled="rfidState === 'listening'"
+                                    class="px-2 py-0.5 rounded-md border text-[11px] font-bold transition disabled:opacity-60 disabled:cursor-wait"
+                                    :class="rfidState === 'listening'
+                                        ? 'border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                                        : 'border-indigo-200 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300'">
+                                <span x-text="rfidState === 'listening' ? ('Listening (' + rfidCountdown + 's)…') : 'Tes RFID'">Tes RFID</span>
+                            </button>
+                        </div>
                     </div>
 
-                    @if($rfidAktif)
-                        <h2 class="text-base font-extrabold text-emerald-700 dark:text-emerald-400">RFID Reader: Aktif</h2>
-                        <p class="text-[11px] text-gray-500 dark:text-slate-400">
-                            Tap terakhir: {{ $lastCardTapAt?->format('d M H:i') }} WIB.
-                        </p>
-                    @else
-                        <h2 class="text-base font-extrabold text-rose-700 dark:text-rose-400">RFID Reader: Belum terdeteksi</h2>
-                        <p class="text-[11px] text-rose-700 dark:text-rose-300">
-                            Belum ada tap kartu dalam 24 jam terakhir.
-                        </p>
-                    @endif
+                    <input type="text"
+                           x-ref="rfidTestInput"
+                           x-model="rfidTestBuffer"
+                           @input="jadwalkanTangkapRfid()"
+                           @keydown.enter.prevent="tangkapInputRfid()"
+                           autocomplete="off"
+                           aria-label="Input pengujian RFID"
+                           class="sr-only"
+                           tabindex="-1">
+
+                    <h2 class="text-base font-extrabold"
+                        :class="{
+                            'text-emerald-700 dark:text-emerald-400': rfidState === 'verified',
+                            'text-amber-700 dark:text-amber-300': rfidState === 'listening' || rfidState === 'no_tap',
+                            'text-sky-700 dark:text-sky-400': rfidState === 'standby'
+                        }"
+                        x-text="rfidState === 'verified'
+                            ? 'Terhubung / Berfungsi'
+                            : (rfidState === 'listening'
+                                ? ('Listening… Tempelkan Kartu (' + rfidCountdown + ' detik)')
+                                : (rfidState === 'no_tap'
+                                    ? 'Standby (Belum ada tap yang terdeteksi)'
+                                    : 'Siap / Standby (Menunggu Tap)'))">
+                        Siap / Standby (Menunggu Tap)
+                    </h2>
+
+                    <p class="text-[11px]"
+                       :class="rfidState === 'no_tap' || rfidState === 'listening' ? 'text-amber-700 dark:text-amber-300' : 'text-gray-500 dark:text-slate-400'">
+                        <template x-if="rfidState === 'verified'">
+                            <span>Input terbaca (<code class="font-mono font-bold text-emerald-700 dark:text-emerald-300" x-text="rfidLastUid"></code>). Klik <strong>Tes RFID</strong> untuk uji ulang.</span>
+                        </template>
+                        <template x-if="rfidState === 'listening'">
+                            <span>Silakan tempelkan kartu ke RFID reader dalam 5 detik.</span>
+                        </template>
+                        <template x-if="rfidState === 'no_tap'">
+                            <span>Tidak ada input kartu selama tes 5 detik. Alat tetap dalam mode standby (USB HID).</span>
+                        </template>
+                        <template x-if="rfidState === 'standby'">
+                            <span>Mode {{ $rfidMode ?? 'USB HID (Keyboard Wedge)' }}. Klik <strong>Tes RFID</strong> lalu tap kartu untuk menguji pembacaan.</span>
+                        </template>
+                    </p>
                 </div>
             </div>
 
             {{-- Panduan Singkat Petugas / Guru Piket --}}
             <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
-                <h3 class="text-sm font-bold text-gray-900 dark:text-slate-100 mb-2">Panduan Cepat Jika Ada Indikator Merah</h3>
+                <h3 class="text-sm font-bold text-gray-900 dark:text-slate-100 mb-2">Panduan Cepat Status &amp; Pengujian Perangkat</h3>
                 <ol class="list-decimal list-inside text-xs text-gray-600 dark:text-slate-300 space-y-1.5">
                     <li>Periksa kabel USB sensor sidik jari ZK9500, webcam, dan RFID reader pada Box PC (cabut lalu colok kembali ke port USB).</li>
-                    <li>Tunggu sekitar 20 detik (watchdog otomatis menyalakan ulang bridge), lalu klik tombol <strong>Muat ulang</strong> di kanan atas.</li>
-                    <li>Bila masih merah, restart Box PC atau klik dua kali file <code class="font-mono">box\mulai-sistem.bat</code> di folder aplikasi.</li>
+                    <li>Untuk memastikan <strong>RFID Reader (USB HID)</strong> bekerja, klik tombol <strong>Tes RFID</strong> lalu segera tempelkan kartu ke reader dalam 5 detik.</li>
+                    <li>Bila indikator Fingerprint merah, tunggu sekitar 20 detik (watchdog otomatis menyalakan ulang bridge), klik <strong>Muat ulang</strong>, atau jalankan <code class="font-mono">box\mulai-sistem.bat</code>.</li>
                 </ol>
             </div>
 
@@ -262,6 +320,13 @@
                 webcamState: 'checking',
                 webcamCount: 0,
                 hoveredPoint: null,
+                rfidState: 'standby',
+                rfidCountdown: 5,
+                rfidTestBuffer: '',
+                rfidLastUid: '',
+                _rfidTimer: null,
+                _rfidFlushTimer: null,
+                _rfidKeyHandler: null,
 
                 async cekWebcam() {
                     try {
@@ -278,6 +343,101 @@
                     } catch {
                         this.webcamState = 'none';
                         this.webcamCount = 0;
+                    }
+                },
+
+                bersihkanTesRfid() {
+                    if (this._rfidTimer) {
+                        clearInterval(this._rfidTimer);
+                        this._rfidTimer = null;
+                    }
+                    if (this._rfidFlushTimer) {
+                        clearTimeout(this._rfidFlushTimer);
+                        this._rfidFlushTimer = null;
+                    }
+                    if (this._rfidKeyHandler) {
+                        window.removeEventListener('keydown', this._rfidKeyHandler);
+                        this._rfidKeyHandler = null;
+                    }
+                },
+
+                mulaiTesRfid() {
+                    this.bersihkanTesRfid();
+                    this.rfidTestBuffer = '';
+                    this.rfidCountdown = 5;
+                    this.rfidState = 'listening';
+
+                    this.$nextTick(() => {
+                        if (this.$refs.rfidTestInput) {
+                            this.$refs.rfidTestInput.focus({ preventScroll: true });
+                        }
+                    });
+
+                    this._rfidKeyHandler = (event) => {
+                        if (this.rfidState !== 'listening') {
+                            return;
+                        }
+                        if (event.ctrlKey || event.altKey || event.metaKey) {
+                            return;
+                        }
+                        if (event.target === this.$refs.rfidTestInput) {
+                            return;
+                        }
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            this.tangkapInputRfid();
+                            return;
+                        }
+                        if (event.key && event.key.length === 1) {
+                            this.rfidTestBuffer += event.key;
+                            this.jadwalkanTangkapRfid();
+                        }
+                    };
+                    window.addEventListener('keydown', this._rfidKeyHandler);
+
+                    this._rfidTimer = setInterval(() => {
+                        if (this.rfidState !== 'listening') {
+                            this.bersihkanTesRfid();
+                            return;
+                        }
+                        this.rfidCountdown -= 1;
+                        if (this.rfidCountdown <= 0) {
+                            this.tangkapInputRfid(true);
+                        }
+                    }, 1000);
+                },
+
+                jadwalkanTangkapRfid() {
+                    if (this.rfidState !== 'listening') {
+                        return;
+                    }
+                    if (this._rfidFlushTimer) {
+                        clearTimeout(this._rfidFlushTimer);
+                    }
+                    const nilai = (this.rfidTestBuffer || '').trim();
+                    if (nilai.length >= 6) {
+                        this._rfidFlushTimer = setTimeout(() => {
+                            this.tangkapInputRfid();
+                        }, 250);
+                    }
+                },
+
+                tangkapInputRfid(waktuHabis = false) {
+                    if (this.rfidState !== 'listening') {
+                        return;
+                    }
+                    const uid = (this.rfidTestBuffer || '').trim();
+                    if (uid.length >= 4) {
+                        this.bersihkanTesRfid();
+                        this.rfidLastUid = uid;
+                        this.rfidTestBuffer = '';
+                        this.rfidState = 'verified';
+                        return;
+                    }
+                    if (waktuHabis) {
+                        this.bersihkanTesRfid();
+                        this.rfidTestBuffer = '';
+                        this.rfidState = 'no_tap';
                     }
                 },
             };

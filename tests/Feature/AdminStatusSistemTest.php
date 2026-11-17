@@ -121,6 +121,9 @@ class AdminStatusSistemTest extends TestCase
         $response->assertSee('Fingerprint');
         $response->assertSee('Kamera / Webcam');
         $response->assertSee('RFID Reader');
+        $response->assertSee('Siap / Standby (Menunggu Tap)');
+        $response->assertSee('Tes RFID');
+        $response->assertDontSee('RFID belum terdeteksi');
 
         // Pastikan tepat 72 kotak (title="... — ...%") dirender
         preg_match_all('/class="h-6 rounded-sm /', (string) $response->getContent(), $matches);
