@@ -373,16 +373,23 @@
                 faceVerifyStudent: null,
                 faceVerifyStatus: '',
                 faceTemplates: [],
+                readyFaceTemplates: [],
                 faceDetecting: false,
                 faceGuideState: 'idle',
                 faceFeedbackMessage: 'Posisikan wajah di dalam kotak',
+                isStable: false,
+                stableSince: null,
                 noFaceSince: null,
                 lowScoreSince: null,
                 faceDetectedSince: null,
                 showUnmatchedHint: false,
                 faceCheckinInFlight: false,
-                faceDetectionTimer: null,
-                _offscreenCanvas: null,
+                faceRafId: null,
+                lastFaceDetectAt: -1000,
+                lastVideoTimestampMs: 0,
+                faceLoopBusy: false,
+                kioskDestroyed: false,
+                _guideOverlayEl: null,
                 _photoCanvas: null,
                 @if(isDebugMode())
                 debugPanelOpen: false,
@@ -400,8 +407,7 @@
                     this.$nextTick(() => this.focusInput());
                     this.startCamera();
                     this.muatFaceTemplates();
-                    // Mulai deteksi wajah secara non-blocking setelah render awal
-                    this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), 900);
+                    this.startFaceLoop();
                     @if(isDebugMode())
                     window.addEventListener('keydown', (event) => {
                         if (event.ctrlKey && event.key.toLowerCase() === 'd') {
@@ -410,27 +416,46 @@
                         }
                     });
                     @endif
-                    window.addEventListener('beforeunload', () => {
-                        this.stopCamera();
-                        this.stopAutoLoop();
-                        if (this.clockTimer) {
-                            clearInterval(this.clockTimer);
-                            this.clockTimer = null;
-                        }
-                        if (this.faceDetectionTimer) {
-                            clearTimeout(this.faceDetectionTimer);
-                            this.faceDetectionTimer = null;
-                        }
-                        if (this.cameraRetryTimer) {
-                            clearTimeout(this.cameraRetryTimer);
-                            this.cameraRetryTimer = null;
-                        }
-                    });
+                    const cleanup = () => this.destroyKioskResources();
+                    window.addEventListener('pagehide', cleanup);
+                    window.addEventListener('beforeunload', cleanup);
                     // Loop identify otomatis HANYA di driver bridge (produksi).
                     // Mock tidak boleh loop (identify mock selalu "menemukan" siswa).
                     if (!this.isMockFingerprint) {
                         this.loopFingerprint();
                     }
+                },
+
+                destroyKioskResources() {
+                    if (this.kioskDestroyed) return;
+                    this.kioskDestroyed = true;
+                    if (this.faceRafId) {
+                        cancelAnimationFrame(this.faceRafId);
+                        this.faceRafId = null;
+                    }
+                    this.stopCamera();
+                    this.stopAutoLoop();
+                    if (this.clockTimer) {
+                        clearInterval(this.clockTimer);
+                        this.clockTimer = null;
+                    }
+                    if (this.cameraRetryTimer) {
+                        clearTimeout(this.cameraRetryTimer);
+                        this.cameraRetryTimer = null;
+                    }
+                    if (this.resetTimer) {
+                        clearTimeout(this.resetTimer);
+                        this.resetTimer = null;
+                    }
+                    if (this._photoCanvas) {
+                        this._photoCanvas.width = 0;
+                        this._photoCanvas.height = 0;
+                        this._photoCanvas = null;
+                    }
+                    this._guideOverlayEl = null;
+                    this.faceTemplates = [];
+                    this.readyFaceTemplates = [];
+                    window.FaceVerification?.closeVerifierFaceLandmarker?.();
                 },
 
                 stopCamera() {
@@ -681,8 +706,10 @@
                         if (!this._photoCanvas) {
                             this._photoCanvas = document.createElement('canvas');
                         }
-                        this._photoCanvas.width = video.videoWidth;
-                        this._photoCanvas.height = video.videoHeight;
+                        if (this._photoCanvas.width !== video.videoWidth || this._photoCanvas.height !== video.videoHeight) {
+                            this._photoCanvas.width = video.videoWidth;
+                            this._photoCanvas.height = video.videoHeight;
+                        }
                         this._photoCanvas.getContext('2d').drawImage(video, 0, 0);
                         return this._photoCanvas.toDataURL('image/jpeg', 0.7);
                     } catch (e) {
@@ -852,6 +879,14 @@
                     }
                 },
 
+                refreshReadyTemplates() {
+                    const verifier = window.FaceVerification;
+                    if (!verifier || typeof verifier.prepareTemplateSignatures !== 'function') {
+                        return;
+                    }
+                    this.readyFaceTemplates = verifier.prepareTemplateSignatures(this.faceTemplates);
+                },
+
                 async muatFaceTemplates() {
                     try {
                         const res = await fetch("{{ route('kiosk.face.templates') }}");
@@ -859,6 +894,7 @@
                             const data = await res.json();
                             if (Array.isArray(data)) {
                                 this.faceTemplates = data;
+                                this.refreshReadyTemplates();
                                 void this.hidrasiFaceTemplates(data);
                             }
                         }
@@ -882,130 +918,192 @@
 
                 async hidrasiFaceTemplates(items) {
                     const pending = (items || []).filter((item) => item && item.needs_extraction && Array.isArray(item.face_photos) && item.face_photos.length === 3);
-                    if (pending.length === 0) return;
+                    if (pending.length === 0) {
+                        this.refreshReadyTemplates();
+                        return;
+                    }
 
                     const verifier = await this.tungguVerifierWajah();
                     if (!verifier) return;
 
                     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
 
-                    for (const item of pending) {
-                        try {
-                            const extracted = await verifier.extractTemplateFromPhotoDataUrls(item.face_photos);
-                            item.needs_extraction = false;
-                            delete item.face_photos;
+                    try {
+                        for (const item of pending) {
+                            if (this.kioskDestroyed) break;
+                            try {
+                                const extracted = await verifier.extractTemplateFromPhotoDataUrls(item.face_photos);
+                                item.needs_extraction = false;
+                                delete item.face_photos;
 
-                            if (Array.isArray(extracted) && extracted.length === 1434) {
-                                item.template = extracted;
-                                await fetch("{{ route('kiosk.face.templates.sync') }}", {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json',
-                                        'X-CSRF-TOKEN': csrf,
-                                    },
-                                    body: JSON.stringify({
-                                        student_id: item.student_id,
-                                        status: 'ok',
-                                        template: extracted,
-                                    }),
-                                });
-                            } else {
-                                await fetch("{{ route('kiosk.face.templates.sync') }}", {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'Accept': 'application/json',
-                                        'X-CSRF-TOKEN': csrf,
-                                    },
-                                    body: JSON.stringify({
-                                        student_id: item.student_id,
-                                        status: 'unextractable',
-                                    }),
-                                });
+                                if (Array.isArray(extracted) && extracted.length === 1434) {
+                                    item.template = extracted;
+                                    this.refreshReadyTemplates();
+                                    await fetch("{{ route('kiosk.face.templates.sync') }}", {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': csrf,
+                                        },
+                                        body: JSON.stringify({
+                                            student_id: item.student_id,
+                                            status: 'ok',
+                                            template: extracted,
+                                        }),
+                                    });
+                                } else {
+                                    await fetch("{{ route('kiosk.face.templates.sync') }}", {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Accept': 'application/json',
+                                            'X-CSRF-TOKEN': csrf,
+                                        },
+                                        body: JSON.stringify({
+                                            student_id: item.student_id,
+                                            status: 'unextractable',
+                                        }),
+                                    });
+                                }
+                            } catch {
+                                // Biarkan kiosk tetap berjalan walau satu hidrasi gagal
                             }
-                        } catch {
-                            // Biarkan kiosk tetap berjalan walau satu hidrasi gagal
                         }
+                    } finally {
+                        // Tutup model IMAGE setelah hidrasi 1x selesai agar RAM hanya menyimpan 1 model VIDEO ringan
+                        verifier.closeImageFaceLandmarker?.();
+                        this.refreshReadyTemplates();
                     }
                 },
 
-                async loopFaceDetection() {
-                    // Loop rekursif via setTimeout (900ms) untuk mencegah penumpukan task di main thread.
-                    // Jangan jalankan matching jika ada hasil di layar, sedang verifikasi 1:1,
-                    // check-in/tap sedang in-flight, tab tersembunyi, atau kamera belum siap.
-                    const FACE_LOOP_DELAY_MS = 900;
+                startFaceLoop() {
+                    if (this.kioskDestroyed || this.faceRafId) return;
+                    const step = (rafTimestamp) => {
+                        if (this.kioskDestroyed) {
+                            this.faceRafId = null;
+                            return;
+                        }
+                        this.faceRafId = requestAnimationFrame(step);
+                        void this.loopFaceDetection(rafTimestamp);
+                    };
+                    this.faceRafId = requestAnimationFrame(step);
+                },
+
+                async loopFaceDetection(rafTimestamp = performance.now()) {
+                    // Throttling ketat via requestAnimationFrame: beri jeda istirahat penuh >= 850ms
+                    // setelah tiap deteksi selesai, dan jalankan matching HANYA saat isStable === true (>= 1.5s).
+                    const FACE_DETECT_INTERVAL_MS = 850;
+                    const FACE_STABLE_REQUIRED_MS = 1500;
+
+                    if (this.faceLoopBusy || (rafTimestamp - this.lastFaceDetectAt < FACE_DETECT_INTERVAL_MS)) {
+                        return;
+                    }
 
                     if (document.hidden || this.result || this.verifyingFace || this.faceCheckinInFlight || this.tapInFlight || this.demoLoading || !this.cameraReady) {
                         if (this.result) {
                             this.faceGuideState = 'idle';
+                            this.isStable = false;
+                            this.stableSince = null;
                         }
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
 
                     const preview = this.$refs.cameraPreview;
                     if (!preview || preview.readyState < 2 || !preview.videoWidth) {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
                         return;
                     }
 
                     const verifier = window.FaceVerification;
-                    if (!verifier || typeof verifier.getVerifierFaceLandmarker !== 'function' || typeof verifier.findBestFaceMatch !== 'function') {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
+                    if (!verifier || typeof verifier.getKioskVideoFaceLandmarker !== 'function' || typeof verifier.extractSignatureFromVideo !== 'function' || typeof verifier.findBestFaceMatch !== 'function') {
                         return;
                     }
 
+                    this.faceLoopBusy = true;
+
                     try {
-                        const landmarker = await verifier.getVerifierFaceLandmarker();
-                        if (!this._offscreenCanvas) {
-                            this._offscreenCanvas = document.createElement('canvas');
+                        const landmarker = await verifier.getKioskVideoFaceLandmarker();
+                        if (this.kioskDestroyed || this.result || this.verifyingFace || !this.cameraReady) {
+                            return;
                         }
 
-                        let detectionState = { faceDetected: false, insideGuide: false, yawRatio: 0 };
-                        const liveVector = verifier.extractVectorFromVideo(landmarker, preview, this._offscreenCanvas, {
+                        if (this.readyFaceTemplates.length === 0 && this.faceTemplates.length > 0) {
+                            this.refreshReadyTemplates();
+                        }
+
+                        if (!this._guideOverlayEl || !this._guideOverlayEl.isConnected) {
+                            this._guideOverlayEl = document.querySelector('.face-guide-overlay');
+                        }
+
+                        this.lastVideoTimestampMs = Math.max(this.lastVideoTimestampMs + 1, Math.floor(performance.now()));
+
+                        let faceDetected = false;
+                        let insideGuide = false;
+                        let yawRatio = 0;
+
+                        const liveSignature = verifier.extractSignatureFromVideo(landmarker, preview, this.lastVideoTimestampMs, {
+                            guideElement: this._guideOverlayEl,
                             onDetectionState: (state) => {
                                 if (state) {
-                                    detectionState = state;
+                                    faceDetected = state.faceDetected;
+                                    insideGuide = state.insideGuide;
+                                    yawRatio = state.yawRatio;
                                 }
                             },
                         });
 
                         const nowMs = Date.now();
 
-                        if (detectionState.faceDetected && !detectionState.insideGuide) {
+                        if (faceDetected && !insideGuide) {
                             this.faceGuideState = 'outside';
                             this.faceDetecting = false;
+                            this.isStable = false;
+                            this.stableSince = null;
                             this.noFaceSince = null;
                             this.lowScoreSince = null;
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
                             this.faceFeedbackMessage = 'Geser wajah ke tengah kotak panduan';
-                        } else if (liveVector && Math.abs(detectionState.yawRatio ?? 0) > 0.30) {
+                        } else if (liveSignature && Math.abs(yawRatio) > 0.30) {
                             this.faceGuideState = 'outside';
                             this.faceDetecting = false;
+                            this.isStable = false;
+                            this.stableSince = null;
                             this.noFaceSince = null;
                             this.lowScoreSince = null;
                             this.faceFeedbackMessage = 'Hadapkan wajah lurus ke kamera.';
-                        } else if (liveVector) {
+                        } else if (liveSignature) {
                             this.noFaceSince = null;
                             this.faceDetecting = true;
 
-                            const readyTemplates = this.faceTemplates.filter((item) => item && Array.isArray(item.template) && item.template.length === 1434);
-                            if (readyTemplates.length > 0) {
+                            if (!this.stableSince) {
+                                this.stableSince = nowMs;
+                            }
+                            this.isStable = (nowMs - this.stableSince) >= FACE_STABLE_REQUIRED_MS;
+
+                            if (!this.isStable) {
+                                this.faceGuideState = 'inside';
+                                this.lowScoreSince = null;
+                                this.faceFeedbackMessage = 'Tahan posisi wajah sebentar... (Menstabilkan...)';
+                                return;
+                            }
+
+                            if (this.readyFaceTemplates.length > 0) {
                                 if (!this.faceDetectedSince) {
                                     this.faceDetectedSince = nowMs;
                                 } else if (nowMs - this.faceDetectedSince >= 10000) {
                                     this.showUnmatchedHint = true;
                                 }
 
-                                const match = verifier.findBestFaceMatch(liveVector, readyTemplates, 0.75);
+                                const match = verifier.findBestFaceMatch(liveSignature, this.readyFaceTemplates, 0.75);
                                 const bestSim = Number(match?.bestSimilarity ?? 0);
 
                                 if (match && match.matched && match.bestMatch && !this.tapInFlight && !this.verifyingFace && !this.result) {
                                     const matchedName = match.bestMatch.nama || match.bestMatch.student_name || 'Siswa';
                                     this.faceGuideState = 'matched';
                                     this.faceFeedbackMessage = 'Halo ' + matchedName + ', absen berhasil.';
+                                    this.isStable = false;
+                                    this.stableSince = null;
                                     this.lowScoreSince = null;
                                     this.faceDetectedSince = null;
                                     this.showUnmatchedHint = false;
@@ -1067,6 +1165,8 @@
                             }
                         } else {
                             this.faceDetecting = false;
+                            this.isStable = false;
+                            this.stableSince = null;
                             this.lowScoreSince = null;
                             this.faceDetectedSince = null;
                             this.showUnmatchedHint = false;
@@ -1085,8 +1185,11 @@
                         // Reset state visual bila model gagal dimuat / error agar UI tidak terjebak
                         this.faceGuideState = 'idle';
                         this.faceDetecting = false;
+                        this.isStable = false;
+                        this.stableSince = null;
                     } finally {
-                        this.faceDetectionTimer = setTimeout(() => this.loopFaceDetection(), FACE_LOOP_DELAY_MS);
+                        this.lastFaceDetectAt = performance.now();
+                        this.faceLoopBusy = false;
                     }
                 },
 
@@ -1094,6 +1197,8 @@
                     this.result = data;
                     this.faceDetecting = false;
                     this.faceGuideState = 'idle';
+                    this.isStable = false;
+                    this.stableSince = null;
                     this.noFaceSince = null;
                     this.lowScoreSince = null;
                     this.faceDetectedSince = null;

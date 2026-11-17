@@ -4,80 +4,155 @@ const WASM_PATH = '/vendor/mediapipe/wasm';
 const LANDMARKER_MODEL_PATH = '/vendor/mediapipe/models/face_landmarker.task';
 
 export const FACE_LANDMARK_COUNT = 478;
+export const FACE_SIGNATURE_LENGTH = 11;
 export const FACE_DISTANCE_THRESHOLD = 0.15;
 export const FACE_MATCH_THRESHOLD = 0.75;
 export const FACE_VERIFY_SIMILARITY_THRESHOLD = 0.72;
-export const FACE_SIMILARITY_SIGMA = 0.065;
+export const FACE_SIGNATURE_SIGMA = 0.084;
 export const FACE_VERIFY_TIMEOUT_MS = 5000;
-export const FACE_VERIFY_INTERVAL_MS = 180;
+export const FACE_VERIFY_INTERVAL_MS = 250;
+export const MAX_DETECT_CANVAS_WIDTH = 320;
 
-/**
- * Titik jangkar kranial kaku (mata, pangkal/puncak hidung, tulang pipi, pelipis)
- * yang stabil terhadap ekspresi mulut dan dipakai untuk alignment 3D Orthogonal Procrustes.
- */
 const RIGID_ANCHOR_INDICES = [
     33, 133, 362, 263, 159, 145, 386, 374,
     168, 6, 197, 195, 5, 4, 1, 2, 98, 327,
     50, 280, 101, 330, 118, 347, 234, 454, 127, 356,
 ];
 
-const NOSE_LANDMARK_SET = new Set([
-    168, 6, 197, 195, 5, 4, 1, 19, 94, 2, 98, 97, 326, 327,
-    48, 115, 220, 45, 275, 440, 344, 278, 64, 294, 49, 279, 102, 331,
-]);
+// Indeks ringan (8 titik wajah utama) untuk menghitung posisi tengah tanpa iterasi 478 titik di loop live
+const CENTER_SAMPLE_INDICES = [33, 133, 263, 362, 168, 2, 234, 454];
 
-const BROW_EYE_LANDMARK_SET = new Set([
-    33, 133, 159, 145, 158, 153, 263, 362, 386, 374, 385, 380,
-    70, 63, 105, 66, 107, 55, 65, 52, 53, 46,
-    300, 293, 334, 296, 336, 285, 295, 282, 283, 276,
-]);
+let videoLandmarkerPromise = null;
+let videoLandmarkerInstance = null;
 
-const DYNAMIC_EXPRESSION_SET = new Set([
-    0, 11, 12, 13, 14, 15, 16, 17, 37, 39, 40, 61, 72, 73, 74, 76, 77, 78, 80, 81,
-    82, 84, 85, 86, 87, 88, 89, 90, 91, 95, 96, 146, 178, 179, 180, 181, 183, 184, 185, 191,
-    267, 269, 270, 291, 302, 303, 304, 306, 307, 308, 310, 311, 312, 314, 315, 316, 317, 318, 319, 320,
-    321, 324, 325, 375, 402, 403, 404, 405, 407, 408, 409, 415,
-    468, 469, 470, 471, 472, 473, 474, 475, 476, 477,
-]);
+let imageLandmarkerPromise = null;
+let imageLandmarkerInstance = null;
 
-let verifierLandmarkerPromise = null;
+// Buffer & canvas statis yang dipakai ulang (mencegah alokasi memori & GC spike berulang di main thread)
+const _liveSignatureBuffer = new Float32Array(FACE_SIGNATURE_LENGTH);
+const _tmpSignatureBuffer = new Float32Array(FACE_SIGNATURE_LENGTH);
+const _verifySignatureBuffer = new Float32Array(FACE_SIGNATURE_LENGTH);
+const _reusableCenterState = { centerX: 0, centerY: 0 };
+
+let _scratchImgCanvas = null;
+let _scratchImgCtx = null;
+let _scratchFallbackCanvas = null;
+let _scratchFallbackCtx = null;
+
+async function createFaceLandmarker(runningMode) {
+    const fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
+    const baseOptions = {
+        modelAssetPath: LANDMARKER_MODEL_PATH,
+        delegate: 'GPU',
+    };
+    const options = {
+        baseOptions,
+        runningMode,
+        numFaces: 1,
+        outputFaceBlendshapes: false,
+        minFaceDetectionConfidence: 0.45,
+        minFacePresenceConfidence: 0.45,
+        minTrackingConfidence: 0.45,
+    };
+
+    try {
+        return await FaceLandmarker.createFromOptions(fileset, options);
+    } catch {
+        baseOptions.delegate = 'CPU';
+
+        return FaceLandmarker.createFromOptions(fileset, options);
+    }
+}
+
+/**
+ * Inisialisasi singleton FaceLandmarker dalam mode VIDEO (detectForVideo langsung dari elemen <video>).
+ * Jauh lebih hemat CPU & RAM dibanding mode IMAGE karena menghindari salinan canvas RGBA per frame.
+ */
+export function getKioskVideoFaceLandmarker() {
+    if (!videoLandmarkerPromise) {
+        videoLandmarkerPromise = createFaceLandmarker('VIDEO')
+            .then((instance) => {
+                videoLandmarkerInstance = instance;
+
+                return instance;
+            })
+            .catch((error) => {
+                videoLandmarkerPromise = null;
+                videoLandmarkerInstance = null;
+                throw error;
+            });
+    }
+
+    return videoLandmarkerPromise;
+}
 
 /**
  * Inisialisasi singleton FaceLandmarker dalam mode IMAGE (numFaces=1).
- * Mode IMAGE dipakai untuk mengekstrak 478 landmark dari foto referensi (<img>)
- * maupun dari frame kamera live yang digambar ke offscreen <canvas>.
+ * Digunakan hanya saat mengekstrak foto pendaftaran (<img>) atau verifikasi kartu 1:1.
  */
 export function getVerifierFaceLandmarker() {
-    if (!verifierLandmarkerPromise) {
-        verifierLandmarkerPromise = (async () => {
-            const fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
-            const baseOptions = {
-                modelAssetPath: LANDMARKER_MODEL_PATH,
-                delegate: 'GPU',
-            };
-            const options = {
-                baseOptions,
-                runningMode: 'IMAGE',
-                numFaces: 1,
-                outputFaceBlendshapes: false,
-                minFaceDetectionConfidence: 0.45,
-                minFacePresenceConfidence: 0.45,
-            };
+    if (!imageLandmarkerPromise) {
+        imageLandmarkerPromise = createFaceLandmarker('IMAGE')
+            .then((instance) => {
+                imageLandmarkerInstance = instance;
 
-            try {
-                return await FaceLandmarker.createFromOptions(fileset, options);
-            } catch (gpuError) {
-                baseOptions.delegate = 'CPU';
-
-                return FaceLandmarker.createFromOptions(fileset, options);
-            }
-        })().catch((error) => {
-            verifierLandmarkerPromise = null;
-            throw error;
-        });
+                return instance;
+            })
+            .catch((error) => {
+                imageLandmarkerPromise = null;
+                imageLandmarkerInstance = null;
+                throw error;
+            });
     }
 
-    return verifierLandmarkerPromise;
+    return imageLandmarkerPromise;
+}
+
+/**
+ * Tutup instance FaceLandmarker mode IMAGE dan kosongkan scratch canvas agar RAM tidak membengkak.
+ */
+export function closeImageFaceLandmarker() {
+    if (imageLandmarkerInstance && typeof imageLandmarkerInstance.close === 'function') {
+        try {
+            imageLandmarkerInstance.close();
+        } catch {
+            // Abaikan kegagalan cleanup saat halaman ditutup
+        }
+    }
+    imageLandmarkerInstance = null;
+    imageLandmarkerPromise = null;
+
+    if (_scratchImgCanvas) {
+        _scratchImgCanvas.width = 0;
+        _scratchImgCanvas.height = 0;
+        _scratchImgCanvas = null;
+        _scratchImgCtx = null;
+    }
+}
+
+/**
+ * Tutup seluruh instance FaceLandmarker (VIDEO & IMAGE) serta bebaskan seluruh offscreen canvas.
+ * Wajib dipanggil saat komponen Kiosk dihancurkan atau halaman ditutup (pagehide/beforeunload).
+ */
+export function closeVerifierFaceLandmarker() {
+    if (videoLandmarkerInstance && typeof videoLandmarkerInstance.close === 'function') {
+        try {
+            videoLandmarkerInstance.close();
+        } catch {
+            // Abaikan kegagalan cleanup saat halaman ditutup
+        }
+    }
+    videoLandmarkerInstance = null;
+    videoLandmarkerPromise = null;
+
+    if (_scratchFallbackCanvas) {
+        _scratchFallbackCanvas.width = 0;
+        _scratchFallbackCanvas.height = 0;
+        _scratchFallbackCanvas = null;
+        _scratchFallbackCtx = null;
+    }
+
+    closeImageFaceLandmarker();
 }
 
 /**
@@ -102,12 +177,197 @@ export function computePoseYawRatio(landmarks) {
 }
 
 /**
+ * Ekstrak signature ringan 11 rasio jarak kraniofasial dari landmark wajah MediaPipe.
+ * Operasi murni aritmatika O(1) pada ~16 titik kunci tanpa matriks 3D ataupun alokasi array baru.
+ * Invarian terhadap translasi, skala jarak ke kamera, rasio aspek gambar, serta rotasi ringan.
+ *
+ * @param {Array<{x: number, y: number, z?: number}>} landmarks
+ * @param {number} [imageWidth=1]
+ * @param {number} [imageHeight=1]
+ * @param {Float32Array} [outBuffer]
+ * @returns {Float32Array|null}
+ */
+export function extractSignatureFromLandmarks(landmarks, imageWidth = 1, imageHeight = 1, outBuffer = null) {
+    if (!Array.isArray(landmarks) || landmarks.length < 455) {
+        return null;
+    }
+
+    const w = Number(imageWidth) > 0 ? Number(imageWidth) : 1;
+    const h = Number(imageHeight) > 0 ? Number(imageHeight) : 1;
+    const aspect = h / w;
+    const out = outBuffer || _liveSignatureBuffer;
+
+    const rEyeO = landmarks[33];
+    const rEyeI = landmarks[133];
+    const lEyeI = landmarks[362];
+    const lEyeO = landmarks[263];
+    const bridge = landmarks[168];
+    const tip = landmarks[4];
+    const subnasale = landmarks[2];
+    const alaR = landmarks[98];
+    const alaL = landmarks[327];
+    const cheekR = landmarks[234];
+    const cheekL = landmarks[454];
+    const malarR = landmarks[50];
+    const malarL = landmarks[280];
+    const browR = landmarks[105];
+    const browL = landmarks[334];
+    const jawR = landmarks[172];
+    const jawL = landmarks[397];
+
+    const rEx = 0.5 * (rEyeO.x + rEyeI.x);
+    const rEy = 0.5 * (rEyeO.y + rEyeI.y) * aspect;
+    const rEz = 0.5 * ((rEyeO.z ?? 0) + (rEyeI.z ?? 0)) * 0.45;
+
+    const lEx = 0.5 * (lEyeI.x + lEyeO.x);
+    const lEy = 0.5 * (lEyeI.y + lEyeO.y) * aspect;
+    const lEz = 0.5 * ((lEyeI.z ?? 0) + (lEyeO.z ?? 0)) * 0.45;
+
+    const iod = Math.hypot(lEx - rEx, lEy - rEy, lEz - rEz);
+    if (iod <= 1e-6) {
+        return null;
+    }
+
+    const ex = 0.5 * (rEx + lEx);
+    const ey = 0.5 * (rEy + lEy);
+    const ez = 0.5 * (rEz + lEz);
+
+    const dist = (a, b) => Math.hypot(a.x - b.x, (a.y - b.y) * aspect, ((a.z ?? 0) - (b.z ?? 0)) * 0.45);
+
+    out[0] = dist(rEyeI, lEyeI) / iod;
+    out[1] = dist(rEyeO, lEyeO) / iod;
+    out[2] = (dist(rEyeO, rEyeI) + dist(lEyeI, lEyeO)) / (2 * iod);
+    out[3] = dist(alaR, alaL) / iod;
+    out[4] = dist(bridge, subnasale) / iod;
+    out[5] = Math.hypot(ex - tip.x, ey - tip.y * aspect, ez - (tip.z ?? 0) * 0.45) / iod;
+    out[6] = dist(cheekR, cheekL) / iod;
+    out[7] = dist(malarR, malarL) / iod;
+    out[8] = Math.hypot(ex - subnasale.x, ey - subnasale.y * aspect, ez - (subnasale.z ?? 0) * 0.45) / iod;
+    out[9] = (dist(browR, rEyeO) + dist(browL, lEyeO)) / (2 * iod);
+    out[10] = dist(jawR, jawL) / iod;
+
+    return out;
+}
+
+/**
+ * Ekstrak signature ringan 11 rasio yang identik dari vektor template 1434-float tersimpan (`template.json`).
+ * Dipanggil 1x per siswa saat cache template dimuat, sehingga loop kamera tidak mengolah 1434 float lagi.
+ *
+ * @param {Float32Array|Array<number>} vec
+ * @param {Float32Array} [outBuffer]
+ * @returns {Float32Array|null}
+ */
+export function extractSignatureFromTemplate(vec, outBuffer = null) {
+    if (!vec || vec.length < 455 * 3) {
+        return null;
+    }
+
+    const out = outBuffer || new Float32Array(FACE_SIGNATURE_LENGTH);
+
+    const dist = (i, j) => {
+        const bi = i * 3;
+        const bj = j * 3;
+        return Math.hypot(vec[bi] - vec[bj], vec[bi + 1] - vec[bj + 1], (vec[bi + 2] - vec[bj + 2]) * 0.45);
+    };
+
+    const rEx = 0.5 * (vec[33 * 3] + vec[133 * 3]);
+    const rEy = 0.5 * (vec[33 * 3 + 1] + vec[133 * 3 + 1]);
+    const rEz = 0.5 * (vec[33 * 3 + 2] + vec[133 * 3 + 2]) * 0.45;
+
+    const lEx = 0.5 * (vec[362 * 3] + vec[263 * 3]);
+    const lEy = 0.5 * (vec[362 * 3 + 1] + vec[263 * 3 + 1]);
+    const lEz = 0.5 * (vec[362 * 3 + 2] + vec[263 * 3 + 2]) * 0.45;
+
+    const iod = Math.hypot(lEx - rEx, lEy - rEy, lEz - rEz);
+    if (iod <= 1e-6) {
+        return null;
+    }
+
+    const ex = 0.5 * (rEx + lEx);
+    const ey = 0.5 * (rEy + lEy);
+    const ez = 0.5 * (rEz + lEz);
+
+    const distEyeMid = (j) => {
+        const bj = j * 3;
+        return Math.hypot(ex - vec[bj], ey - vec[bj + 1], ez - vec[bj + 2] * 0.45);
+    };
+
+    out[0] = dist(133, 362) / iod;
+    out[1] = dist(33, 263) / iod;
+    out[2] = (dist(33, 133) + dist(362, 263)) / (2 * iod);
+    out[3] = dist(98, 327) / iod;
+    out[4] = dist(168, 2) / iod;
+    out[5] = distEyeMid(4) / iod;
+    out[6] = dist(234, 454) / iod;
+    out[7] = dist(50, 280) / iod;
+    out[8] = distEyeMid(2) / iod;
+    out[9] = (dist(105, 33) + dist(334, 263)) / (2 * iod);
+    out[10] = dist(172, 397) / iod;
+
+    return out;
+}
+
+/**
+ * Hitung kemiripan dua signature ringan menggunakan Euclidean Distance sederhana.
+ * Tidak ada alokasi objek atau perkalian matriks 3D.
+ *
+ * @param {Float32Array|Array<number>} sigA
+ * @param {Float32Array|Array<number>} sigB
+ * @param {number} [sigma=FACE_SIGNATURE_SIGMA]
+ * @returns {number}
+ */
+export function computeSignatureSimilarity(sigA, sigB, sigma = FACE_SIGNATURE_SIGMA) {
+    if (!sigA || !sigB || sigA.length === 0 || sigA.length !== sigB.length) {
+        return 0;
+    }
+
+    let sumSquares = 0;
+    const len = sigA.length;
+    for (let i = 0; i < len; i += 1) {
+        const diff = sigA[i] - sigB[i];
+        sumSquares += diff * diff;
+    }
+
+    const rms = Math.sqrt(sumSquares / len);
+    const safeSigma = Math.max(0.01, Number(sigma) || FACE_SIGNATURE_SIGMA);
+    const ratio = rms / safeSigma;
+
+    return Math.max(0, Math.min(1, Math.exp(-(ratio * ratio))));
+}
+
+/**
+ * Siapkan cache `_signature` pada setiap item template yang siap pakai sekali di muka.
+ *
+ * @param {Array<object>} templates
+ * @returns {Array<object>}
+ */
+export function prepareTemplateSignatures(templates) {
+    if (!Array.isArray(templates)) {
+        return [];
+    }
+
+    const ready = [];
+    for (let i = 0; i < templates.length; i += 1) {
+        const item = templates[i];
+        if (!item || !Array.isArray(item.template) || item.template.length < 455 * 3) {
+            continue;
+        }
+        if (!item._signature) {
+            const sig = extractSignatureFromTemplate(item.template);
+            if (!sig) {
+                continue;
+            }
+            item._signature = sig;
+        }
+        ready.push(item);
+    }
+
+    return ready;
+}
+
+/**
  * Normalisasi 478 titik landmark MediaPipe (x, y, z) menjadi vektor 1434 float
- * yang invarian terhadap rasio aspek gambar, translasi, skala jarak ke kamera, dan rotasi 3D kepala:
- * 1. Koreksi rasio aspek isotropik: y dikali (imageHeight / imageWidth) agar setara skala x dan z.
- * 2. Centering 3-sumbu independen menggunakan centroid jangkar kaku kranial (mata + hidung + pipi).
- * 3. Alignment basis ortonormal 3D (mata-ke-mata u_x, sumbu vertikal glabella->subnasale u_y, normal u_z).
- * 4. Skala seragam terhadap jarak inter-okular 3D (Inter-Ocular Distance = 1.0).
+ * (dipakai satu kali saat pendaftaran / hidrasi awal agar format `template.json` tetap 1434 float).
  *
  * @param {Array<{x: number, y: number, z?: number}>} landmarks
  * @param {number} [imageWidth=1]
@@ -124,30 +384,24 @@ export function flattenAndNormalizeLandmarks(landmarks, imageWidth = 1, imageHei
     const aspect = h / w;
     const count = Math.min(landmarks.length, FACE_LANDMARK_COUNT);
 
-    const pts = new Array(count);
-    for (let i = 0; i < count; i += 1) {
-        const pt = landmarks[i];
-        pts[i] = [
-            Number(pt?.x ?? 0),
-            Number(pt?.y ?? 0) * aspect,
-            Number(pt?.z ?? 0),
-        ];
-    }
+    const p33 = landmarks[33];
+    const p133 = landmarks[133];
+    const p362 = landmarks[362];
+    const p263 = landmarks[263];
+    const p168 = landmarks[168];
+    const p2 = landmarks[2];
 
-    const rEye = [
-        0.5 * (pts[33][0] + pts[133][0]),
-        0.5 * (pts[33][1] + pts[133][1]),
-        0.5 * (pts[33][2] + pts[133][2]),
-    ];
-    const lEye = [
-        0.5 * (pts[362][0] + pts[263][0]),
-        0.5 * (pts[362][1] + pts[263][1]),
-        0.5 * (pts[362][2] + pts[263][2]),
-    ];
+    const rEx = 0.5 * (p33.x + p133.x);
+    const rEy = 0.5 * (p33.y + p133.y) * aspect;
+    const rEz = 0.5 * ((p33.z ?? 0) + (p133.z ?? 0));
 
-    const eyeVecX = lEye[0] - rEye[0];
-    const eyeVecY = lEye[1] - rEye[1];
-    const eyeVecZ = lEye[2] - rEye[2];
+    const lEx = 0.5 * (p362.x + p263.x);
+    const lEy = 0.5 * (p362.y + p263.y) * aspect;
+    const lEz = 0.5 * ((p362.z ?? 0) + (p263.z ?? 0));
+
+    const eyeVecX = lEx - rEx;
+    const eyeVecY = lEy - rEy;
+    const eyeVecZ = lEz - rEz;
     const eyeSpan = Math.hypot(eyeVecX, eyeVecY, eyeVecZ);
     if (eyeSpan <= 1e-8) {
         return null;
@@ -157,11 +411,13 @@ export function flattenAndNormalizeLandmarks(landmarks, imageWidth = 1, imageHei
     let oy = 0;
     let oz = 0;
     let anchorCount = 0;
-    for (const idx of RIGID_ANCHOR_INDICES) {
+    for (let k = 0; k < RIGID_ANCHOR_INDICES.length; k += 1) {
+        const idx = RIGID_ANCHOR_INDICES[k];
         if (idx < count) {
-            ox += pts[idx][0];
-            oy += pts[idx][1];
-            oz += pts[idx][2];
+            const pt = landmarks[idx];
+            ox += Number(pt?.x ?? 0);
+            oy += Number(pt?.y ?? 0) * aspect;
+            oz += Number(pt?.z ?? 0);
             anchorCount += 1;
         }
     }
@@ -172,35 +428,44 @@ export function flattenAndNormalizeLandmarks(landmarks, imageWidth = 1, imageHei
     oy /= anchorCount;
     oz /= anchorCount;
 
-    const ux = [eyeVecX / eyeSpan, eyeVecY / eyeSpan, eyeVecZ / eyeSpan];
-    const downX = pts[2][0] - pts[168][0];
-    const downY = pts[2][1] - pts[168][1];
-    const downZ = pts[2][2] - pts[168][2];
-    const dotDownUx = downX * ux[0] + downY * ux[1] + downZ * ux[2];
-    const rawUyX = downX - dotDownUx * ux[0];
-    const rawUyY = downY - dotDownUx * ux[1];
-    const rawUyZ = downZ - dotDownUx * ux[2];
+    const ux0 = eyeVecX / eyeSpan;
+    const ux1 = eyeVecY / eyeSpan;
+    const ux2 = eyeVecZ / eyeSpan;
+
+    const downX = p2.x - p168.x;
+    const downY = (p2.y - p168.y) * aspect;
+    const downZ = (p2.z ?? 0) - (p168.z ?? 0);
+    const dotDownUx = downX * ux0 + downY * ux1 + downZ * ux2;
+    const rawUyX = downX - dotDownUx * ux0;
+    const rawUyY = downY - dotDownUx * ux1;
+    const rawUyZ = downZ - dotDownUx * ux2;
     const uyLen = Math.hypot(rawUyX, rawUyY, rawUyZ);
     if (uyLen <= 1e-8) {
         return null;
     }
-    const uy = [rawUyX / uyLen, rawUyY / uyLen, rawUyZ / uyLen];
 
-    const rawUzX = ux[1] * uy[2] - ux[2] * uy[1];
-    const rawUzY = ux[2] * uy[0] - ux[0] * uy[2];
-    const rawUzZ = ux[0] * uy[1] - ux[1] * uy[0];
+    const uy0 = rawUyX / uyLen;
+    const uy1 = rawUyY / uyLen;
+    const uy2 = rawUyZ / uyLen;
+
+    const rawUzX = ux1 * uy2 - ux2 * uy1;
+    const rawUzY = ux2 * uy0 - ux0 * uy2;
+    const rawUzZ = ux0 * uy1 - ux1 * uy0;
     const uzLen = Math.hypot(rawUzX, rawUzY, rawUzZ) || 1;
-    const uz = [rawUzX / uzLen, rawUzY / uzLen, rawUzZ / uzLen];
+    const uz0 = rawUzX / uzLen;
+    const uz1 = rawUzY / uzLen;
+    const uz2 = rawUzZ / uzLen;
 
     const normalized = new Float32Array(count * 3);
     for (let i = 0; i < count; i += 1) {
-        const px = pts[i][0] - ox;
-        const py = pts[i][1] - oy;
-        const pz = pts[i][2] - oz;
+        const pt = landmarks[i];
+        const px = Number(pt?.x ?? 0) - ox;
+        const py = Number(pt?.y ?? 0) * aspect - oy;
+        const pz = Number(pt?.z ?? 0) - oz;
         const base = i * 3;
-        normalized[base] = (px * ux[0] + py * ux[1] + pz * ux[2]) / eyeSpan;
-        normalized[base + 1] = (px * uy[0] + py * uy[1] + pz * uy[2]) / eyeSpan;
-        normalized[base + 2] = (px * uz[0] + py * uz[1] + pz * uz[2]) / eyeSpan;
+        normalized[base] = (px * ux0 + py * ux1 + pz * ux2) / eyeSpan;
+        normalized[base + 1] = (px * uy0 + py * uy1 + pz * uy2) / eyeSpan;
+        normalized[base + 2] = (px * uz0 + py * uz1 + pz * uz2) / eyeSpan;
     }
 
     return normalized;
@@ -252,7 +517,7 @@ export function computeAverageVector(vectors, weights = null) {
 }
 
 /**
- * Hitung Euclidean Distance antara dua vektor landmark 1D.
+ * Hitung Euclidean Distance antara dua vektor 1D.
  *
  * @param {Float32Array|Array<number>} vecA
  * @param {Float32Array|Array<number>} vecB
@@ -273,8 +538,7 @@ export function computeEuclideanDistance(vecA, vecB) {
 }
 
 /**
- * Hitung Cosine Similarity antara dua vektor landmark 1D (misal 1434 float).
- * Mengembalikan nilai antara -1.0 sampai 1.0 (1.0 = identik sempurna).
+ * Hitung Cosine Similarity antara dua vektor 1D.
  *
  * @param {Float32Array|Array<number>} vecA
  * @param {Float32Array|Array<number>} vecB
@@ -307,222 +571,53 @@ export function computeCosineSimilarity(vecA, vecB) {
 }
 
 /**
- * Solusi Horn Unit-Quaternion untuk rotasi ortogonal 3D terbaik (det=+1)
- * yang menyelaraskan srcPts ke dstPts pada ruang 3D kaku.
- */
-function solveHornRotation3D(srcPts, dstPts) {
-    let Sxx = 0;
-    let Sxy = 0;
-    let Sxz = 0;
-    let Syx = 0;
-    let Syy = 0;
-    let Syz = 0;
-    let Szx = 0;
-    let Szy = 0;
-    let Szz = 0;
-
-    for (let i = 0; i < srcPts.length; i += 1) {
-        const [px, py, pz] = srcPts[i];
-        const [qx, qy, qz] = dstPts[i];
-        Sxx += px * qx;
-        Sxy += px * qy;
-        Sxz += px * qz;
-        Syx += py * qx;
-        Syy += py * qy;
-        Syz += py * qz;
-        Szx += pz * qx;
-        Szy += pz * qy;
-        Szz += pz * qz;
-    }
-
-    const N = [
-        [Sxx + Syy + Szz, Syz - Szy, Szx - Sxz, Sxy - Syx],
-        [Syz - Szy, Sxx - Syy - Szz, Sxy + Syx, Szx + Sxz],
-        [Szx - Sxz, Sxy + Syx, -Sxx + Syy - Szz, Syz + Szy],
-        [Sxy - Syx, Szx + Sxz, Syz + Szy, -Sxx - Syy + Szz],
-    ];
-    const V = [
-        [1, 0, 0, 0],
-        [0, 1, 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1],
-    ];
-
-    for (let iter = 0; iter < 30; iter += 1) {
-        let p = 0;
-        let q = 1;
-        let maxVal = Math.abs(N[0][1]);
-        for (let i = 0; i < 4; i += 1) {
-            for (let j = i + 1; j < 4; j += 1) {
-                const absVal = Math.abs(N[i][j]);
-                if (absVal > maxVal) {
-                    maxVal = absVal;
-                    p = i;
-                    q = j;
-                }
-            }
-        }
-        if (maxVal < 1e-12) {
-            break;
-        }
-        const app = N[p][p];
-        const aqq = N[q][q];
-        const apq = N[p][q];
-        const phi = 0.5 * Math.atan2(2 * apq, aqq - app);
-        const c = Math.cos(phi);
-        const s = Math.sin(phi);
-
-        for (let i = 0; i < 4; i += 1) {
-            if (i !== p && i !== q) {
-                const nip = N[i][p];
-                const niq = N[i][q];
-                N[i][p] = c * nip - s * niq;
-                N[p][i] = N[i][p];
-                N[i][q] = s * nip + c * niq;
-                N[q][i] = N[i][q];
-            }
-        }
-        N[p][p] = c * c * app - 2 * s * c * apq + s * s * aqq;
-        N[q][q] = s * s * app + 2 * s * c * apq + c * c * aqq;
-        N[p][q] = 0;
-        N[q][p] = 0;
-
-        for (let i = 0; i < 4; i += 1) {
-            const vip = V[i][p];
-            const viq = V[i][q];
-            V[i][p] = c * vip - s * viq;
-            V[i][q] = s * vip + c * viq;
-        }
-    }
-
-    let bestCol = 0;
-    for (let j = 1; j < 4; j += 1) {
-        if (N[j][j] > N[bestCol][bestCol]) {
-            bestCol = j;
-        }
-    }
-    const qw = V[0][bestCol];
-    const qx = V[1][bestCol];
-    const qy = V[2][bestCol];
-    const qz = V[3][bestCol];
-
-    const R = [
-        1 - 2 * (qy * qy + qz * qz), 2 * (qx * qy - qw * qz), 2 * (qx * qz + qw * qy),
-        2 * (qx * qy + qw * qz), 1 - 2 * (qx * qx + qz * qz), 2 * (qy * qz - qw * qx),
-        2 * (qx * qz - qw * qy), 2 * (qy * qz + qw * qx), 1 - 2 * (qx * qx + qy * qy),
-    ];
-    const Rt = [R[0], R[3], R[6], R[1], R[4], R[7], R[2], R[5], R[8]];
-
-    let d1 = 0;
-    let d2 = 0;
-    for (let i = 0; i < srcPts.length; i += 1) {
-        const [px, py, pz] = srcPts[i];
-        const [dx, dy, dz] = dstPts[i];
-        d1 += dx * (R[0] * px + R[1] * py + R[2] * pz)
-            + dy * (R[3] * px + R[4] * py + R[5] * pz)
-            + dz * (R[6] * px + R[7] * py + R[8] * pz);
-        d2 += dx * (Rt[0] * px + Rt[1] * py + Rt[2] * pz)
-            + dy * (Rt[3] * px + Rt[4] * py + Rt[5] * pz)
-            + dz * (Rt[6] * px + Rt[7] * py + Rt[8] * pz);
-    }
-
-    return d1 >= d2 ? R : Rt;
-}
-
-/**
- * Hitung kemiripan wajah berbasis 3D Orthogonal Procrustes Alignment + bobot struktur kranial.
- * Mengembalikan nilai ternormalisasi [0, 1] (1.0 = identik sempurna).
- *
- * @param {Float32Array|Array<number>} vecA
- * @param {Float32Array|Array<number>} vecB
- * @param {number} [sigma=FACE_SIMILARITY_SIGMA]
- * @returns {number}
- */
-export function computeProcrustesSimilarity(vecA, vecB, sigma = FACE_SIMILARITY_SIGMA) {
-    if (!vecA || !vecB || vecA.length === 0 || vecA.length !== vecB.length) {
-        return 0;
-    }
-
-    const landmarkCount = Math.floor(vecA.length / 3);
-    if (landmarkCount < 468) {
-        return 0;
-    }
-
-    const srcAnchors = [];
-    const dstAnchors = [];
-    for (const idx of RIGID_ANCHOR_INDICES) {
-        if (idx < landmarkCount) {
-            const base = idx * 3;
-            srcAnchors.push([vecA[base], vecA[base + 1], vecA[base + 2]]);
-            dstAnchors.push([vecB[base], vecB[base + 1], vecB[base + 2]]);
-        }
-    }
-
-    const R = solveHornRotation3D(srcAnchors, dstAnchors);
-    let weightedSumSquares = 0;
-    let weightTotal = 0;
-
-    for (let i = 0; i < landmarkCount; i += 1) {
-        const base = i * 3;
-        const ax = vecA[base];
-        const ay = vecA[base + 1];
-        const az = vecA[base + 2];
-
-        const rx = R[0] * ax + R[1] * ay + R[2] * az;
-        const ry = R[3] * ax + R[4] * ay + R[5] * az;
-        const rz = R[6] * ax + R[7] * ay + R[8] * az;
-
-        let weight = 0.7;
-        if (DYNAMIC_EXPRESSION_SET.has(i)) {
-            weight = 0.1;
-        } else if (NOSE_LANDMARK_SET.has(i)) {
-            weight = 2.0;
-        } else if (BROW_EYE_LANDMARK_SET.has(i)) {
-            weight = 1.6;
-        }
-
-        const dx = rx - vecB[base];
-        const dy = ry - vecB[base + 1];
-        const dz = (rz - vecB[base + 2]) * 0.5;
-
-        weightedSumSquares += weight * (dx * dx + dy * dy + dz * dz);
-        weightTotal += weight;
-    }
-
-    if (weightTotal <= 1e-8) {
-        return 0;
-    }
-
-    const rms = Math.sqrt(weightedSumSquares / weightTotal);
-    const safeSigma = Math.max(0.01, Number(sigma) || FACE_SIMILARITY_SIGMA);
-    const ratio = rms / safeSigma;
-
-    return Math.max(0, Math.min(1, Math.exp(-(ratio * ratio))));
-}
-
-/**
- * Cari siswa dengan kemiripan wajah terbaik (1:N matching) dari daftar template.
+ * Cari siswa dengan kemiripan wajah terbaik (1:N matching) menggunakan signature ringan 11 rasio.
+ * Menerima baik live signature (11 float) maupun live vector (1434 float), tanpa matriks 3D berat.
  * Mencetak Debug Score ke browser console untuk setiap kandidat siswa yang dibandingkan.
  *
- * @param {Float32Array|Array<number>} liveVector
- * @param {Array<{student_id: number, nama?: string, student_name?: string, card_label?: string, template: Array<number>}>} templates
+ * @param {Float32Array|Array<number>} liveInput
+ * @param {Array<{student_id: number, nama?: string, student_name?: string, card_label?: string, template: Array<number>, _signature?: Float32Array}>} templates
  * @param {number} [threshold=FACE_MATCH_THRESHOLD]
  * @returns {{matched: boolean, bestMatch: object|null, bestSimilarity: number}}
  */
-export function findBestFaceMatch(liveVector, templates, threshold = FACE_MATCH_THRESHOLD) {
-    if (!liveVector || !Array.isArray(templates) || templates.length === 0) {
+export function findBestFaceMatch(liveInput, templates, threshold = FACE_MATCH_THRESHOLD) {
+    if (!liveInput || !Array.isArray(templates) || templates.length === 0) {
+        return { matched: false, bestMatch: null, bestSimilarity: 0 };
+    }
+
+    let liveSig = null;
+    if (liveInput.length === FACE_SIGNATURE_LENGTH) {
+        liveSig = liveInput;
+    } else if (liveInput.length >= 455 * 3) {
+        liveSig = extractSignatureFromTemplate(liveInput, _tmpSignatureBuffer);
+    }
+
+    if (!liveSig) {
         return { matched: false, bestMatch: null, bestSimilarity: 0 };
     }
 
     let bestItem = null;
     let bestSim = -1;
 
-    for (const item of templates) {
-        if (!item || !Array.isArray(item.template) || item.template.length !== liveVector.length) {
+    for (let i = 0; i < templates.length; i += 1) {
+        const item = templates[i];
+        if (!item) {
             continue;
         }
 
-        const sim = computeProcrustesSimilarity(liveVector, item.template);
+        let itemSig = item._signature;
+        if (!itemSig && Array.isArray(item.template) && item.template.length >= 455 * 3) {
+            itemSig = extractSignatureFromTemplate(item.template);
+            if (itemSig) {
+                item._signature = itemSig;
+            }
+        }
+
+        if (!itemSig || itemSig.length !== FACE_SIGNATURE_LENGTH) {
+            continue;
+        }
+
+        const sim = computeSignatureSimilarity(liveSig, itemSig);
         const nama = item.nama || item.student_name || `Siswa #${item.student_id ?? '?'}`;
         console.log(`Matching dengan ${nama}: Score ${sim.toFixed(4)}`);
 
@@ -560,24 +655,43 @@ function loadImageFromDataUrl(dataUrl) {
     });
 }
 
+function getScratchImageCanvas(targetW, targetH) {
+    if (!_scratchImgCanvas) {
+        _scratchImgCanvas = document.createElement('canvas');
+        _scratchImgCtx = _scratchImgCanvas.getContext('2d');
+    }
+    if (_scratchImgCanvas.width !== targetW || _scratchImgCanvas.height !== targetH) {
+        _scratchImgCanvas.width = targetW;
+        _scratchImgCanvas.height = targetH;
+    }
+
+    return { canvas: _scratchImgCanvas, ctx: _scratchImgCtx };
+}
+
 /**
  * Ekstrak vektor landmark ternormalisasi beserta estimasi sudut yaw dari 1 data URL foto referensi.
+ * Menggambar ke satu canvas scratch yang diperkecil (maks. 320px) agar tidak membebani memori.
  *
  * @param {FaceLandmarker} landmarker
  * @param {string} dataUrl
  * @returns {Promise<{vector: Float32Array, yawRatio: number}|null>}
  */
 export async function extractVectorFromDataUrlWithMeta(landmarker, dataUrl) {
+    let img = null;
     try {
-        const img = await loadImageFromDataUrl(dataUrl);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width || 320;
-        canvas.height = img.naturalHeight || img.height || 240;
-        canvas.getContext('2d').drawImage(img, 0, 0);
+        img = await loadImageFromDataUrl(dataUrl);
+        const rawW = img.naturalWidth || img.width || 320;
+        const rawH = img.naturalHeight || img.height || 240;
+        const scale = rawW > MAX_DETECT_CANVAS_WIDTH ? MAX_DETECT_CANVAS_WIDTH / rawW : 1;
+        const targetW = Math.max(1, Math.round(rawW * scale));
+        const targetH = Math.max(1, Math.round(rawH * scale));
+
+        const { canvas, ctx } = getScratchImageCanvas(targetW, targetH);
+        ctx.drawImage(img, 0, 0, targetW, targetH);
 
         const result = landmarker.detect(canvas);
         const landmarks = result?.faceLandmarks?.[0];
-        const vector = flattenAndNormalizeLandmarks(landmarks, canvas.width, canvas.height);
+        const vector = flattenAndNormalizeLandmarks(landmarks, targetW, targetH);
         if (!vector) {
             return null;
         }
@@ -588,6 +702,12 @@ export async function extractVectorFromDataUrlWithMeta(landmarker, dataUrl) {
         };
     } catch {
         return null;
+    } finally {
+        if (img) {
+            img.onload = null;
+            img.onerror = null;
+            img.src = '';
+        }
     }
 }
 
@@ -605,13 +725,12 @@ export async function extractVectorFromDataUrl(landmarker, dataUrl) {
 
 /**
  * Ekstrak template vektor wajah 1434-float dari array foto pendaftaran (maks. 3 foto base64).
- * Memberi bobot tinggi pada pose menghadap lurus kamera (|yawRatio| kecil) agar foto menoleh
- * untuk liveness tidak merusak ketajaman geometri frontal.
  *
  * @param {Array<string>} facePhotos
+ * @param {{closeImageLandmarkerAfter?: boolean}} [options]
  * @returns {Promise<Array<number>|null>}
  */
-export async function extractTemplateFromPhotoDataUrls(facePhotos) {
+export async function extractTemplateFromPhotoDataUrls(facePhotos, options = {}) {
     if (!Array.isArray(facePhotos) || facePhotos.length === 0) {
         return null;
     }
@@ -620,37 +739,48 @@ export async function extractTemplateFromPhotoDataUrls(facePhotos) {
     const vectors = [];
     const weights = [];
 
-    for (const dataUrl of facePhotos) {
-        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
-            continue;
+    try {
+        for (const dataUrl of facePhotos) {
+            if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/')) {
+                continue;
+            }
+            const item = await extractVectorFromDataUrlWithMeta(landmarker, dataUrl);
+            if (item?.vector) {
+                const poseRatio = item.yawRatio / 0.16;
+                vectors.push(item.vector);
+                weights.push(Math.exp(-(poseRatio * poseRatio)));
+            }
         }
-        const item = await extractVectorFromDataUrlWithMeta(landmarker, dataUrl);
-        if (item?.vector) {
-            const poseRatio = item.yawRatio / 0.16;
-            const weight = Math.exp(-(poseRatio * poseRatio));
-            vectors.push(item.vector);
-            weights.push(weight);
+
+        const avgVector = computeAverageVector(vectors, weights);
+        if (!avgVector) {
+            return null;
+        }
+
+        return Array.from(avgVector, (val) => Number(val.toFixed(6)));
+    } finally {
+        if (_scratchImgCanvas) {
+            _scratchImgCanvas.width = 0;
+            _scratchImgCanvas.height = 0;
+            _scratchImgCanvas = null;
+            _scratchImgCtx = null;
+        }
+        if (options?.closeImageLandmarkerAfter) {
+            closeImageFaceLandmarker();
         }
     }
-
-    const avgVector = computeAverageVector(vectors, weights);
-    if (!avgVector) {
-        return null;
-    }
-
-    return Array.from(avgVector, (val) => Number(val.toFixed(6)));
 }
 
 /**
- * Hitung koordinat pusat wajah (rata-rata x, y dari seluruh landmark) dalam koordinat viewport
- * dengan memperhitungkan aspect ratio video dan CSS object-fit: cover.
+ * Hitung koordinat pusat wajah dalam koordinat viewport dengan mempertimbangkan object-fit: cover.
  *
  * @param {Array<{x: number, y: number, z?: number}>} landmarks
  * @param {HTMLVideoElement} video
- * @returns {{centerX: number, centerY: number, bounds: {minX: number, maxX: number, minY: number, maxY: number}}|null}
+ * @param {{centerX: number, centerY: number}|null} [outCenter]
+ * @returns {{centerX: number, centerY: number}|null}
  */
-export function computeFaceCenterInViewport(landmarks, video) {
-    if (!Array.isArray(landmarks) || landmarks.length === 0 || !video || typeof video.getBoundingClientRect !== 'function') {
+export function computeFaceCenterInViewport(landmarks, video, outCenter = null) {
+    if (!Array.isArray(landmarks) || landmarks.length < 455 || !video || typeof video.getBoundingClientRect !== 'function') {
         return null;
     }
 
@@ -661,26 +791,15 @@ export function computeFaceCenterInViewport(landmarks, video) {
 
     let sumX = 0;
     let sumY = 0;
-    let minX = 1;
-    let maxX = 0;
-    let minY = 1;
-    let maxY = 0;
-    const count = landmarks.length;
-
-    for (let i = 0; i < count; i += 1) {
-        const pt = landmarks[i];
-        const x = Number(pt?.x ?? 0);
-        const y = Number(pt?.y ?? 0);
-        sumX += x;
-        sumY += y;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
+    const sampleCount = CENTER_SAMPLE_INDICES.length;
+    for (let k = 0; k < sampleCount; k += 1) {
+        const pt = landmarks[CENTER_SAMPLE_INDICES[k]];
+        sumX += Number(pt?.x ?? 0);
+        sumY += Number(pt?.y ?? 0);
     }
 
-    const normCenterX = sumX / count;
-    const normCenterY = sumY / count;
+    const normCenterX = sumX / sampleCount;
+    const normCenterY = sumY / sampleCount;
 
     const videoW = video.videoWidth || videoRect.width;
     const videoH = video.videoHeight || videoRect.height;
@@ -690,11 +809,11 @@ export function computeFaceCenterInViewport(landmarks, video) {
     const offsetX = (videoRect.width - renderedW) / 2;
     const offsetY = (videoRect.height - renderedH) / 2;
 
-    return {
-        centerX: videoRect.left + offsetX + normCenterX * renderedW,
-        centerY: videoRect.top + offsetY + normCenterY * renderedH,
-        bounds: { minX, maxX, minY, maxY },
-    };
+    const target = outCenter || _reusableCenterState;
+    target.centerX = videoRect.left + offsetX + normCenterX * renderedW;
+    target.centerY = videoRect.top + offsetY + normCenterY * renderedH;
+
+    return target;
 }
 
 /**
@@ -713,41 +832,124 @@ export function isPointInsideGuideRect(x, y, rect) {
     return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 }
 
+function detectLandmarksFromVideo(landmarker, video, timestampMs, sharedCanvas = null) {
+    if (typeof landmarker.detectForVideo === 'function') {
+        const result = landmarker.detectForVideo(video, timestampMs);
+
+        return result?.multiFaceLandmarks?.[0] || result?.faceLandmarks?.[0] || null;
+    }
+
+    // Fallback aman bila menerima landmarker mode IMAGE
+    const srcW = video.videoWidth;
+    const srcH = video.videoHeight;
+    const scale = srcW > MAX_DETECT_CANVAS_WIDTH ? MAX_DETECT_CANVAS_WIDTH / srcW : 1;
+    const targetW = Math.max(1, Math.round(srcW * scale));
+    const targetH = Math.max(1, Math.round(srcH * scale));
+
+    let canvas = sharedCanvas;
+    let ctx = null;
+    if (canvas) {
+        if (canvas.width !== targetW || canvas.height !== targetH) {
+            canvas.width = targetW;
+            canvas.height = targetH;
+        }
+        ctx = canvas.getContext('2d');
+    } else {
+        if (!_scratchFallbackCanvas) {
+            _scratchFallbackCanvas = document.createElement('canvas');
+            _scratchFallbackCtx = _scratchFallbackCanvas.getContext('2d');
+        }
+        if (_scratchFallbackCanvas.width !== targetW || _scratchFallbackCanvas.height !== targetH) {
+            _scratchFallbackCanvas.width = targetW;
+            _scratchFallbackCanvas.height = targetH;
+        }
+        canvas = _scratchFallbackCanvas;
+        ctx = _scratchFallbackCtx;
+    }
+
+    ctx.drawImage(video, 0, 0, targetW, targetH);
+    const result = landmarker.detect(canvas);
+
+    return result?.multiFaceLandmarks?.[0] || result?.faceLandmarks?.[0] || null;
+}
+
 /**
- * Ekstrak vektor landmark ternormalisasi dari frame live elemen <video>.
- * Hanya memproses landmark jika pusat wajah berada di dalam elemen `.face-guide-overlay` (bila tersedia).
- * Menggunakan proses matematis yang 100% identik dengan extractVectorFromDataUrl.
+ * Ekstrak signature ringan 11-rasio dari frame video tanpa membuat canvas baru atau alokasi array.
+ * Menggunakan detectForVideo langsung dari elemen <video> saat tersedia.
  *
  * @param {FaceLandmarker} landmarker
  * @param {HTMLVideoElement} video
- * @param {HTMLCanvasElement} [sharedCanvas]
- * @param {{guideElement?: Element|null, onDetectionState?: (state: {faceDetected: boolean, insideGuide: boolean, center: {centerX: number, centerY: number}|null, yawRatio?: number}) => void}} [options]
+ * @param {number} [timestampMs=performance.now()]
+ * @param {{guideElement?: Element|null, sharedCanvas?: HTMLCanvasElement|null, outSignature?: Float32Array|null, onDetectionState?: (state: {faceDetected: boolean, insideGuide: boolean, yawRatio: number}) => void}} [options]
  * @returns {Float32Array|null}
  */
-export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, options = {}) {
-    if (!video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
-        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
+export function extractSignatureFromVideo(landmarker, video, timestampMs = performance.now(), options = {}) {
+    const stateCb = options?.onDetectionState;
+
+    if (!landmarker || !video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+        stateCb?.({ faceDetected: false, insideGuide: false, yawRatio: 0 });
         return null;
     }
 
     try {
-        const canvas = sharedCanvas || document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-
-        const result = landmarker.detect(canvas);
-        const landmarks = result?.multiFaceLandmarks?.[0] || result?.faceLandmarks?.[0];
-
-        if (!Array.isArray(landmarks) || landmarks.length < 468) {
-            options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
+        const landmarks = detectLandmarksFromVideo(landmarker, video, timestampMs, options?.sharedCanvas || null);
+        if (!Array.isArray(landmarks) || landmarks.length < 455) {
+            stateCb?.({ faceDetected: false, insideGuide: false, yawRatio: 0 });
             return null;
         }
 
         const yawRatio = computePoseYawRatio(landmarks);
         const guideElement = options?.guideElement
             ?? (typeof document !== 'undefined' ? document.querySelector('.face-guide-overlay') : null);
-        const faceCenter = computeFaceCenterInViewport(landmarks, video);
+
+        if (guideElement) {
+            const faceCenter = computeFaceCenterInViewport(landmarks, video, _reusableCenterState);
+            const overlayRect = guideElement.getBoundingClientRect();
+            const insideGuide = Boolean(
+                faceCenter && isPointInsideGuideRect(faceCenter.centerX, faceCenter.centerY, overlayRect)
+            );
+
+            if (!insideGuide) {
+                stateCb?.({ faceDetected: true, insideGuide: false, yawRatio });
+                return null;
+            }
+        }
+
+        stateCb?.({ faceDetected: true, insideGuide: true, yawRatio });
+
+        return extractSignatureFromLandmarks(
+            landmarks,
+            video.videoWidth,
+            video.videoHeight,
+            options?.outSignature || _liveSignatureBuffer
+        );
+    } catch {
+        stateCb?.({ faceDetected: false, insideGuide: false, yawRatio: 0 });
+        return null;
+    }
+}
+
+/**
+ * Adapter kompatibilitas untuk ekstraksi vektor 1434-float dari video.
+ */
+export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, options = {}) {
+    const stateCb = options?.onDetectionState;
+    if (!landmarker || !video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+        stateCb?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
+        return null;
+    }
+
+    try {
+        const landmarks = detectLandmarksFromVideo(landmarker, video, performance.now(), sharedCanvas);
+        if (!Array.isArray(landmarks) || landmarks.length < 468) {
+            stateCb?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
+            return null;
+        }
+
+        const yawRatio = computePoseYawRatio(landmarks);
+        const guideElement = options?.guideElement
+            ?? (typeof document !== 'undefined' ? document.querySelector('.face-guide-overlay') : null);
+        const faceCenter = computeFaceCenterInViewport(landmarks, video, _reusableCenterState);
 
         if (guideElement) {
             const overlayRect = guideElement.getBoundingClientRect();
@@ -756,23 +958,23 @@ export function extractVectorFromVideo(landmarker, video, sharedCanvas = null, o
             );
 
             if (!insideGuide) {
-                options?.onDetectionState?.({ faceDetected: true, insideGuide: false, center: faceCenter, yawRatio });
+                stateCb?.({ faceDetected: true, insideGuide: false, center: faceCenter, yawRatio });
                 return null;
             }
         }
 
-        options?.onDetectionState?.({ faceDetected: true, insideGuide: true, center: faceCenter, yawRatio });
+        stateCb?.({ faceDetected: true, insideGuide: true, center: faceCenter, yawRatio });
 
-        return flattenAndNormalizeLandmarks(landmarks, canvas.width, canvas.height);
+        return flattenAndNormalizeLandmarks(landmarks, video.videoWidth, video.videoHeight);
     } catch {
-        options?.onDetectionState?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
+        stateCb?.({ faceDetected: false, insideGuide: false, center: null, yawRatio: 0 });
         return null;
     }
 }
 
 /**
- * Jalankan verifikasi wajah 1:1 di browser maksimal selama timeoutMs (default 5000 ms).
- * Mengembalikan objek { matched, matchScore, distance, reason }.
+ * Jalankan verifikasi wajah 1:1 di browser maksimal selama timeoutMs (default 5000 ms)
+ * menggunakan signature ringan 11-rasio dan mode VIDEO tanpa membebani CPU/RAM.
  */
 export async function verifyStudentFace1to1({
     facePhotos,
@@ -786,54 +988,66 @@ export async function verifyStudentFace1to1({
     }
 
     onProgress({ stage: 'loading_model', message: 'Memuat pendeteksi landmark wajah…' });
-    const landmarker = await getVerifierFaceLandmarker();
+    const imgLandmarker = await getVerifierFaceLandmarker();
 
     onProgress({ stage: 'extracting_reference', message: 'Mengekstrak landmark 3 foto referensi siswa…' });
-    const refVectors = [];
-    const refWeights = [];
-    for (const photoDataUrl of facePhotos) {
-        try {
-            const item = await extractVectorFromDataUrlWithMeta(landmarker, photoDataUrl);
-            if (item?.vector) {
-                const poseRatio = item.yawRatio / 0.16;
-                refVectors.push(item.vector);
-                refWeights.push(Math.exp(-(poseRatio * poseRatio)));
+    let refSignature = null;
+    try {
+        const refVectors = [];
+        const refWeights = [];
+        for (const photoDataUrl of facePhotos) {
+            try {
+                const item = await extractVectorFromDataUrlWithMeta(imgLandmarker, photoDataUrl);
+                if (item?.vector) {
+                    const poseRatio = item.yawRatio / 0.16;
+                    refVectors.push(item.vector);
+                    refWeights.push(Math.exp(-(poseRatio * poseRatio)));
+                }
+            } catch {
+                // Abaikan kesalahan pembacaan foto referensi individual
             }
-        } catch {
-            // Abaikan kesalahan pembacaan foto referensi individual
         }
+
+        const avgReferenceVector = computeAverageVector(refVectors, refWeights);
+        refSignature = avgReferenceVector
+            ? extractSignatureFromTemplate(avgReferenceVector, _verifySignatureBuffer)
+            : null;
+    } finally {
+        closeImageFaceLandmarker();
     }
 
-    const avgReferenceVector = computeAverageVector(refVectors, refWeights);
-    if (!avgReferenceVector) {
+    if (!refSignature) {
         return { matched: false, matchScore: 0, distance: Infinity, reason: 'reference_landmarks_empty' };
     }
 
+    const videoLandmarker = await getKioskVideoFaceLandmarker();
     const similarityThreshold = threshold > 0 && threshold < 0.4 ? FACE_VERIFY_SIMILARITY_THRESHOLD : threshold;
-    const offscreenCanvas = document.createElement('canvas');
     const startedAt = performance.now();
+    let lastTimestampMs = 0;
     let bestSimilarity = 0;
     let bestDistance = Number.POSITIVE_INFINITY;
     let noFaceSince = null;
     let lowScoreSince = null;
+    const detectionState = { faceDetected: false, insideGuide: false, yawRatio: 0 };
 
     onProgress({ stage: 'matching_live', message: 'Mencocokkan wajah dengan kamera... Pastikan wajah terkena cahaya.' });
 
     while (performance.now() - startedAt < timeoutMs) {
-        let detectionState = { faceDetected: false, insideGuide: false, yawRatio: 0 };
-        const liveVector = extractVectorFromVideo(landmarker, video, offscreenCanvas, {
+        lastTimestampMs = Math.max(lastTimestampMs + 1, Math.floor(performance.now()));
+        const liveSig = extractSignatureFromVideo(videoLandmarker, video, lastTimestampMs, {
+            outSignature: _liveSignatureBuffer,
             onDetectionState: (state) => {
-                if (state) {
-                    detectionState = state;
-                }
+                detectionState.faceDetected = state.faceDetected;
+                detectionState.insideGuide = state.insideGuide;
+                detectionState.yawRatio = state.yawRatio;
             },
         });
 
         const nowMs = performance.now();
 
-        if (liveVector) {
+        if (liveSig) {
             noFaceSince = null;
-            const similarity = computeProcrustesSimilarity(liveVector, avgReferenceVector);
+            const similarity = computeSignatureSimilarity(liveSig, refSignature);
             const distance = Number((1 - similarity).toFixed(4));
             if (similarity > bestSimilarity) {
                 bestSimilarity = similarity;

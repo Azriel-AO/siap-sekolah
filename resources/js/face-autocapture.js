@@ -18,6 +18,7 @@ export const STEP_TIMEOUT_MS = 10000;
 export const DEBUG_LOG_INTERVAL_MS = 500;
 
 let landmarkerPromise = null;
+let landmarkerInstance = null;
 
 /**
  * Inisialisasi singleton FaceLandmarker (mode VIDEO, numFaces=1, outputFaceBlendshapes=true).
@@ -43,19 +44,38 @@ export function getFaceLandmarker() {
             };
 
             try {
-                return await FaceLandmarker.createFromOptions(fileset, options);
+                landmarkerInstance = await FaceLandmarker.createFromOptions(fileset, options);
+
+                return landmarkerInstance;
             } catch (gpuError) {
                 baseOptions.delegate = 'CPU';
+                landmarkerInstance = await FaceLandmarker.createFromOptions(fileset, options);
 
-                return FaceLandmarker.createFromOptions(fileset, options);
+                return landmarkerInstance;
             }
         })().catch((error) => {
             landmarkerPromise = null;
+            landmarkerInstance = null;
             throw error;
         });
     }
 
     return landmarkerPromise;
+}
+
+/**
+ * Tutup instance FaceLandmarker auto-capture untuk membebaskan memori WASM/WebGL.
+ */
+export function closeFaceLandmarker() {
+    if (landmarkerInstance && typeof landmarkerInstance.close === 'function') {
+        try {
+            landmarkerInstance.close();
+        } catch {
+            // Abaikan error cleanup saat halaman ditutup
+        }
+    }
+    landmarkerInstance = null;
+    landmarkerPromise = null;
 }
 
 /**
@@ -248,6 +268,7 @@ export class FaceAutoCaptureSession {
         this.stopped = false;
 
         this.loop = this.loop.bind(this);
+        this.onPageHide = () => this.stop();
     }
 
     async start() {
@@ -258,6 +279,9 @@ export class FaceAutoCaptureSession {
         this.poseStableSince = null;
         this.firstTurnSign = 0;
         this.stepStartedAt = performance.now();
+        if (typeof window !== 'undefined') {
+            window.addEventListener('pagehide', this.onPageHide, { once: true });
+        }
 
         this.emitState({
             hint: 'Memuat pendeteksi wajah otomatis…',
@@ -321,10 +345,20 @@ export class FaceAutoCaptureSession {
 
     stop() {
         this.stopped = true;
+        if (typeof window !== 'undefined' && this.onPageHide) {
+            window.removeEventListener('pagehide', this.onPageHide);
+        }
         if (this.rafId) {
             cancelAnimationFrame(this.rafId);
             this.rafId = null;
         }
+        if (this._captureCanvas) {
+            this._captureCanvas.width = 0;
+            this._captureCanvas.height = 0;
+            this._captureCanvas = null;
+        }
+        this.landmarker = null;
+        closeFaceLandmarker();
     }
 
     defaultHintForStep(step) {
@@ -381,12 +415,16 @@ export class FaceAutoCaptureSession {
             return null;
         }
 
-        const offscreen = document.createElement('canvas');
-        offscreen.width = this.video.videoWidth;
-        offscreen.height = this.video.videoHeight;
-        offscreen.getContext('2d').drawImage(this.video, 0, 0);
+        if (!this._captureCanvas) {
+            this._captureCanvas = document.createElement('canvas');
+        }
+        if (this._captureCanvas.width !== this.video.videoWidth || this._captureCanvas.height !== this.video.videoHeight) {
+            this._captureCanvas.width = this.video.videoWidth;
+            this._captureCanvas.height = this.video.videoHeight;
+        }
+        this._captureCanvas.getContext('2d').drawImage(this.video, 0, 0);
 
-        return offscreen.toDataURL('image/jpeg', 0.7);
+        return this._captureCanvas.toDataURL('image/jpeg', 0.7);
     }
 
     advanceStep(nextStep, now, capturedSlotIndex = null, jpeg = null) {

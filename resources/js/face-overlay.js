@@ -11,6 +11,7 @@ const GUIDE_COLOR = '#f59e0b';
 const DETECTED_COLOR = '#22c55e';
 
 let detectorPromise = null;
+let detectorInstance = null;
 
 /**
  * Satu instance FaceDetector dipakai ulang oleh semua overlay di halaman.
@@ -33,19 +34,35 @@ function getFaceDetector() {
             };
 
             try {
-                return await FaceDetector.createFromOptions(fileset, options);
+                detectorInstance = await FaceDetector.createFromOptions(fileset, options);
+
+                return detectorInstance;
             } catch (gpuError) {
                 baseOptions.delegate = 'CPU';
+                detectorInstance = await FaceDetector.createFromOptions(fileset, options);
 
-                return FaceDetector.createFromOptions(fileset, options);
+                return detectorInstance;
             }
         })().catch((error) => {
             detectorPromise = null;
+            detectorInstance = null;
             throw error;
         });
     }
 
     return detectorPromise;
+}
+
+function closeFaceDetector() {
+    if (detectorInstance && typeof detectorInstance.close === 'function') {
+        try {
+            detectorInstance.close();
+        } catch {
+            // Abaikan error cleanup saat halaman ditutup
+        }
+    }
+    detectorInstance = null;
+    detectorPromise = null;
 }
 
 class FaceOverlay {
@@ -355,6 +372,9 @@ class FaceOverlay {
             cancelAnimationFrame(this.rafId);
             this.rafId = null;
         }
+        this.detector = null;
+        this.lastFace = null;
+        closeFaceDetector();
     }
 }
 
