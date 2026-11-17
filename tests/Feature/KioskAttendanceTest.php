@@ -527,7 +527,9 @@ class KioskAttendanceTest extends TestCase
             'consented_at' => now(),
         ]);
 
-        $response = $this->postJson('/kiosk/tap', [
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+
+        $response = $this->actingAs($admin)->postJson('/kiosk/tap', [
             'card_uid' => 'CARD-TKJ-009',
         ]);
 
@@ -630,7 +632,9 @@ class KioskAttendanceTest extends TestCase
             'consented_at' => now(),
         ]);
 
-        $response = $this->getJson('/kiosk/face-templates');
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+
+        $response = $this->actingAs($admin)->getJson('/kiosk/face-templates');
 
         $response->assertStatus(200);
         $data = $response->json();

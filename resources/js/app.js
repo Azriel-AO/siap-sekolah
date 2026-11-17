@@ -4,6 +4,71 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
+const THEME_STORAGE_KEY = 'epresknbi-theme';
+
+function readInitialDarkPreference() {
+    try {
+        const saved = localStorage.getItem(THEME_STORAGE_KEY);
+        if (saved === 'dark') {
+            return true;
+        }
+        if (saved === 'light') {
+            return false;
+        }
+        return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch {
+        return false;
+    }
+}
+
+function applyThemeClass(isDark) {
+    document.documentElement.classList.toggle('dark', Boolean(isDark));
+}
+
+document.addEventListener('alpine:init', () => {
+    const initialDark = readInitialDarkPreference();
+    applyThemeClass(initialDark);
+
+    Alpine.store('theme', {
+        dark: initialDark,
+        toggle() {
+            this.dark = !this.dark;
+            applyThemeClass(this.dark);
+            try {
+                localStorage.setItem(THEME_STORAGE_KEY, this.dark ? 'dark' : 'light');
+            } catch {
+                // Abaikan bila localStorage dibatasi browser
+            }
+            window.dispatchEvent(new CustomEvent('theme:changed', { detail: { dark: this.dark } }));
+        },
+        set(isDark) {
+            this.dark = Boolean(isDark);
+            applyThemeClass(this.dark);
+            try {
+                localStorage.setItem(THEME_STORAGE_KEY, this.dark ? 'dark' : 'light');
+            } catch {
+                // Abaikan bila localStorage dibatasi browser
+            }
+            window.dispatchEvent(new CustomEvent('theme:changed', { detail: { dark: this.dark } }));
+        },
+    });
+});
+
+window.toggleTheme = () => {
+    if (window.Alpine && Alpine.store('theme')) {
+        Alpine.store('theme').toggle();
+        return Alpine.store('theme').dark;
+    }
+    const nextDark = document.documentElement.classList.toggle('dark');
+    try {
+        localStorage.setItem(THEME_STORAGE_KEY, nextDark ? 'dark' : 'light');
+    } catch {
+        // Abaikan bila localStorage dibatasi browser
+    }
+    window.dispatchEvent(new CustomEvent('theme:changed', { detail: { dark: nextDark } }));
+    return nextDark;
+};
+
 Alpine.start();
 
 // Overlay deteksi posisi wajah hanya dimuat di halaman pendaftaran wajah ([data-face-autocapture]).

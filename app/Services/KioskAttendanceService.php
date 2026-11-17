@@ -8,6 +8,10 @@ use App\Models\Student;
 use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * Layanan pemrosesan absensi siswa pada Kiosk Gerbang (Kartu RFID, Face ID, Sidik Jari).
@@ -44,7 +48,8 @@ class KioskAttendanceService
         $facePhotos = $this->photoService->readStudentEnrollmentPhotos($student);
 
         if (! $direct && ! $bypassFaceVerify && count($facePhotos) === 3) {
-            $gateCheck = $this->checkPendingFaceVerify($student, $facePhotos, $bypassCooldown);
+            $isAdmin = auth()->user()?->role === 'admin';
+            $gateCheck = $this->checkPendingFaceVerify($student, $isAdmin ? $facePhotos : [], $bypassCooldown);
             if ($gateCheck !== null) {
                 return $gateCheck;
             }
@@ -60,7 +65,7 @@ class KioskAttendanceService
      */
     public function processFaceCheckin(int $studentId, float $similarity, ?string $photo): JsonResponse
     {
-        if ($similarity < 0.75) {
+        if (! is_finite($similarity) || $similarity < 0.75 || $similarity > 1.0) {
             return response()->json([
                 'success' => false,
                 'type' => 'face_mismatch',
@@ -77,15 +82,33 @@ class KioskAttendanceService
     }
 
     /**
-     * Proses verifikasi wajah 1:1 setelah tap kartu.
+     * Proses verifikasi wajah 1:1 setelah tap kartu dengan perlindungan anti-replay token.
      */
-    public function processFaceVerify(int $studentId, float $score, ?string $photo): JsonResponse
+    public function processFaceVerify(int $studentId, float $score, ?string $photo, ?string $verifyToken = null): JsonResponse
     {
-        if ($score <= 0.85 || $score > 1.0) {
+        if (! is_finite($score) || $score <= 0.85 || $score > 1.0) {
             return response()->json([
                 'success' => false,
                 'type' => 'face_mismatch',
                 'message' => 'Wajah tidak cocok. Silakan coba lagi atau gunakan sidik jari.',
+            ], 422);
+        }
+
+        if ($verifyToken !== null && $verifyToken !== '') {
+            $consumed = Cache::pull("kiosk-verify-token:{$studentId}:{$verifyToken}");
+            Cache::forget("kiosk-verify-pending:{$studentId}");
+            if ($consumed !== true) {
+                return response()->json([
+                    'success' => false,
+                    'type' => 'replay_detected',
+                    'message' => 'Sesi verifikasi wajah tidak valid atau sudah digunakan. Silakan tap ulang kartu.',
+                ], 422);
+            }
+        } elseif (Cache::has("kiosk-verify-pending:{$studentId}")) {
+            return response()->json([
+                'success' => false,
+                'type' => 'replay_detected',
+                'message' => 'Token verifikasi wajah diperlukan untuk melanjutkan.',
             ], 422);
         }
 
@@ -168,7 +191,7 @@ class KioskAttendanceService
     }
 
     /**
-     * Logika inti absensi masuk/pulang memakai waktu server mutlak dan cooldown 60 detik.
+     * Logika inti absensi masuk/pulang dengan kunci atomik anti-TOCTOU & transaksi DB.
      */
     public function recordAttendance(
         Student $student,
@@ -193,73 +216,103 @@ class KioskAttendanceService
         $now = Carbon::now('Asia/Jakarta');
         $today = $now->toDateString();
         $currentTime = $now->format('H:i:s');
+        $lockKey = "kiosk-attendance:{$student->id}:{$today}";
 
-        $attendance = Attendance::where('student_id', $student->id)
-            ->where('date', $today)
-            ->first();
+        return Cache::lock($lockKey, 10)->block(5, function () use (
+            $student,
+            $schoolClass,
+            $photo,
+            $device,
+            $bypassCooldown,
+            $now,
+            $today,
+            $currentTime
+        ): JsonResponse {
+            return DB::transaction(function () use (
+                $student,
+                $schoolClass,
+                $photo,
+                $device,
+                $bypassCooldown,
+                $now,
+                $today,
+                $currentTime
+            ): JsonResponse {
+                $attendance = Attendance::where('student_id', $student->id)
+                    ->where('date', $today)
+                    ->first();
 
-        if (! $bypassCooldown && $this->isInCooldown($attendance, $now)) {
-            return $this->cooldownResponse($student->name);
-        }
+                if (! $bypassCooldown && $this->isInCooldown($attendance, $now)) {
+                    return $this->cooldownResponse($student->name);
+                }
 
-        if (! $attendance) {
-            $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
+                if (! $attendance) {
+                    $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
+                    $photoPath = $this->photoService->storeEvidencePhoto($photo, $student, 'masuk', $now);
 
-            try {
-                Attendance::create([
-                    'student_id' => $student->id,
-                    'school_class_id' => $schoolClass->id,
-                    'date' => $today,
-                    'check_in_at' => $currentTime,
-                    'status' => $status,
-                    'last_tap_at' => $now,
-                    'kiosk_device' => $device,
-                    'photo_in_path' => $this->photoService->storeEvidencePhoto($photo, $student, 'masuk', $now),
-                ]);
-            } catch (QueryException) {
-                return $this->cooldownResponse($student->name);
-            }
+                    try {
+                        Attendance::create([
+                            'student_id' => $student->id,
+                            'school_class_id' => $schoolClass->id,
+                            'date' => $today,
+                            'check_in_at' => $currentTime,
+                            'status' => $status,
+                            'last_tap_at' => $now,
+                            'kiosk_device' => $device,
+                            'photo_in_path' => $photoPath,
+                        ]);
+                    } catch (QueryException) {
+                        if ($photoPath) {
+                            Storage::disk('local')->delete($photoPath);
+                        }
 
-            return response()->json([
-                'success' => true,
-                'type' => 'check_in',
-                'student_name' => $student->name,
-                'nis' => $student->nis,
-                'kelas' => $schoolClass->name,
-                'status' => $status,
-                'status_label' => ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat',
-                'time' => $currentTime,
-                'message' => "Selamat datang, {$student->name}!",
-            ]);
-        }
+                        return $this->cooldownResponse($student->name);
+                    }
 
-        if (! $attendance->check_out_at) {
-            $attendance->update([
-                'check_out_at' => $currentTime,
-                'last_tap_at' => $now,
-                'photo_out_path' => $this->photoService->storeEvidencePhoto($photo, $student, 'pulang', $now) ?? $attendance->photo_out_path,
-            ]);
+                    return response()->json([
+                        'success' => true,
+                        'type' => 'check_in',
+                        'student_name' => $student->name,
+                        'nis' => $student->nis,
+                        'kelas' => $schoolClass->name,
+                        'status' => $status,
+                        'status_label' => ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat',
+                        'time' => $currentTime,
+                        'message' => "Selamat datang, {$student->name}!",
+                    ]);
+                }
 
-            return response()->json([
-                'success' => true,
-                'type' => 'check_out',
-                'student_name' => $student->name,
-                'nis' => $student->nis,
-                'kelas' => $schoolClass->name,
-                'status' => $attendance->status,
-                'status_label' => 'Absen Pulang Berhasil',
-                'time' => $currentTime,
-                'message' => "Selamat pulang, {$student->name}!",
-            ]);
-        }
+                if (! $attendance->check_out_at) {
+                    $photoOutPath = $this->photoService->storeEvidencePhoto($photo, $student, 'pulang', $now);
 
-        return response()->json([
-            'success' => false,
-            'type' => 'already_completed',
-            'student_name' => $student->name,
-            'kelas' => $schoolClass->name,
-            'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
-        ], 200);
+                    $attendance->update([
+                        'check_out_at' => $currentTime,
+                        'last_tap_at' => $now,
+                        'photo_out_path' => $photoOutPath ?? $attendance->photo_out_path,
+                    ]);
+
+                    return response()->json([
+                        'success' => true,
+                        'type' => 'check_out',
+                        'student_name' => $student->name,
+                        'nis' => $student->nis,
+                        'kelas' => $schoolClass->name,
+                        'status' => $attendance->status,
+                        'status_label' => 'Absen Pulang Berhasil',
+                        'time' => $currentTime,
+                        'message' => "Selamat pulang, {$student->name}!",
+                    ]);
+                }
+
+                return response()->json([
+                    'success' => false,
+                    'type' => 'already_completed',
+                    'student_name' => $student->name,
+                    'kelas' => $schoolClass->name,
+                    'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
+                ], 200);
+            });
+        });
     }
 
     /**
@@ -296,10 +349,15 @@ class KioskAttendanceService
             ], 200);
         }
 
+        $verifyToken = Str::random(40);
+        Cache::put("kiosk-verify-token:{$student->id}:{$verifyToken}", true, now()->addSeconds(90));
+        Cache::put("kiosk-verify-pending:{$student->id}", $verifyToken, now()->addSeconds(90));
+
         return response()->json([
             'success' => true,
             'requires_face_verify' => true,
             'type' => 'face_verification_required',
+            'verify_token' => $verifyToken,
             'student_id' => $student->id,
             'student_name' => $student->name,
             'nis' => $student->nis,

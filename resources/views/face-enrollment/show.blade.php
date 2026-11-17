@@ -2,14 +2,14 @@
     <x-slot name="header">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
+                <h1 class="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">
                     Pendaftaran Wajah
                 </h1>
-                <p class="text-xs sm:text-sm text-gray-500 mt-0.5">
+                <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">
                     Ambil 3 foto wajah Anda sebagai data referensi dan verifikasi absensi.
                 </p>
             </div>
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
                 Siswa: {{ $student?->name }}
             </span>
         </div>
@@ -21,21 +21,21 @@
             {{-- Pesan hasil simpan --}}
             <div x-show="message" x-cloak x-transition
                  class="rounded-md p-4 border shadow-sm flex items-start justify-between"
-                 :class="messageOk ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'">
+                 :class="messageOk ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200' : 'bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200'">
                 <p class="text-sm font-medium" x-text="message"></p>
-                <button @click="message = ''" class="text-xs font-bold px-2 py-1 rounded hover:bg-black/5">Tutup</button>
+                <button @click="message = ''" class="text-xs font-bold px-2 py-1 rounded hover:bg-black/5 dark:hover:bg-white/10">Tutup</button>
             </div>
 
             <template x-if="mode === 'status' && sudahTerdaftar">
-                <div class="bg-white rounded-xl border border-emerald-200 shadow-sm p-6 sm:p-8 space-y-6">
+                <div class="bg-white dark:bg-slate-800 rounded-xl border border-emerald-200 dark:border-emerald-800/60 shadow-sm p-6 sm:p-8 space-y-6">
                     <div class="text-center space-y-3">
-                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center">
-                            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
-                        <h2 class="text-xl font-extrabold text-emerald-700">Wajah Anda Sudah Terdaftar</h2>
-                        <div class="text-sm text-gray-600 space-y-1">
+                        <h2 class="text-xl font-extrabold text-emerald-700 dark:text-emerald-400">Wajah Anda Sudah Terdaftar</h2>
+                        <div class="text-sm text-gray-600 dark:text-slate-300 space-y-1">
                             <p>Terdaftar sejak: <strong x-text="tanggalDaftar"></strong></p>
                             <p x-show="tanggalDaftarUlang">Daftar ulang terakhir: <strong x-text="tanggalDaftarUlang"></strong></p>
                         </div>
@@ -44,19 +44,19 @@
                     {{-- Pratinjau 3 foto milik siswa sendiri (embedded base64, hanya halaman ber-login ini) --}}
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <template x-for="(foto, index) in photosEmbedded" :key="index">
-                            <div class="rounded-xl border border-gray-200 overflow-hidden">
-                                <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <div class="rounded-xl border border-gray-200 dark:border-slate-700 overflow-hidden">
+                                <div class="aspect-[4/3] bg-gray-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                                     <img x-show="foto" :src="foto"
                                          loading="lazy" decoding="async"
                                          x-data="{ loaded: false }"
                                          x-init="$nextTick(() => { if ($el.complete) loaded = true })"
                                          @load="loaded = true"
                                          :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
-                                         class="w-full h-full object-cover bg-slate-200 transition-all duration-200"
+                                         class="w-full h-full object-cover bg-slate-200 dark:bg-slate-700 transition-all duration-200"
                                          :alt="'Foto wajah terdaftar ke-' + (index + 1)">
-                                    <span x-show="!foto" class="text-xs text-gray-400 font-semibold">Foto tidak tersedia</span>
+                                    <span x-show="!foto" class="text-xs text-gray-400 dark:text-slate-500 font-semibold">Foto tidak tersedia</span>
                                 </div>
-                                <div class="p-2 bg-white border-t border-gray-100 text-center text-xs font-bold text-gray-600" x-text="'Foto ' + (index + 1)"></div>
+                                <div class="p-2 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 text-center text-xs font-bold text-gray-600 dark:text-slate-300" x-text="'Foto ' + (index + 1)"></div>
                             </div>
                         </template>
                     </div>
@@ -70,7 +70,7 @@
                             </svg>
                             Daftar Ulang
                         </button>
-                        <p class="text-xs text-gray-400 mt-2">Foto lama akan dihapus dan diganti dengan 3 foto baru.</p>
+                        <p class="text-xs text-gray-400 dark:text-slate-400 mt-2">Foto lama akan dihapus dan diganti dengan 3 foto baru.</p>
                     </div>
                 </div>
             </template>
@@ -92,15 +92,15 @@
                      x-transition:leave="transition-all ease-in duration-150"
                      x-transition:leave-start="opacity-100 scale-100"
                      x-transition:leave-end="opacity-0 scale-95"
-                     class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" @click.outside="showConfirmDaftarUlang = false">
-                    <h3 class="text-lg font-extrabold text-gray-900">Daftar Ulang Wajah?</h3>
-                    <p class="text-sm text-gray-600 leading-relaxed">
+                     class="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4" @click.outside="showConfirmDaftarUlang = false">
+                    <h3 class="text-lg font-extrabold text-gray-900 dark:text-slate-100">Daftar Ulang Wajah?</h3>
+                    <p class="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
                         Seluruh foto wajah lama Anda akan <strong>dihapus permanen</strong> dan diganti dengan
                         3 foto baru. Tindakan ini tidak bisa dibatalkan setelah disimpan.
                     </p>
                     <div class="flex justify-end space-x-3">
                         <button type="button" @click="showConfirmDaftarUlang = false"
-                                class="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-sm transition">
+                                class="px-4 py-2 rounded-lg bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 font-semibold text-sm transition">
                             Batal
                         </button>
                         <button type="button" @click="yaDaftarUlang()"
@@ -115,30 +115,30 @@
                 <div class="space-y-6" data-face-autocapture>
 
                     {{-- Kartu pernyataan izin orang tua/wali (FR-012) --}}
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                        <h2 class="text-lg font-bold text-gray-900">Pernyataan Izin Orang Tua / Wali</h2>
-                        <p class="text-sm text-gray-600 mt-2 leading-relaxed">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100">Pernyataan Izin Orang Tua / Wali</h2>
+                        <p class="text-sm text-gray-600 dark:text-slate-300 mt-2 leading-relaxed">
                             Saya menyatakan bahwa saya telah mendapat <strong>izin orang tua atau wali</strong>
                             untuk mendaftarkan foto wajah saya. Foto ini disimpan di penyimpanan privat sekolah
                             dan digunakan <strong>hanya untuk keperluan absensi resmi sekolah</strong>.
                         </p>
                         <label class="mt-4 flex items-start space-x-3 p-4 rounded-lg border cursor-pointer transition"
-                               :class="consent ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 bg-gray-50 hover:border-indigo-400'">
+                               :class="consent ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' : 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/50 hover:border-indigo-400'">
                             <input type="checkbox" x-model="consent" @change="onConsentChange()"
-                                   class="mt-1 h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                            <span class="text-sm font-medium text-gray-800">
+                                   class="mt-1 h-5 w-5 rounded border-gray-300 dark:border-slate-600 dark:bg-slate-800 text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-sm font-medium text-gray-800 dark:text-slate-200">
                                 Saya sudah mendapat izin orang tua/wali dan menyetujui pernyataan di atas.
                             </span>
                         </label>
                     </div>
 
                     {{-- Area kamera (gagal-aman) --}}
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
                         @if(isDebugMode())
-                            <div class="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <div class="mb-4 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div class="flex items-center gap-2">
                                     <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
-                                    <span class="text-xs font-semibold text-amber-900">Bypass Kamera Granular: isi hanya slot foto yang masih kosong.</span>
+                                    <span class="text-xs font-semibold text-amber-900 dark:text-amber-200">Bypass Kamera Granular: isi hanya slot foto yang masih kosong.</span>
                                 </div>
                                 <button type="button" @click="isiSlotFotoKosongDebug()"
                                         class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold transition shrink-0">
@@ -147,41 +147,41 @@
                             </div>
                         @endif
                         <div class="flex items-center justify-between gap-2">
-                            <h2 class="text-lg font-bold text-gray-900">Kamera Wajah</h2>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100">Kamera Wajah</h2>
                             <span x-show="consent && !kameraGagal" x-cloak
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
-                                  :class="manualMode ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'"
+                                  :class="manualMode ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300'"
                                   x-text="manualMode ? 'Mode Manual (Fallback)' : 'Auto-Capture + Liveness'"></span>
                         </div>
-                        <p class="text-xs text-gray-500 mt-1">Kamera menyala setelah Anda mencentang pernyataan izin di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
+                        <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Kamera menyala setelah Anda mencentang pernyataan izin di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
 
                         {{-- Indikator 4 langkah otomatis --}}
-                        <div x-show="consent && !kameraGagal && !manualMode" x-cloak class="mt-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
+                        <div x-show="consent && !kameraGagal && !manualMode" x-cloak class="mt-3 rounded-xl border border-indigo-100 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/40 p-3">
                             <div class="grid grid-cols-4 gap-2 text-xs font-bold text-center">
                                 <div class="px-2 py-1.5 rounded-lg border transition"
-                                     :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                     :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                     1. Hadap Lurus
                                 </div>
                                 <div class="px-2 py-1.5 rounded-lg border transition"
-                                     :class="autoStep > 1 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 1 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                     :class="autoStep > 1 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 1 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                     2. Tengok Kanan
                                 </div>
                                 <div class="px-2 py-1.5 rounded-lg border transition"
-                                     :class="autoStep > 2 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 2 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                     :class="autoStep > 2 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 2 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                     3. Tengok Kiri
                                 </div>
                                 <div class="px-2 py-1.5 rounded-lg border transition"
-                                     :class="autoStep > 3 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 3 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                     :class="autoStep > 3 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 3 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                     4. Kedip Mata
                                 </div>
                             </div>
-                            <p class="mt-2 text-center text-xs font-bold text-indigo-900" x-text="autoHint"></p>
+                            <p class="mt-2 text-center text-xs font-bold text-indigo-900 dark:text-indigo-200" x-text="autoHint"></p>
                         </div>
 
                         {{-- Pesan gagal-aman: tanpa kamera / izin ditolak / browser tidak mendukung --}}
-                        <div x-show="consent && kameraGagal" x-cloak class="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
-                            <p class="text-sm font-semibold text-amber-800">Kamera tidak dapat dipakai.</p>
-                            <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+                        <div x-show="consent && kameraGagal" x-cloak class="mt-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-4">
+                            <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Kamera tidak dapat dipakai.</p>
+                            <p class="text-xs text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
                                 Yang terjadi: perangkat tidak punya kamera, sedang dipakai aplikasi lain,
                                 izin kamera ditolak, atau browser tidak mendukung.<br>
                                 Yang harus Anda lakukan: izinkan kamera lewat ikon gembok/kamera di bilah alamat browser
@@ -191,7 +191,7 @@
                         </div>
 
                         {{-- Pratinjau kamera --}}
-                        <div x-show="consent && !kameraGagal" class="mt-4 relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
+                        <div x-show="consent && !kameraGagal" class="mt-4 relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300 dark:border-slate-700" style="aspect-ratio: 16/9;">
                             <video x-ref="cameraPreview" autoplay muted playsinline
                                    class="w-full h-full object-cover scale-x-[-1]"></video>
                             <canvas data-face-overlay aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full"></canvas>
@@ -206,38 +206,38 @@
                             </div>
                         </div>
 
-                        <p x-show="consent && !kameraGagal" class="mt-2 text-center text-xs font-medium text-gray-600">
+                        <p x-show="consent && !kameraGagal" class="mt-2 text-center text-xs font-medium text-gray-600 dark:text-slate-400">
                             Pastikan cahaya cukup dan wajah menghadap kamera.
                         </p>
                     </div>
 
                     {{-- 3 Slot Foto --}}
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                        <h2 class="text-lg font-bold text-gray-900">3 Foto Wajah</h2>
-                        <p class="text-xs text-gray-500 mt-1">Foto diambil otomatis saat Anda mengikuti panduan gerakan wajah (atau tekan "Ambil Foto" pada mode manual). Ulangi foto mana pun yang kurang bagus sebelum menyimpan.</p>
+                    <div class="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-slate-100">3 Foto Wajah</h2>
+                        <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Foto diambil otomatis saat Anda mengikuti panduan gerakan wajah (atau tekan "Ambil Foto" pada mode manual). Ulangi foto mana pun yang kurang bagus sebelum menyimpan.</p>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
                             <template x-for="(foto, index) in photos" :key="index">
                                 <div class="rounded-xl border-2 overflow-hidden"
-                                     :class="foto ? 'border-emerald-400' : 'border-dashed border-gray-300 bg-gray-50'">
-                                    <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                                     :class="foto ? 'border-emerald-400 dark:border-emerald-600' : 'border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/50'">
+                                    <div class="aspect-[4/3] bg-gray-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                                         <img x-show="foto" :src="foto"
                                              loading="lazy" decoding="async"
                                              x-data="{ loaded: false }"
                                              x-init="$nextTick(() => { if ($el.complete) loaded = true })"
                                              @load="loaded = true"
                                              :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
-                                             class="w-full h-full object-cover bg-slate-200 transition-all duration-200"
+                                             class="w-full h-full object-cover bg-slate-200 dark:bg-slate-700 transition-all duration-200"
                                              :alt="'Foto wajah ke-' + (index + 1)">
-                                        <div x-show="!foto" class="text-center text-gray-400">
+                                        <div x-show="!foto" class="text-center text-gray-400 dark:text-slate-500">
                                             <div class="text-3xl font-black" x-text="index + 1"></div>
                                             <div class="text-[10px] font-semibold uppercase tracking-wider mt-1">Belum ada foto</div>
                                         </div>
                                     </div>
-                                    <div class="p-2 flex items-center justify-between bg-white border-t border-gray-100">
-                                        <span class="text-xs font-bold text-gray-600" x-text="photoLabels[index] || ('Foto ' + (index + 1))"></span>
+                                    <div class="p-2 flex items-center justify-between bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
+                                        <span class="text-xs font-bold text-gray-600 dark:text-slate-300" x-text="photoLabels[index] || ('Foto ' + (index + 1))"></span>
                                         <button type="button" x-show="foto" @click="ulangFoto(index)"
-                                                class="text-xs font-bold text-rose-600 hover:text-rose-800 hover:bg-rose-50 px-2 py-1 rounded transition">
+                                                class="text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/60 px-2 py-1 rounded transition">
                                             Ulangi
                                         </button>
                                     </div>
@@ -248,7 +248,7 @@
                         <div class="flex flex-col sm:flex-row items-center gap-3 mt-6">
                             <button type="button" x-show="manualMode" @click="ambilFoto()"
                                     :disabled="!consent || kameraGagal || countdown !== null || saving || photos.every(p => p)"
-                                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
+                                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
                                 <svg class="w-5 h-5 me-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -258,16 +258,16 @@
 
                             <button type="button" @click="simpan()"
                                     :disabled="saving || photos.some(p => !p)"
-                                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
+                                    class="inline-flex items-center px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 disabled:cursor-not-allowed text-white font-semibold text-sm shadow-sm transition">
                                 <span x-text="saving ? 'Menyimpan...' : 'Simpan Pendaftaran'"></span>
                             </button>
 
                             <button type="button" x-show="consent && !kameraGagal && !manualMode && !photos.every(p => p)" @click="aktifManualFallback()"
-                                    class="text-xs font-semibold text-gray-500 hover:text-gray-800 underline">
+                                    class="text-xs font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 underline">
                                 Gunakan tombol ambil foto manual
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mt-2" x-show="photos.some(p => !p)">
+                        <p class="text-xs text-gray-400 dark:text-slate-400 mt-2" x-show="photos.some(p => !p)">
                             Tersimpan: <span x-text="photos.filter(p => p).length"></span> dari 3 foto.
                         </p>
                     </div>

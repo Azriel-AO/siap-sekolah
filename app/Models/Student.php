@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -14,6 +15,8 @@ use Illuminate\Support\Str;
 class Student extends Model
 {
     use HasFactory;
+
+    private ?string $precomputedCardLabel = null;
 
     protected $fillable = [
         'school_class_id',
@@ -57,6 +60,53 @@ class Student extends Model
     }
 
     /**
+     * Isi awal cache label kartu untuk koleksi siswa dalam 1 query agar tidak memicu N+1.
+     *
+     * @param  Collection<int, Student>  $students
+     */
+    public static function preloadCardLabels(Collection $students): void
+    {
+        if ($students->isEmpty()) {
+            return;
+        }
+
+        $classIds = $students
+            ->pluck('school_class_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($classIds->isEmpty()) {
+            return;
+        }
+
+        $positionsByClass = self::query()
+            ->whereIn('school_class_id', $classIds)
+            ->orderBy('id')
+            ->get(['id', 'school_class_id'])
+            ->groupBy('school_class_id')
+            ->map(fn (Collection $group): array => $group->pluck('id')->flip()->all());
+
+        foreach ($students as $student) {
+            if (! $student->school_class_id || ! $student->rfidCard || ! $student->schoolClass) {
+                $student->precomputedCardLabel = null;
+
+                continue;
+            }
+
+            $slugKelas = $student->schoolClass->slug !== null && $student->schoolClass->slug !== ''
+                ? strtoupper($student->schoolClass->slug)
+                : strtoupper(Str::slug($student->schoolClass->name));
+
+            $posMap = $positionsByClass->get($student->school_class_id, []);
+            $posisi = $posMap[$student->id] ?? false;
+            $nomorUrut = $posisi !== false ? ((int) $posisi + 1) : 1;
+
+            $student->precomputedCardLabel = sprintf('%s-%03d', $slugKelas, $nomorUrut);
+        }
+    }
+
+    /**
      * Label kartu cantik berformat "{slug_kelas}-{nomor_urut_3_digit}" (misal: "10-TKJ-1-003").
      * Mengembalikan null apabila siswa belum memiliki kelas atau kartu RFID.
      * UID fisik di tabel rfid_cards tetap mentah untuk pembacaan scanner.
@@ -65,6 +115,10 @@ class Student extends Model
     {
         if (! $this->school_class_id || ! $this->rfidCard || ! $this->schoolClass) {
             return null;
+        }
+
+        if ($this->precomputedCardLabel !== null) {
+            return $this->precomputedCardLabel;
         }
 
         $slugKelas = $this->schoolClass->slug !== null && $this->schoolClass->slug !== ''
@@ -79,7 +133,7 @@ class Student extends Model
         $posisi = $ids->search($this->id);
         $nomorUrut = $posisi !== false ? ((int) $posisi + 1) : 1;
 
-        return sprintf('%s-%03d', $slugKelas, $nomorUrut);
+        return $this->precomputedCardLabel = sprintf('%s-%03d', $slugKelas, $nomorUrut);
     }
 
     /**

@@ -101,6 +101,8 @@ class TeacherAttendanceController extends Controller
             ->orderBy('name')
             ->get();
 
+        Student::preloadCardLabels($students);
+
         $formatted = $students->map(fn (Student $student): array => $this->formatDailyStudentRow($student));
 
         return [

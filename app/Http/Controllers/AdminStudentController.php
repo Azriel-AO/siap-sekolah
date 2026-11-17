@@ -35,6 +35,8 @@ class AdminStudentController extends Controller
             ? $kelasDipilih->students()->with(['rfidCard', 'user', 'faceEnrollment', 'schoolClass'])->withCount('attendances')->orderBy('name')->get()
             : collect();
 
+        Student::preloadCardLabels($students);
+
         return view('admin.students.index', [
             'classes' => $classes,
             'kelasDipilih' => $kelasDipilih,
@@ -127,11 +129,11 @@ class AdminStudentController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
-            'nis' => ['required', 'string', 'max:20', Rule::unique('students', 'nis')->ignore($student?->id)],
-            'induk' => ['nullable', 'string', 'max:20', Rule::unique('students', 'induk')->ignore($student?->id)],
+            'nis' => ['required', 'string', 'max:20', 'not_regex:/[<>]/', Rule::unique('students', 'nis')->ignore($student?->id)],
+            'induk' => ['nullable', 'string', 'max:20', 'not_regex:/[<>]/', Rule::unique('students', 'induk')->ignore($student?->id)],
             'gender' => ['required', Rule::in(['L', 'P'])],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
-            'card_uid' => ['nullable', 'string', 'max:50', Rule::unique('rfid_cards', 'card_uid')->ignore($student?->rfidCard?->id)],
+            'card_uid' => ['nullable', 'string', 'max:50', 'not_regex:/[<>]/', Rule::unique('rfid_cards', 'card_uid')->ignore($student?->rfidCard?->id)],
         ], [
             'name.required' => 'Nama siswa wajib diisi.',
             'name.not_regex' => 'Nama siswa tidak boleh mengandung tag HTML atau karakter < dan >.',

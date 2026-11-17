@@ -31,6 +31,15 @@ class PhotoUploadService
                 return null;
             }
 
+            $originalName = strtolower((string) $input->getClientOriginalName());
+            $clientExt = strtolower((string) $input->getClientOriginalExtension());
+            if ($clientExt !== '' && ! in_array($clientExt, ['jpg', 'jpeg', 'png'], true)) {
+                return null;
+            }
+            if (preg_match('/\.(php|phtml|phar|pht|cgi|pl|py|jsp|asp|aspx|sh|exe|svg|html?|js)(\.|$)/i', $originalName)) {
+                return null;
+            }
+
             $size = $input->getSize();
             if ($size === false || $size < self::MIN_BYTES || $size > $maxBytes) {
                 return null;
@@ -217,7 +226,7 @@ class PhotoUploadService
     private function inspectImageBinary(string $binary, ?string $expectedMime, int $maxBytes): ?array
     {
         $size = strlen($binary);
-        if ($size < self::MIN_BYTES || $size > $maxBytes) {
+        if ($size < self::MIN_BYTES || $size > $maxBytes || $this->containsMarkupOrCode($binary)) {
             return null;
         }
 

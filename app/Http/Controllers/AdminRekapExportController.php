@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\RekapExportData;
 use App\Services\RekapPeriodeHelper;
+use App\Support\ExportSanitizer;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -35,7 +36,7 @@ class AdminRekapExportController extends Controller
         $writer->openToFile($tmp);
         $writer->getCurrentSheet()->setName('Rekap');
         foreach ($rows as $row) {
-            $writer->addRow(Row::fromValues($row));
+            $writer->addRow(Row::fromValues(ExportSanitizer::sanitizeRow($row)));
         }
         $writer->close();
 
@@ -74,11 +75,11 @@ class AdminRekapExportController extends Controller
     {
         $kelas = str_replace(' ', '-', $data['kelasLabel']);
 
-        if ($data['periode'] === 'hari') {
-            return 'rekap-hari-'.$data['tanggal'].'-'.$kelas.'.'.$ext;
-        }
+        $rawName = $data['periode'] === 'hari'
+            ? 'rekap-hari-'.$data['tanggal'].'-'.$kelas.'.'.$ext
+            : 'rekap-'.$data['periode'].'-'.$data['rentangAwal'].'-sd-'.$data['rentangAkhir'].'-'.$kelas.'.'.$ext;
 
-        return 'rekap-'.$data['periode'].'-'.$data['rentangAwal'].'-sd-'.$data['rentangAkhir'].'-'.$kelas.'.'.$ext;
+        return ExportSanitizer::sanitizeFilename($rawName);
     }
 
     /**

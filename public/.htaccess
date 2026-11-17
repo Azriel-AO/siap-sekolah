@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # Block direct HTTP access to hidden files, environment configs, logs, backups, and SQLite databases
+    RewriteRule "(^|/)\." - [F,L]
+    RewriteRule "\.(sqlite|sqlite3|db|env|log|bak|sql)$" - [F,L,NC]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

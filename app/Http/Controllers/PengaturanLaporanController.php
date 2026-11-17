@@ -24,12 +24,12 @@ class PengaturanLaporanController extends Controller
     public function simpan(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'laporan_nama_sekolah' => ['required', 'string', 'max:100'],
-            'laporan_tahun_pelajaran' => ['required', 'string', 'max:20'],
+            'laporan_nama_sekolah' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
+            'laporan_tahun_pelajaran' => ['required', 'string', 'max:20', 'not_regex:/[<>]/'],
             'laporan_semester' => ['required', Rule::in(['Ganjil', 'Genap'])],
-            'laporan_kota' => ['required', 'string', 'max:50'],
-            'laporan_jabatan_ttd' => ['required', 'string', 'max:50'],
-            'laporan_nama_ttd' => ['required', 'string', 'max:100'],
+            'laporan_kota' => ['required', 'string', 'max:50', 'not_regex:/[<>]/'],
+            'laporan_jabatan_ttd' => ['required', 'string', 'max:50', 'not_regex:/[<>]/'],
+            'laporan_nama_ttd' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
         ], [
             'laporan_nama_sekolah.required' => 'Nama sekolah wajib diisi.',
             'laporan_tahun_pelajaran.required' => 'Tahun pelajaran wajib diisi.',

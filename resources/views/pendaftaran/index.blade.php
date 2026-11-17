@@ -11,19 +11,30 @@
     <link rel="preload" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" as="style">
     <link rel="preload" href="{{ asset('images/logo-sekolah.png') }}" as="image">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
+    <script>
+        (function () {
+            const t = localStorage.getItem('epresknbi-theme');
+            if (t === 'dark' || (t === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-slate-100 text-gray-900 font-sans antialiased min-h-screen" x-data="pendaftaranApp()" x-init="init()">
+<body class="bg-slate-100 dark:bg-slate-900 text-gray-900 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-200" x-data="pendaftaranApp()" x-init="init()">
 
-    <header class="bg-white border-b border-gray-200">
-        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center space-x-3">
-            <div class="bg-white rounded-lg p-1 border border-gray-100 shadow-sm flex items-center justify-center">
-                <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-9 w-auto object-contain">
+    <header class="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+        <div class="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white dark:bg-slate-100 rounded-lg p-1 border border-gray-100 dark:border-slate-700 shadow-sm flex items-center justify-center">
+                    <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-9 w-auto object-contain">
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-extrabold text-gray-900 dark:text-slate-100 leading-tight">Pendaftaran Siswa Baru</h1>
+                    <p class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-400">E-PRESKNBI - SMK KARYA NUGRAHA</p>
+                </div>
             </div>
-            <div>
-                <h1 class="text-base sm:text-lg font-extrabold text-gray-900 leading-tight">Pendaftaran Siswa Baru</h1>
-                <p class="text-[11px] sm:text-xs text-gray-500">E-PRESKNBI - SMK KARYA NUGRAHA</p>
-            </div>
+            <x-theme-toggle :compact="true" />
         </div>
     </header>
 
@@ -32,7 +43,7 @@
         {{-- Pendaftaran SELALU terbuka dalam pengawasan guru piket --}}
 
         {{-- Daftar error dari server --}}
-            <div x-show="message" x-cloak x-transition.duration.200ms class="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+            <div x-show="message" x-cloak x-transition.duration.200ms class="mb-4 rounded-lg border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/60 px-4 py-3 text-sm text-rose-800 dark:text-rose-200">
                 <p class="font-semibold" x-text="message"></p>
                 <ul x-show="errorList.length" class="list-disc list-inside mt-1">
                     <template x-for="e in errorList" :key="e"><li x-text="e"></li></template>
@@ -42,35 +53,35 @@
             <form @submit.prevent="simpan()" class="space-y-5">
 
                 @if(isDebugMode())
-                    <div class="rounded-xl border border-amber-300 bg-amber-50 p-4 space-y-3">
+                    <div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-4 space-y-3">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded bg-amber-400 text-slate-950 text-[10px] font-black tracking-widest uppercase">DEBUG</span>
-                                <span class="text-xs font-semibold text-amber-900">Mode Pengembang Granular: lewati perangkat tertentu tanpa menimpa data asli perangkat lain.</span>
+                                <span class="text-xs font-semibold text-amber-900 dark:text-amber-200">Mode Pengembang Granular: lewati perangkat tertentu tanpa menimpa data asli perangkat lain.</span>
                             </div>
                             <button type="button" @click="isiDummyBiometrik()"
                                     class="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-extrabold shadow-sm transition shrink-0">
                                 Lewati Biometrik (Pakai Data Dummy)
                             </button>
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-amber-200/80">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 border-t border-amber-200/80 dark:border-amber-800/60">
                             <button type="button" @click="isiDataDiriContoh()"
-                                    class="px-2.5 py-1.5 rounded-lg bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition text-center">
+                                    class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-[11px] font-bold transition text-center">
                                 + Isi Data Diri Kosong
                             </button>
                             <button type="button" @click="bypassKameraGranular()"
                                     class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
-                                    :class="debugBypass.camera ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                    :class="debugBypass.camera ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200'">
                                 Bypass Kamera (Slot Kosong)
                             </button>
                             <button type="button" @click="bypassSidikJariGranular()"
                                     class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
-                                    :class="debugBypass.fingerprint ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                    :class="debugBypass.fingerprint ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200'">
                                 Bypass Sidik Jari
                             </button>
                             <button type="button" @click="bypassRfidGranular()"
                                     class="px-2.5 py-1.5 rounded-lg border text-[11px] font-bold transition text-center"
-                                    :class="debugBypass.rfid ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white border-amber-300 hover:bg-amber-100 text-amber-900'">
+                                    :class="debugBypass.rfid ? 'bg-amber-500 border-amber-600 text-slate-950' : 'bg-white dark:bg-slate-800 border-amber-300 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200'">
                                 Bypass Kartu RFID
                             </button>
                         </div>
@@ -78,33 +89,33 @@
                 @endif
 
                 {{-- Langkah 1: Data Diri --}}
-                <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
                     <div class="flex items-center space-x-3 mb-4">
                         <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">1</span>
-                        <h2 class="text-base font-bold text-gray-900">Data Diri</h2>
+                        <h2 class="text-base font-bold text-gray-900 dark:text-slate-100">Data Diri</h2>
                     </div>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Lengkap <span class="text-rose-500">*</span></label>
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Nama Lengkap <span class="text-rose-500">*</span></label>
                             <input type="text" x-model="form.name" required maxlength="100" placeholder="Masukkan nama lengkap sesuai ijazah"
-                                   class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                   class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
                             <div class="flex gap-3">
                                 <label class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition"
-                                       :class="form.gender === 'L' ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-gray-300 text-gray-600'">
+                                       :class="form.gender === 'L' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300'">
                                     <input type="radio" name="gender" value="L" x-model="form.gender" class="sr-only"> L - Laki-laki
                                 </label>
                                 <label class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition"
-                                       :class="form.gender === 'P' ? 'border-indigo-500 bg-indigo-50 text-indigo-800' : 'border-gray-300 text-gray-600'">
+                                       :class="form.gender === 'P' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-200' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300'">
                                     <input type="radio" name="gender" value="P" x-model="form.gender" class="sr-only"> P - Perempuan
                                 </label>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
-                            <select x-model="form.school_class_id" required class="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Kelas <span class="text-rose-500">*</span></label>
+                            <select x-model="form.school_class_id" required class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
                                 <option value="">- Pilih kelas Anda -</option>
                                 @foreach($classes as $kelas)
                                     <option value="{{ $kelas->id }}">{{ $kelas->name }}</option>
@@ -112,70 +123,70 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">NISN <span class="text-rose-500">*</span></label>
+                            <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NISN <span class="text-rose-500">*</span></label>
                             <input type="text" x-model="form.nisn" required inputmode="numeric" maxlength="20" placeholder="Masukkan 10 digit angka NISN"
-                                   class="w-full rounded-lg border-gray-300 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
-                            <p class="text-[11px] text-gray-400 mt-1">Nomor Induk Siswa Nasional Anda (hanya angka).</p>
+                                   class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
+                            <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">Nomor Induk Siswa Nasional Anda (hanya angka).</p>
                         </div>
 
                         <label class="flex items-start space-x-3 p-4 rounded-xl border cursor-pointer transition"
-                               :class="form.setuju ? 'border-emerald-400 bg-emerald-50' : 'border-gray-300 bg-gray-50'">
+                               :class="form.setuju ? 'border-emerald-400 dark:border-emerald-600 bg-emerald-50 dark:bg-emerald-950/40' : 'border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/50'">
                             <input type="checkbox" x-model="form.setuju" @change="onSetujuChange()"
-                                   class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer appearance-none rounded-md border-2 border-gray-500 bg-white text-indigo-600 checked:border-indigo-600 checked:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                            <span class="text-xs text-gray-700 leading-relaxed">Saya menyetujui data <strong>biometrik</strong> (foto wajah dan sidik jari) saya direkam dan dipakai <strong>hanya untuk keperluan absensi</strong> SMK KNBI.</span>
+                                   class="mt-0.5 h-5 w-5 shrink-0 cursor-pointer appearance-none rounded-md border-2 border-gray-500 dark:border-slate-500 bg-white dark:bg-slate-800 text-indigo-600 checked:border-indigo-600 checked:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                            <span class="text-xs text-gray-700 dark:text-slate-300 leading-relaxed">Saya menyetujui data <strong>biometrik</strong> (foto wajah dan sidik jari) saya direkam dan dipakai <strong>hanya untuk keperluan absensi</strong> SMK KNBI.</span>
                         </label>
                     </div>
                 </section>
 
                 {{-- Langkah 2: Foto Wajah --}}
-                <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6" data-face-autocapture>
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6" data-face-autocapture>
                     <div class="flex items-center justify-between gap-2 mb-1">
                         <div class="flex items-center space-x-3">
                             <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">2</span>
-                            <h2 class="text-base font-bold text-gray-900">Foto Wajah (3 foto)</h2>
+                            <h2 class="text-base font-bold text-gray-900 dark:text-slate-100">Foto Wajah (3 foto)</h2>
                         </div>
                         <span x-show="form.setuju && !kameraGagal" x-cloak
                               class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold"
-                              :class="manualMode ? 'bg-amber-100 text-amber-800' : 'bg-indigo-100 text-indigo-800'"
+                              :class="manualMode ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300' : 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300'"
                               x-text="manualMode ? 'Mode Manual (Fallback)' : 'Auto-Capture + Liveness'"></span>
                     </div>
-                    <p class="text-[11px] text-gray-400 ml-10 mb-3">Kamera menyala setelah Anda mencentang persetujuan di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
+                    <p class="text-[11px] text-gray-400 dark:text-slate-400 ml-10 mb-3">Kamera menyala setelah Anda mencentang persetujuan di atas. Ikuti panduan gerakan wajah agar 3 foto diambil otomatis.</p>
 
                     {{-- Indikator 4 langkah otomatis: Hadap Lurus -> Tengok Kanan -> Tengok Kiri -> Kedip --}}
-                    <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak x-transition.duration.200ms class="mb-3 rounded-xl border border-indigo-100 bg-indigo-50/70 p-3">
+                    <div x-show="form.setuju && !kameraGagal && !manualMode" x-cloak x-transition.duration.200ms class="mb-3 rounded-xl border border-indigo-100 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/40 p-3">
                         <div class="grid grid-cols-4 gap-1.5 text-[11px] font-bold text-center">
                             <div class="px-2 py-1.5 rounded-lg border transition"
-                                 :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                 :class="autoStep > 0 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 0 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                 1. Hadap Lurus
                             </div>
                             <div class="px-2 py-1.5 rounded-lg border transition"
-                                 :class="autoStep > 1 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 1 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                 :class="autoStep > 1 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 1 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                 2. Tengok Kanan
                             </div>
                             <div class="px-2 py-1.5 rounded-lg border transition"
-                                 :class="autoStep > 2 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 2 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                 :class="autoStep > 2 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 2 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                 3. Tengok Kiri
                             </div>
                             <div class="px-2 py-1.5 rounded-lg border transition"
-                                 :class="autoStep > 3 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 3 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-gray-500 border-gray-200')">
+                                 :class="autoStep > 3 ? 'bg-emerald-600 text-white border-emerald-600' : (autoStep === 3 ? 'bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-300' : 'bg-white dark:bg-slate-800 text-gray-500 dark:text-slate-400 border-gray-200 dark:border-slate-700')">
                                 4. Kedip Mata
                             </div>
                         </div>
                         <div class="mt-2 flex flex-col items-center gap-1 text-center">
-                            <p class="text-xs font-bold text-indigo-900" x-text="autoHint"></p>
+                            <p class="text-xs font-bold text-indigo-900 dark:text-indigo-200" x-text="autoHint"></p>
                             <span x-show="stabilityText" x-cloak
                                   class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-extrabold transition-colors duration-200"
-                                  :class="stabilityReady ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                                  :class="stabilityReady ? 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300'"
                                   x-text="stabilityText"></span>
                         </div>
                     </div>
 
                     {{-- Banner peringatan bila timeout 10 detik per step tercapai --}}
                     <div x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" x-cloak x-transition.duration.200ms
-                         class="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                         class="mb-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/50 p-3 text-xs text-amber-900 dark:text-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div>
                             <p class="font-extrabold">Wajah tidak terdeteksi dengan baik</p>
-                            <p class="text-[11px] text-amber-800 mt-0.5">Pastikan pencahayaan cukup dan wajah berada di dalam kotak panduan, atau beralih ke mode manual.</p>
+                            <p class="text-[11px] text-amber-800 dark:text-amber-300 mt-0.5">Pastikan pencahayaan cukup dan wajah berada di dalam kotak panduan, atau beralih ke mode manual.</p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
                             <button type="button" @click="cobaLagiStep()"
@@ -183,17 +194,17 @@
                                 Coba lagi
                             </button>
                             <button type="button" @click="aktifManualFallback()"
-                                    class="px-3 py-1.5 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-amber-900 text-xs font-bold transition">
+                                    class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-amber-400 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-xs font-bold transition">
                                 Mode Manual
                             </button>
                         </div>
                     </div>
 
-                    <div x-show="form.setuju && kameraGagal" x-cloak class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 mb-3">
+                    <div x-show="form.setuju && kameraGagal" x-cloak class="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 p-3 text-xs text-amber-800 dark:text-amber-200 mb-3">
                         Kamera tidak dapat dipakai (perangkat tidak ada / izin ditolak / browser tidak mendukung). Izinkan kamera lewat ikon gembok di bilah alamat browser, lalu muat ulang halaman ini.
                     </div>
 
-                    <div x-show="form.setuju" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300" style="aspect-ratio: 16/9;">
+                    <div x-show="form.setuju" class="relative rounded-xl overflow-hidden bg-gray-900 border border-gray-300 dark:border-slate-700" style="aspect-ratio: 16/9;">
                         <video x-ref="cameraPreview" autoplay muted playsinline class="w-full h-full object-cover relative z-0"></video>
 
                         {{-- Overlay panduan posisi wajah (disamakan dengan kiosk gerbang) --}}
@@ -236,26 +247,26 @@
                         </div>
                     </div>
 
-                    <p class="mt-2 text-center text-xs font-medium text-gray-600">
+                    <p class="mt-2 text-center text-xs font-medium text-gray-600 dark:text-slate-400">
                         Pastikan cahaya cukup dan wajah menghadap kamera.
                     </p>
 
                     <div class="grid grid-cols-3 gap-3 mt-3">
                         <template x-for="(foto, i) in photos" :key="i">
-                            <div class="rounded-xl border-2 overflow-hidden" :class="foto ? 'border-emerald-400' : 'border-dashed border-gray-300 bg-gray-50'">
-                                <div class="aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
+                            <div class="rounded-xl border-2 overflow-hidden" :class="foto ? 'border-emerald-400 dark:border-emerald-600' : 'border-dashed border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-900/50'">
+                                <div class="aspect-[4/3] bg-gray-100 dark:bg-slate-900 flex items-center justify-center overflow-hidden">
                                     <img x-show="foto" :src="foto"
                                          loading="lazy" decoding="async"
                                          x-data="{ loaded: false }"
                                          x-init="$nextTick(() => { if ($el.complete) loaded = true })"
                                          @load="loaded = true"
                                          :class="loaded ? 'blur-0 opacity-100' : 'blur-[2px] opacity-80'"
-                                         class="w-full h-full object-cover bg-slate-200 transition-all duration-200" alt="Foto wajah">
-                                    <span x-show="!foto" class="text-2xl font-black text-gray-300" x-text="i + 1"></span>
+                                         class="w-full h-full object-cover bg-slate-200 dark:bg-slate-700 transition-all duration-200" alt="Foto wajah">
+                                    <span x-show="!foto" class="text-2xl font-black text-gray-300 dark:text-slate-600" x-text="i + 1"></span>
                                 </div>
-                                <div class="p-1.5 flex items-center justify-between bg-white border-t border-gray-100">
-                                    <span class="text-[10px] font-bold text-gray-500" x-text="photoLabels[i] || ('Foto ' + (i + 1))"></span>
-                                    <button type="button" x-show="foto" @click="ulangFoto(i)" class="text-[10px] font-bold text-rose-600 hover:text-rose-800 px-1.5 py-0.5 rounded">Ulangi</button>
+                                <div class="p-1.5 flex items-center justify-between bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700">
+                                    <span class="text-[10px] font-bold text-gray-500 dark:text-slate-400" x-text="photoLabels[i] || ('Foto ' + (i + 1))"></span>
+                                    <button type="button" x-show="foto" @click="ulangFoto(i)" class="text-[10px] font-bold text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 px-1.5 py-0.5 rounded">Ulangi</button>
                                 </div>
                             </div>
                         </template>
@@ -265,7 +276,7 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <button type="button" x-show="manualMode" @click="ambilFoto()"
                                     :disabled="!form.setuju || kameraGagal || countdown !== null || photos.every(p => p)"
-                                    class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white text-xs font-semibold transition">
+                                    class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 text-white text-xs font-semibold transition">
                                 <span x-text="countdown !== null ? 'Bersiap… ' + countdown : 'Ambil Foto'"></span>
                             </button>
                             <button type="button" x-show="form.setuju && !kameraGagal && !manualMode && stepTimedOut" @click="cobaLagiStep()"
@@ -273,71 +284,71 @@
                                 Coba lagi
                             </button>
                             <button type="button" x-show="!manualMode && !photos.every(p => p)" @click="aktifManualFallback()"
-                                    class="text-xs font-bold text-indigo-700 hover:text-indigo-900 underline">
+                                    class="text-xs font-bold text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 underline">
                                 Gunakan tombol ambil foto manual
                             </button>
                         </div>
                         <button type="button" x-show="form.setuju && !kameraGagal && (photos.some(p => p) || autoStep > 0 || stepTimedOut)" @click="ulangSemuaWajah()"
-                                class="text-[11px] font-semibold text-rose-600 hover:text-rose-800 underline">
+                                class="text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-800 dark:hover:text-rose-300 underline">
                             Ulangi panduan dari awal
                         </button>
                     </div>
                 </section>
 
                     {{-- Langkah 3: Sidik Jari --}}
-                <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
                     <div class="flex items-center justify-between gap-2 mb-1">
                         <div class="flex items-center space-x-3">
                             <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">3</span>
-                            <h2 class="text-base font-bold text-gray-900">Sidik Jari</h2>
+                            <h2 class="text-base font-bold text-gray-900 dark:text-slate-100">Sidik Jari</h2>
                         </div>
                         @if(isDebugMode())
                             <button type="button" @click="bypassSidikJariGranular()"
-                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition">
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[11px] font-bold transition">
                                 DEBUG: Skip Sidik Jari
                             </button>
                         @endif
                     </div>
-                    <p class="text-[11px] text-gray-400 ml-10 mb-4">Tekan tombol, lalu letakkan jari Anda pada sensor. Bisa dilewati bila sensor belum tersedia.</p>
+                    <p class="text-[11px] text-gray-400 dark:text-slate-400 ml-10 mb-4">Tekan tombol, lalu letakkan jari Anda pada sensor. Bisa dilewati bila sensor belum tersedia.</p>
 
                     <div class="flex items-center gap-3 flex-wrap">
                         <button type="button" @click="daftarSidikJari()" :disabled="enrollStatus === 'loading'"
-                                class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 text-white text-xs font-semibold transition">
+                                class="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 text-white text-xs font-semibold transition">
                             <svg class="w-4 h-4 me-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.1.9-2 2-2s2 .9 2 2m-6.5 1.5A6.5 6.5 0 0112 5a6.5 6.5 0 014.5 11M8 14.5A3.5 3.5 0 0012 17a3.5 3.5 0 003.5-3M5.5 12H3m18 0h-2.5"/></svg>
                             <span x-text="enrollStatus === 'loading' ? 'Membaca sidik jari…' : 'Daftar Sidik Jari'"></span>
                         </button>
-                        <span x-show="enrollStatus === 'ok'" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">✓ Sidik jari terdaftar <span x-show="form.fingerprint_id" class="ms-1 font-mono text-[10px]" x-text="'(' + form.fingerprint_id + ')'"></span></span>
-                        <span x-show="enrollStatus === 'gagal'" class="text-xs text-rose-600 font-medium" x-text="enrollMessage"></span>
+                        <span x-show="enrollStatus === 'ok'" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs font-bold">✓ Sidik jari terdaftar <span x-show="form.fingerprint_id" class="ms-1 font-mono text-[10px]" x-text="'(' + form.fingerprint_id + ')'"></span></span>
+                        <span x-show="enrollStatus === 'gagal'" class="text-xs text-rose-600 dark:text-rose-400 font-medium" x-text="enrollMessage"></span>
                     </div>
                 </section>
 
                 {{-- Langkah 4: Kartu Pelajar --}}
-                <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <section class="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 shadow-sm p-6">
                     <div class="flex items-center justify-between gap-2 mb-1">
                         <div class="flex items-center space-x-3">
                             <span class="w-7 h-7 rounded-full bg-indigo-600 text-white text-sm font-black flex items-center justify-center">4</span>
-                            <h2 class="text-base font-bold text-gray-900">Kartu Pelajar</h2>
+                            <h2 class="text-base font-bold text-gray-900 dark:text-slate-100">Kartu Pelajar</h2>
                         </div>
                         @if(isDebugMode())
                             <button type="button" @click="bypassRfidGranular()"
-                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition">
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg border border-amber-400 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[11px] font-bold transition">
                                 DEBUG: Generate UID Kartu
                             </button>
                         @endif
                     </div>
-                    <p class="text-[11px] text-gray-400 ml-10 mb-4">Ketuk kotak di bawah, lalu tempelkan kartu pelajar Anda ke scanner (atau ketik UID kartu lalu Enter).</p>
+                    <p class="text-[11px] text-gray-400 dark:text-slate-400 ml-10 mb-4">Ketuk kotak di bawah, lalu tempelkan kartu pelajar Anda ke scanner (atau ketik UID kartu lalu Enter).</p>
 
                     <input type="text" x-ref="cardInput" @keydown.enter.prevent="bacaKartu($event)" placeholder="Tempelkan kartu di sini…"
-                           class="w-full rounded-lg border-gray-300 text-center text-lg font-mono shadow-sm focus:border-indigo-500 focus:ring-indigo-500" autocomplete="off">
+                           class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-center text-lg font-mono shadow-sm focus:border-indigo-500 focus:ring-indigo-500" autocomplete="off">
                     <div class="mt-2 flex items-center justify-between gap-3 flex-wrap">
-                        <span x-show="!form.card_uid" class="text-xs text-gray-400">Belum ada kartu terbaca.</span>
-                        <span x-show="form.card_uid" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-mono font-bold">✓ Kartu terbaca: <span class="ms-1" x-text="form.card_uid"></span></span>
-                        <button type="button" x-show="form.card_uid" @click="form.card_uid = ''" class="text-xs font-semibold text-gray-500 hover:text-gray-800 underline">Ketuk ulang</button>
+                        <span x-show="!form.card_uid" class="text-xs text-gray-400 dark:text-slate-500">Belum ada kartu terbaca.</span>
+                        <span x-show="form.card_uid" class="inline-flex items-center px-3 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold">✓ Kartu terbaca: <span class="ms-1" x-text="form.card_uid"></span></span>
+                        <button type="button" x-show="form.card_uid" @click="form.card_uid = ''" class="text-xs font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 underline">Ketuk ulang</button>
                     </div>
                 </section>
 
                 <button type="submit" :disabled="!form.siapSimpan() || saving"
-                        class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-lg font-extrabold shadow-sm transition">
+                        class="w-full py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 disabled:cursor-not-allowed text-white text-lg font-extrabold shadow-sm transition">
                     <span x-text="saving ? 'Menyimpan…' : 'Selesaikan Pendaftaran'"></span>
                 </button>
             </form>

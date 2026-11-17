@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\SchoolClass;
+use App\Support\ExportSanitizer;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use OpenSpout\Common\Entity\Row;
@@ -54,7 +55,7 @@ class DaftarHadirExcelExporter
         unlink($tmp);
 
         $namaBulan = Carbon::create($tahun, $bulan, 1)->translatedFormat('F');
-        $filename = 'DAFTAR-HADIR-'.$namaBulan.'-'.$tahun.'-'.str_replace(' ', '-', $slug).'.xlsx';
+        $filename = ExportSanitizer::sanitizeFilename('DAFTAR-HADIR-'.$namaBulan.'-'.$tahun.'-'.str_replace(' ', '-', $slug).'.xlsx');
 
         return [
             'content' => $content,
@@ -94,22 +95,23 @@ class DaftarHadirExcelExporter
         $totalRows = count($rows);
 
         foreach ($rows as $i => $row) {
+            $safeRow = ExportSanitizer::sanitizeRow($row);
             if ($i <= 2) {
                 $kopRow = array_fill(0, DaftarHadirBulanan::JUMLAH_KOLOM, '');
-                $kopRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] = (string) ($row[DaftarHadirBulanan::KOLOM_KOP_TENGAH] ?? ($row[0] ?? ''));
+                $kopRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] = (string) ($safeRow[DaftarHadirBulanan::KOLOM_KOP_TENGAH] ?? ($safeRow[0] ?? ''));
                 $writer->addRow(Row::fromValues($kopRow, $styles['boldCenter']));
             } elseif ($i >= 3 && $i <= 5) {
-                $writer->addRow(Row::fromValues($row, $styles['bold']));
+                $writer->addRow(Row::fromValues($safeRow, $styles['bold']));
             } elseif ($i === 6 || $i === $totalRows - 5) {
-                $writer->addRow(Row::fromValues($row));
+                $writer->addRow(Row::fromValues($safeRow));
             } elseif ($i === 7 || $i === 8) {
                 $headerStyles = $this->buildHeaderRowStyles($weekendMap, $styles);
-                $paddedRow = $i === 7 ? array_pad($row, DaftarHadirBulanan::JUMLAH_KOLOM, '') : $row;
+                $paddedRow = $i === 7 ? array_pad($safeRow, DaftarHadirBulanan::JUMLAH_KOLOM, '') : $safeRow;
                 $writer->addRow(Row::fromValuesWithStyles($paddedRow, null, $headerStyles));
             } elseif ($i >= 9 && $i < $totalRows - 5) {
-                $writer->addRow(Row::fromValuesWithStyles($row, null, $this->buildStudentRowStyles($row, $weekendMap, $styles)));
+                $writer->addRow(Row::fromValuesWithStyles($safeRow, null, $this->buildStudentRowStyles($safeRow, $weekendMap, $styles)));
             } else {
-                $writer->addRow(Row::fromValues($row, $styles['right']));
+                $writer->addRow(Row::fromValues($safeRow, $styles['right']));
             }
         }
     }

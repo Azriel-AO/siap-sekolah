@@ -25,8 +25,10 @@ class DashboardController extends Controller
 
         $siswaPerluDaftarWajah = false;
         if ($user->role === 'siswa') {
-            $student = Student::where('user_id', $user->id)->first() ?? Student::first();
-            $siswaPerluDaftarWajah = ! $student || ! $student->faceEnrollment;
+            $student = Student::where('user_id', $user->id)
+                ->when($user->student_id, fn ($query) => $query->orWhere('id', $user->student_id))
+                ->first();
+            $siswaPerluDaftarWajah = $student !== null && ! $student->faceEnrollment;
         }
 
         $metrics = $this->metricsService->buildMetrics();

@@ -136,12 +136,14 @@ class KioskController extends Controller
             'student_id' => ['required', 'integer', 'exists:students,id'],
             'match_score' => ['required', 'numeric'],
             'photo' => ['nullable', 'string', 'max:400000'],
+            'verify_token' => ['nullable', 'string', 'max:100'],
         ]);
 
         return $this->kioskService->processFaceVerify(
             (int) $validated['student_id'],
             (float) $validated['match_score'],
-            $validated['photo'] ?? null
+            $validated['photo'] ?? null,
+            $validated['verify_token'] ?? null
         );
     }
 

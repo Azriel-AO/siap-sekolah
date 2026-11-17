@@ -16,15 +16,24 @@ class StudentAttendanceController extends Controller
     {
         $user = $request->user();
 
-        // Cari record siswa yang tertaut dengan akun login
+        // Cari record siswa yang tertaut ketat dengan akun login (hindari fallback IDOR ke siswa lain)
         $student = Student::with(['schoolClass', 'rfidCard'])
-            ->where('user_id', $user->id)
+            ->where(function ($query) use ($user): void {
+                $query->where('user_id', $user->id);
+                if ($user->student_id) {
+                    $query->orWhere('id', $user->student_id);
+                }
+            })
             ->first();
 
-        // Jika login dengan role siswa tapi belum tertaut (atau fallback demo)
-        if (! $student) {
-            $student = Student::with(['schoolClass', 'rfidCard'])->first();
+        if (! $student && $user->role === 'admin') {
+            $requestedStudentId = $request->integer('student_id');
+            $student = $requestedStudentId > 0
+                ? Student::with(['schoolClass', 'rfidCard'])->find($requestedStudentId)
+                : Student::with(['schoolClass', 'rfidCard'])->first();
         }
+
+        abort_if(! $student, 404, 'Data siswa belum tertaut dengan akun ini.');
 
         $attendances = Attendance::where('student_id', $student->id)
             ->orderBy('date', 'desc')

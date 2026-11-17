@@ -34,8 +34,6 @@ Route::get('/dashboard', [DashboardController::class, 'index'])
 
 // Kiosk Gerbang Tunggal (kartu + sidik jari; tanpa scoping kelas)
 Route::get('/kiosk', [KioskController::class, 'gerbang'])->name('kiosk.gerbang');
-Route::get('/kiosk/face-templates', [KioskController::class, 'faceTemplates'])->name('kiosk.face.templates');
-Route::post('/kiosk/face-templates', [KioskController::class, 'syncFaceTemplate'])->name('kiosk.face.templates.sync');
 Route::post('/kiosk/tap', [KioskController::class, 'tap'])
     ->middleware('throttle:kiosk-tap')
     ->name('kiosk.tap');
@@ -58,14 +56,14 @@ Route::post('/pendaftaran', [PendaftaranController::class, 'store'])
 Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])->name('pendaftaran.fingerprint.enrolar');
 Route::get('/pendaftaran/berhasil', [PendaftaranController::class, 'berhasil'])->name('pendaftaran.berhasil');
 
-// Route lama /kiosk/{slug} tetap aman: redirect 301 ke /kiosk
-Route::redirect('/kiosk/{slug}', '/kiosk', 301)->where('slug', '[A-Za-z0-9\-]+');
-Route::redirect('/kiosk/{slug}/tap', '/kiosk/tap', 301)->where('slug', '[A-Za-z0-9\-]+');
-
 // Rute terproteksi sesi autentikasi
 Route::middleware(['auth', 'prevent-back-history'])->group(function () {
     // Admin: semua route /admin/* serta rekap & riwayat khusus peran admin (middleware 'admin'). Guru & siswa → 403.
     Route::middleware(['admin'])->group(function () {
+        // Template wajah biometrik kiosk dibatasi ketat hanya untuk sesi admin
+        Route::get('/kiosk/face-templates', [KioskController::class, 'faceTemplates'])->name('kiosk.face.templates');
+        Route::post('/kiosk/face-templates', [KioskController::class, 'syncFaceTemplate'])->name('kiosk.face.templates.sync');
+
         // Rekap Absensi (US-21, US-22) — sekarang dibuka oleh admin
         Route::get('/guru/rekap-harian', [TeacherAttendanceController::class, 'index'])->name('guru.rekap');
         Route::get('/guru/rekap-harian/data', [TeacherAttendanceController::class, 'data'])->name('guru.rekap.data');
@@ -119,5 +117,9 @@ Route::middleware(['auth', 'prevent-back-history'])->group(function () {
         ->middleware('throttle:enrollment')
         ->name('siswa.wajah.simpan');
 });
+
+// Route lama /kiosk/{slug} tetap aman: ditempatkan setelah /kiosk/face-templates agar tidak mencegat API admin
+Route::redirect('/kiosk/{slug}', '/kiosk', 301)->where('slug', '[A-Za-z0-9\-]+');
+Route::redirect('/kiosk/{slug}/tap', '/kiosk/tap', 301)->where('slug', '[A-Za-z0-9\-]+');
 
 require __DIR__.'/auth.php';

@@ -74,7 +74,8 @@ class Task48FaceAndClassMergeTest extends TestCase
         $meta = json_decode((string) Storage::disk('local')->get("face-photos/{$student->id}/template_meta.json"), true);
         $this->assertSame(FaceTemplateService::TEMPLATE_VERSION, $meta['version'] ?? null);
 
-        $templatesRes = $this->getJson('/kiosk/face-templates');
+        $admin = User::factory()->create(['role' => 'admin']);
+        $templatesRes = $this->actingAs($admin)->getJson('/kiosk/face-templates');
         $templatesRes->assertOk();
 
         $matchedEntry = collect($templatesRes->json())->firstWhere('student_id', $student->id);
@@ -124,7 +125,8 @@ class Task48FaceAndClassMergeTest extends TestCase
         Storage::disk('local')->assertMissing("face-photos/{$student->id}/template.json");
         Storage::disk('local')->assertMissing("face-photos/{$student->id}/template_meta.json");
 
-        $kioskTemplates = $this->getJson('/kiosk/face-templates')->assertOk()->json();
+        $admin = User::where('email', 'admin@knbi.sch.id')->firstOrFail();
+        $kioskTemplates = $this->actingAs($admin)->getJson('/kiosk/face-templates')->assertOk()->json();
         $entry = collect($kioskTemplates)->firstWhere('student_id', $student->id);
         $this->assertNotNull($entry);
         $this->assertNull($entry['template']);
@@ -135,6 +137,7 @@ class Task48FaceAndClassMergeTest extends TestCase
     public function test_kiosk_face_templates_meminta_ekstraksi_foto_lama_dan_sync_melindungi_dari_overwrite(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
+        $admin = User::factory()->create(['role' => 'admin']);
         Storage::fake('local');
         Cache::flush();
 
@@ -160,7 +163,7 @@ class Task48FaceAndClassMergeTest extends TestCase
             'consented_at' => now(),
         ]);
 
-        $res = $this->getJson('/kiosk/face-templates')->assertOk();
+        $res = $this->actingAs($admin)->getJson('/kiosk/face-templates')->assertOk();
         $entry = collect($res->json())->firstWhere('student_id', $student->id);
         $this->assertNotNull($entry);
         $this->assertNull($entry['template']);
@@ -168,14 +171,14 @@ class Task48FaceAndClassMergeTest extends TestCase
         $this->assertCount(3, $entry['face_photos'] ?? []);
 
         // Tolak vektor nol atau panjang salah
-        $this->postJson('/kiosk/face-templates', [
+        $this->actingAs($admin)->postJson('/kiosk/face-templates', [
             'student_id' => $student->id,
             'status' => 'ok',
             'template' => array_fill(0, 1434, 0.0),
         ])->assertStatus(422);
 
         $realVec = $this->fakeVector(0.18);
-        $this->postJson('/kiosk/face-templates', [
+        $this->actingAs($admin)->postJson('/kiosk/face-templates', [
             'student_id' => $student->id,
             'status' => 'ok',
             'template' => $realVec,
@@ -183,13 +186,13 @@ class Task48FaceAndClassMergeTest extends TestCase
 
         // Permintaan kedua tidak boleh menimpa template v2 yang sudah tersimpan
         $tamperVec = $this->fakeVector(0.88);
-        $this->postJson('/kiosk/face-templates', [
+        $this->actingAs($admin)->postJson('/kiosk/face-templates', [
             'student_id' => $student->id,
             'status' => 'ok',
             'template' => $tamperVec,
         ])->assertOk()->assertJson(['ok' => true, 'already_synced' => true]);
 
-        $afterSync = $this->getJson('/kiosk/face-templates')->assertOk();
+        $afterSync = $this->actingAs($admin)->getJson('/kiosk/face-templates')->assertOk();
         $syncedEntry = collect($afterSync->json())->firstWhere('student_id', $student->id);
         $this->assertEquals($realVec, $syncedEntry['template']);
     }

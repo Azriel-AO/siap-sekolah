@@ -127,8 +127,11 @@ class FaceEnrollmentController extends Controller
 
     private function siswaMilikAkun(Request $request): ?Student
     {
-        return Student::where('user_id', $request->user()->id)->first()
-            ?? Student::first();
+        $user = $request->user();
+
+        return Student::where('user_id', $user->id)
+            ->when($user->student_id, fn ($query) => $query->orWhere('id', $user->student_id))
+            ->first();
     }
 
     private function pendaftaranValid(?FaceEnrollment $enrollment): bool

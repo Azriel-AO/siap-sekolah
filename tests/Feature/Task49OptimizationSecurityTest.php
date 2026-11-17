@@ -214,6 +214,9 @@ class Task49OptimizationSecurityTest extends TestCase
         $regResponse->assertJsonValidationErrors(['photos.0']);
 
         $siswaUser = User::factory()->create(['role' => 'siswa']);
+        $student = Student::firstOrFail();
+        $student->update(['user_id' => $siswaUser->id]);
+        $siswaUser->update(['student_id' => $student->id]);
         $enrollResponse = $this->actingAs($siswaUser)->postJson('/siswa/pendaftaran-wajah', [
             'consent' => true,
             'photos' => [$oversizedJpeg, $validPngDataUrl, $validPngDataUrl],

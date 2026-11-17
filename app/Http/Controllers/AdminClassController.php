@@ -113,14 +113,17 @@ class AdminClassController extends Controller
     private function validasi(Request $request, ?SchoolClass $class = null): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:50'],
+            'name' => ['required', 'string', 'max:50', 'not_regex:/[<>]/'],
             'slug' => ['nullable', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('school_classes', 'slug')->ignore($class?->id)],
-            'department' => ['nullable', 'string', 'max:50'],
-            'wali_kelas' => ['nullable', 'string', 'max:100'],
+            'department' => ['nullable', 'string', 'max:50', 'not_regex:/[<>]/'],
+            'wali_kelas' => ['nullable', 'string', 'max:100', 'not_regex:/[<>]/'],
             'entry_time' => ['nullable', 'date_format:H:i'],
             'exit_time' => ['nullable', 'date_format:H:i'],
         ], [
             'name.required' => 'Nama kelas wajib diisi.',
+            'name.not_regex' => 'Nama kelas tidak boleh mengandung karakter < atau >.',
+            'department.not_regex' => 'Nama jurusan tidak boleh mengandung karakter < atau >.',
+            'wali_kelas.not_regex' => 'Nama wali kelas tidak boleh mengandung karakter < atau >.',
             'slug.regex' => 'Slug hanya boleh huruf, angka, dan tanda minus (contoh: 10-TKR-1). Pola diubah otomatis ke kapital.',
             'slug.unique' => 'Slug tersebut sudah dipakai kelas lain.',
             'department.max' => 'Nama jurusan maksimal 50 karakter.',

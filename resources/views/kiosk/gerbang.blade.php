@@ -11,33 +11,44 @@
     <link rel="preload" href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" as="style">
     <link rel="preload" href="{{ asset('images/logo-sekolah.png') }}" as="image">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&display=swap" rel="stylesheet" />
+    <script>
+        (function () {
+            const t = localStorage.getItem('epresknbi-theme');
+            if (t === 'dark' || (t === null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="bg-slate-900 text-white font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white"
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-indigo-500 selection:text-white transition-colors duration-200"
       data-kiosk-face-verify
       x-data="kioskGerbangApp()"
       x-init="initKiosk()"
       @click="focusInput()">
 
     <!-- Header Kiosk -->
-    <header class="p-6 sm:px-12 flex justify-between items-center border-b border-slate-800 bg-slate-900/80 backdrop-blur">
+    <header class="p-6 sm:px-12 flex justify-between items-center border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur transition-colors duration-200">
         <div class="flex items-center space-x-4">
-            <div class="bg-white rounded-lg p-1 flex items-center justify-center shadow-lg">
+            <div class="bg-white dark:bg-slate-100 rounded-lg p-1 border border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
                 <img src="{{ asset('images/logo-sekolah.png') }}" alt="Logo SMK Karya Nugraha" class="h-10 w-auto object-contain">
             </div>
             <div>
-                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-white">E-PRESKNBI - SMK KARYA NUGRAHA</h1>
-                <p class="text-xs sm:text-sm text-slate-400 font-medium">Absen Gerbang Tunggal</p>
+                <h1 class="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">E-PRESKNBI - SMK KARYA NUGRAHA</h1>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium">Absen Gerbang Tunggal</p>
             </div>
         </div>
 
-        <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-4 sm:space-x-6">
             <div class="text-right">
-                <div class="text-2xl sm:text-3xl font-mono font-bold tracking-wider text-emerald-400" x-text="currentTime">--:--:--</div>
-                <div class="text-xs text-slate-400" x-text="currentDate">--</div>
+                <div class="text-2xl sm:text-3xl font-mono font-bold tracking-wider text-emerald-600 dark:text-emerald-400" x-text="currentTime">--:--:--</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400" x-text="currentDate">--</div>
             </div>
-            <div class="hidden sm:inline-flex px-4 py-2 rounded-xl bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 font-bold text-sm tracking-wide">
+            <div class="hidden sm:inline-flex px-4 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 border border-indigo-200 dark:border-indigo-500/40 text-indigo-700 dark:text-indigo-300 font-bold text-sm tracking-wide">
                 Gerbang Sekolah
+            </div>
+            <div @click.stop>
+                <x-theme-toggle :compact="true" />
             </div>
         </div>
     </header>
@@ -51,8 +62,8 @@
             <div x-show="!result" x-transition.opacity.duration.300ms class="w-full flex flex-col items-center gap-3">
 
                 <div>
-                    <h2 class="text-2xl sm:text-4xl font-black text-white tracking-tight">Absen Gerbang</h2>
-                    <p class="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl mx-auto">
+                    <h2 class="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Absen Gerbang</h2>
+                    <p class="text-slate-600 dark:text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl mx-auto">
                         Silakan Tap Kartu, Tatap Kamera, atau Tempelkan Jari. Tiga jalur absensi aktif bersamaan.
                     </p>
                 </div>
@@ -63,7 +74,7 @@
 
                 {{-- Kamera utama: pusat layar, rasio tetap, video mengisi penuh container --}}
                 <div x-ref="cameraBox" x-cloak class="w-full select-none">
-                    <div class="relative mx-auto aspect-video w-full rounded-3xl overflow-hidden border-2 border-indigo-500/40 shadow-2xl shadow-indigo-900/30 bg-slate-800"
+                    <div class="relative mx-auto aspect-video w-full rounded-3xl overflow-hidden border-2 border-indigo-300 dark:border-indigo-500/40 shadow-2xl shadow-slate-300/60 dark:shadow-indigo-900/30 bg-slate-900 dark:bg-slate-950"
                          style="max-width: min(48rem, calc(40vh * 16 / 9));">
                         <video x-ref="cameraPreview" autoplay muted playsinline x-show="cameraReady"
                                class="absolute inset-0 h-full w-full object-cover object-center block bg-slate-900"></video>
@@ -150,41 +161,46 @@
                 {{-- Petunjuk tiga kanal paralel tepat di bawah kamera --}}
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full max-w-4xl">
                     {{-- Kanal 1: Kartu Pelajar --}}
-                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
-                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-500/40 bg-white dark:bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3 shadow-sm dark:shadow-none">
+                        <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                         </svg>
                         <div class="text-left min-w-0">
-                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tempelkan Kartu</p>
-                            <p class="text-[11px] text-slate-400 truncate">RFID reader selalu aktif</p>
+                            <p class="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-wide">Tempelkan Kartu</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">RFID reader selalu aktif</p>
                         </div>
                     </div>
 
                     {{-- Kanal 2: Tatap Kamera (Face ID 1:N) --}}
-                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
-                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-500/40 bg-white dark:bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3 shadow-sm dark:shadow-none">
+                        <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                         <div class="text-left min-w-0">
-                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tatap Kamera</p>
-                            <p class="text-[11px] text-slate-400 truncate" x-text="faceDetecting ? 'Mendeteksi wajah…' : 'Face ID 1:N mandiri'"></p>
+                            <p class="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-wide">Tatap Kamera</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate" x-text="faceDetecting ? 'Mendeteksi wajah…' : 'Face ID 1:N mandiri'"></p>
                         </div>
                     </div>
 
                     {{-- Kanal 3: Sidik Jari --}}
-                    <div class="rounded-2xl border-2 border-indigo-500/40 bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3">
-                        <svg class="w-8 h-8 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-500/40 bg-white dark:bg-slate-800/60 px-4 py-3 flex items-center justify-start gap-3 shadow-sm dark:shadow-none">
+                        <svg class="w-8 h-8 text-indigo-600 dark:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 11c0-1.1.9-2 2-2s2 .9 2 2m-6.5 1.5A6.5 6.5 0 0112 5a6.5 6.5 0 014.5 11M8 14.5A3.5 3.5 0 0012 17a3.5 3.5 0 003.5-3M5.5 12H3m18 0h-2.5" />
                         </svg>
                         <div class="text-left min-w-0">
-                            <p class="text-sm sm:text-base font-black text-white tracking-wide">Tekan Jari</p>
+                            <p class="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-wide">Tekan Jari</p>
                             <div class="flex items-center space-x-1.5 text-[11px] truncate">
                                 <span class="w-2 h-2 rounded-full shrink-0" :class="sensorBelumAktif ? 'bg-amber-400' : (sensorTimeoutInfo ? 'bg-sky-400 animate-pulse' : 'bg-emerald-400')"></span>
-                                <span class="text-slate-400 font-medium truncate" x-text="sensorBelumAktif ? 'Belum aktif' : (sensorTimeoutInfo ? 'Menunggu jari…' : 'Sensor aktif')"></span>
+                                <span class="text-slate-500 dark:text-slate-400 font-medium truncate" x-text="sensorBelumAktif ? 'Belum aktif' : (sensorTimeoutInfo ? 'Menunggu jari…' : 'Sensor aktif')"></span>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div x-show="faceTemplatesAuthRequired" x-cloak
+                     class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 text-amber-800 dark:text-amber-300 text-[11px] font-medium">
+                    Face ID 1:N membutuhkan sesi admin aktif pada perangkat ini
                 </div>
 
                 {{-- Tombol HANYA untuk driver mock (presenter demo). Di produksi (bridge) tidak muncul sama sekali. --}}
@@ -278,8 +294,8 @@
 
     </main>
 
-    <footer class="p-6 border-t border-slate-800 bg-slate-900/90 text-center">
-        <p class="text-xs text-slate-500 font-medium">
+    <footer class="p-6 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 text-center transition-colors duration-200">
+        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium">
             Kiosk Gerbang Sekolah: satu titik untuk semua kelas. Jam masuk/pulang mengikuti kelas masing-masing siswa.
         </p>
     </footer>
@@ -375,6 +391,7 @@
                 faceVerifyStudent: null,
                 faceVerifyStatus: '',
                 faceTemplates: [],
+                faceTemplatesAuthRequired: false,
                 readyFaceTemplates: [],
                 faceDetecting: false,
                 faceGuideState: 'idle',
@@ -856,6 +873,7 @@
                             body: JSON.stringify({
                                 student_id: tapData.student_id,
                                 match_score: hasil.matchScore,
+                                verify_token: tapData.verify_token || null,
                                 photo: fotoBuktiTerbaru
                             })
                         });
@@ -891,8 +909,15 @@
 
                 async muatFaceTemplates() {
                     try {
-                        const res = await fetch("{{ route('kiosk.face.templates') }}");
+                        const res = await fetch("{{ route('kiosk.face.templates') }}", {
+                            headers: { 'Accept': 'application/json' }
+                        });
+                        if (res.status === 401 || res.status === 403) {
+                            this.faceTemplatesAuthRequired = true;
+                            return;
+                        }
                         if (res.ok) {
+                            this.faceTemplatesAuthRequired = false;
                             const data = await res.json();
                             if (Array.isArray(data)) {
                                 this.faceTemplates = data;

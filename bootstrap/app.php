@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\PreventBackHistory;
+use App\Http\Middleware\SecurityHeadersMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -12,9 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(SecurityHeadersMiddleware::class);
+
         $middleware->alias([
-            'prevent-back-history' => \App\Http\Middleware\PreventBackHistory::class,
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'prevent-back-history' => PreventBackHistory::class,
+            'admin' => EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -20,7 +20,7 @@ return [
             ['jurusan' => 'TBKR', 'nomor' => [1], 'department' => 'Teknik Bodi Kendaraan Ringan'],
             ['jurusan' => 'TSM', 'nomor' => [1, 2, 3], 'department' => 'Teknik Sepeda Motor'],
             ['jurusan' => 'TKJ', 'nomor' => [1, 2, 3], 'department' => 'Teknik Komputer & Jaringan'],
-            ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Tata Udara & Pendingin'],
+            ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Transmisi Telekomunikasi'],
             ['jurusan' => 'PSY', 'nomor' => [1], 'department' => 'Perbankan Syariah'],
         ],
         '12' => [
@@ -28,7 +28,7 @@ return [
             ['jurusan' => 'TBKR', 'nomor' => [1], 'department' => 'Teknik Bodi Kendaraan Ringan'],
             ['jurusan' => 'TSM', 'nomor' => [1, 2], 'department' => 'Teknik Sepeda Motor'],
             ['jurusan' => 'TKJ', 'nomor' => [1, 2], 'department' => 'Teknik Komputer & Jaringan'],
-            ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Tata Udara & Pendingin'],
+            ['jurusan' => 'TTT', 'nomor' => [1], 'department' => 'Teknik Transmisi Telekomunikasi'],
             ['jurusan' => 'PSY', 'nomor' => [1], 'department' => 'Perbankan Syariah'],
         ],
     ],

@@ -6,7 +6,7 @@ if (! function_exists('isDebugMode')) {
      */
     function isDebugMode(): bool
     {
-        return (bool) config('app.debug_mode', false);
+        return ! app()->isProduction() && (bool) config('app.debug_mode', false);
     }
 }
 
