@@ -120,12 +120,14 @@ class PendaftaranTest extends TestCase
         $this->seedDemo();
         Storage::fake('local');
 
-        // CARD-TKJ-001 adalah kartu milik Raka Pratama (seed demo)
+        // CARD-TKJ-001 adalah kartu milik Raka Pratama (seed demo) — PII tidak boleh bocor pada pesan error
         $response = $this->postJson('/pendaftaran', $this->dataValid(['card_uid' => 'CARD-TKJ-001']));
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['card_uid']);
-        $this->assertStringContainsString('sudah dipakai', $response->json('errors.card_uid.0'));
+        $errorMessage = (string) $response->json('errors.card_uid.0');
+        $this->assertSame('Kartu dengan UID tersebut sudah terdaftar. Gunakan kartu lain atau hubungi admin.', $errorMessage);
+        $this->assertStringNotContainsString('Raka Pratama', $errorMessage);
 
         // Data tidak boleh setengah tersimpan
         $this->assertDatabaseMissing('students', ['nisn' => '0099001122']);

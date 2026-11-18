@@ -2,11 +2,13 @@
 
 if (! function_exists('isDebugMode')) {
     /**
-     * Cek apakah Developer Debug Mode aktif (DEBUG_MODE=true pada konfigurasi).
+     * Cek apakah Developer Debug Mode aktif (hanya di local/staging/testing saat APP_DEBUG & DEBUG_MODE true).
      */
     function isDebugMode(): bool
     {
-        return ! app()->isProduction() && (bool) config('app.debug_mode', false);
+        return app()->environment('local', 'staging', 'testing')
+            && (bool) config('app.debug_mode', false)
+            && (bool) config('app.debug', false);
     }
 }
 

@@ -32,7 +32,7 @@ class StudentRegistrationService
         $kartuTerpakai = RfidCard::with('student')->where('card_uid', $cardUid)->first();
         if ($kartuTerpakai && $kartuTerpakai->student) {
             throw ValidationException::withMessages([
-                'card_uid' => 'Kartu dengan UID "'.$cardUid.'" sudah dipakai oleh '.$kartuTerpakai->student->name.'. Gunakan kartu lain atau hubungi guru piket.',
+                'card_uid' => 'Kartu dengan UID tersebut sudah terdaftar. Gunakan kartu lain atau hubungi admin.',
             ]);
         }
 

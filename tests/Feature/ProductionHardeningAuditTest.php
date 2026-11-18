@@ -204,13 +204,16 @@ class ProductionHardeningAuditTest extends TestCase
 
         // Guard debug mode saat APP_ENV=production
         $originalEnv = $this->app['env'];
+        $originalDebug = Config::get('app.debug');
         $originalDebugMode = Config::get('app.debug_mode');
         try {
+            Config::set('app.debug', true);
             Config::set('app.debug_mode', true);
             $this->app['env'] = 'production';
             $this->assertFalse(isDebugMode());
         } finally {
             $this->app['env'] = $originalEnv;
+            Config::set('app.debug', $originalDebug);
             Config::set('app.debug_mode', $originalDebugMode);
         }
 

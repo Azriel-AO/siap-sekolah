@@ -46,14 +46,18 @@ Route::post('/kiosk/face-verify', [KioskController::class, 'faceVerify'])
 Route::post('/kiosk/fingerprint/identificar', [KioskController::class, 'identificarSidikJari'])
     ->middleware('throttle:kiosk-sensor')
     ->name('kiosk.fingerprint.identificar');
-Route::post('/kiosk/debug/simulate', [KioskController::class, 'debugSimulate'])->name('kiosk.debug.simulate');
+Route::post('/kiosk/debug/simulate', [KioskController::class, 'debugSimulate'])
+    ->middleware('throttle:10,1')
+    ->name('kiosk.debug.simulate');
 
 // Terminal Pendaftaran Mandiri (guest; SELALU terbuka — pengawasan guru piket)
 Route::get('/pendaftaran', [PendaftaranController::class, 'show'])->name('pendaftaran.index');
 Route::post('/pendaftaran', [PendaftaranController::class, 'store'])
     ->middleware('throttle:enrollment')
     ->name('pendaftaran.simpan');
-Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])->name('pendaftaran.fingerprint.enrolar');
+Route::post('/pendaftaran/fingerprint/enrolar', [PendaftaranController::class, 'fingerprintEnrolar'])
+    ->middleware('throttle:10,1')
+    ->name('pendaftaran.fingerprint.enrolar');
 Route::get('/pendaftaran/berhasil', [PendaftaranController::class, 'berhasil'])->name('pendaftaran.berhasil');
 
 // Rute terproteksi sesi autentikasi

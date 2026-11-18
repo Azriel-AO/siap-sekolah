@@ -29,10 +29,13 @@ class DebugModeAndDeviceStatusTest extends TestCase
         $this->assertFalse((bool) config('app.debug_mode'));
         $this->assertFalse(isDebugMode());
 
-        config(['app.debug_mode' => true]);
+        config(['app.debug' => false, 'app.debug_mode' => true]);
+        $this->assertFalse(isDebugMode(), 'isDebugMode wajib false ketika APP_DEBUG bernilai false.');
+
+        config(['app.debug' => true, 'app.debug_mode' => true]);
         $this->assertTrue(isDebugMode());
 
-        config(['app.debug_mode' => false]);
+        config(['app.debug' => true, 'app.debug_mode' => false]);
         $this->assertFalse(isDebugMode());
 
         $this->assertStringContainsString('DEBUG_MODE=true', file_get_contents(base_path('.env.example')));
@@ -68,7 +71,7 @@ class DebugModeAndDeviceStatusTest extends TestCase
     public function test_ui_debug_tampil_saat_debug_mode_true(): void
     {
         $this->seed([DatabaseSeeder::class, DemoAttendanceSeeder::class]);
-        config(['app.debug_mode' => true]);
+        config(['app.debug' => true, 'app.debug_mode' => true]);
 
         $student = Student::orderBy('name')->firstOrFail();
 
@@ -90,7 +93,7 @@ class DebugModeAndDeviceStatusTest extends TestCase
     public function test_endpoint_simulasi_absensi_hanya_aktif_saat_debug_mode_true_dan_memakai_proses_absensi(): void
     {
         $this->seed(DatabaseSeeder::class);
-        config(['app.debug_mode' => true]);
+        config(['app.debug' => true, 'app.debug_mode' => true]);
 
         $kelas = SchoolClass::firstOrFail();
         $student = Student::create([
@@ -146,7 +149,7 @@ class DebugModeAndDeviceStatusTest extends TestCase
     {
         $this->seed(DatabaseSeeder::class);
         Storage::fake('local');
-        config(['app.debug_mode' => true]);
+        config(['app.debug' => true, 'app.debug_mode' => true]);
 
         $kelas = SchoolClass::firstOrFail();
         $realPhoto1 = generateDummyJpegDataUrl('REAL-CAMERA-PHOTO-1');
