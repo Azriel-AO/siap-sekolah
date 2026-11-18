@@ -49,19 +49,26 @@ class FaceEnrollmentService
         }
 
         $written = [];
+        $oldPaths = [];
 
         try {
-            $enrollment = DB::transaction(function () use ($existing, $paths, $photoItems, $student, $now, &$written): FaceEnrollment {
+            $enrollment = DB::transaction(function () use ($existing, $paths, $photoItems, $student, $now, &$written, &$oldPaths): FaceEnrollment {
                 if ($existing) {
+                    // Jangan hapus dulu — catat saja. Penghapusan dilakukan SETELAH commit
+                    // sukses agar kegagalan di tengah transaksi tidak meninggalkan DB
+                    // yang menunjuk ke file lama yang sudah terhapus.
                     foreach ([$existing->photo_1_path, $existing->photo_2_path, $existing->photo_3_path] as $oldPath) {
                         if ($oldPath) {
-                            Storage::disk('local')->delete($oldPath);
+                            $oldPaths[] = $oldPath;
                         }
                     }
                 }
 
                 foreach ($paths as $slot => $path) {
-                    Storage::disk('local')->put($path, $photoItems[$slot]['binary']);
+                    if (! Storage::disk('local')->put($path, $photoItems[$slot]['binary'])) {
+                        throw new \RuntimeException("Gagal menulis foto wajah ke penyimpanan: {$path}");
+                    }
+
                     $written[] = $path;
                 }
 
@@ -97,6 +104,13 @@ class FaceEnrollmentService
                     ? 'Gagal menyimpan pendaftaran ulang. Coba lagi.'
                     : 'Gagal menyimpan pendaftaran. Coba lagi.',
             ];
+        }
+
+        // Commit sukses: barulah foto lama dihapus dari disk (lewati bila path sama pada detik yang sama).
+        foreach ($oldPaths as $oldPath) {
+            if (! in_array($oldPath, $paths, true)) {
+                Storage::disk('local')->delete($oldPath);
+            }
         }
 
         Cache::forget(FaceTemplateService::CACHE_KEY);

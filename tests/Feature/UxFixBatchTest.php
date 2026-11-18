@@ -2,12 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Models\Attendance;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\KioskAttendanceService;
 use App\Services\StudentRegistrationService;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -24,8 +27,9 @@ class UxFixBatchTest extends TestCase
 
         $ihdr = pack('N2C5', 2, 2, 8, 2, 0, 0, 0);
         $idat = (string) gzcompress("\x00\xFF\x00\x00\x00\xFF\x00\x00\xFF\x00\xFF\xFF\x00\x00");
+        $text = "Comment\x00".str_repeat('P', 120);
 
-        return 'data:image/png;base64,'.base64_encode("\x89PNG\r\n\x1A\n".$chunk('IHDR', $ihdr).$chunk('IDAT', $idat).$chunk('IEND', ''));
+        return 'data:image/png;base64,'.base64_encode("\x89PNG\r\n\x1A\n".$chunk('IHDR', $ihdr).$chunk('tEXt', $text).$chunk('IDAT', $idat).$chunk('IEND', ''));
     }
 
     public function test_pendaftaran_mengembalikan_json_422_saat_terjadi_throwable_dengan_accept_json(): void
@@ -112,18 +116,18 @@ class UxFixBatchTest extends TestCase
         $this->assertSame('guru', $guru->fresh()->role);
     }
 
-    public function test_kiosk_tap_throttle_30_per_menit_dan_pesan_429_bahasa_indonesia(): void
+    public function test_kiosk_tap_throttle_60_per_menit_dan_pesan_429_bahasa_indonesia(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
 
-        for ($i = 1; $i <= 30; $i++) {
+        for ($i = 1; $i <= 60; $i++) {
             $this->postJson(route('kiosk.tap'), [
                 'card_uid' => 'ANTRIAN-PAGI-'.$i,
             ])->assertNotFound();
         }
 
         $this->postJson(route('kiosk.tap'), [
-            'card_uid' => 'ANTRIAN-PAGI-31',
+            'card_uid' => 'ANTRIAN-PAGI-61',
         ])->assertTooManyRequests();
 
         $kioskView = $this->get(route('kiosk.gerbang'));
@@ -132,5 +136,63 @@ class UxFixBatchTest extends TestCase
         $kioskView->assertSee('hasilThrottle', false);
         $kioskView->assertSee('Sistem Sibuk', false);
         $kioskView->assertSee('Sistem sedang sibuk melayani antrean. Tunggu sebentar, lalu tap ulang kartu Anda.', false);
+    }
+
+    public function test_cache_forget_gagal_tidak_menghapus_foto_pendaftaran_yang_sudah_commit(): void
+    {
+        $this->seed(DemoAttendanceSeeder::class);
+        Storage::fake('local');
+
+        $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
+
+        Cache::shouldReceive('forget')
+            ->andThrow(new \RuntimeException('Simulasi kegagalan cache'));
+
+        $service = app(StudentRegistrationService::class);
+        $student = $service->register([
+            'name' => 'Siswa Cache Aman',
+            'gender' => 'L',
+            'school_class_id' => $kelas->id,
+            'nisn' => '0099443322',
+            'setuju' => true,
+            'card_uid' => 'CARD-CACHE-AMAN-1',
+            'photos' => [
+                $this->validPngDataUrl(),
+                $this->validPngDataUrl(),
+                $this->validPngDataUrl(),
+            ],
+        ]);
+
+        $enrollment = $student->faceEnrollment()->firstOrFail();
+        Storage::disk('local')->assertExists($enrollment->photo_1_path);
+        Storage::disk('local')->assertExists($enrollment->photo_2_path);
+        Storage::disk('local')->assertExists($enrollment->photo_3_path);
+    }
+
+    public function test_kegagalan_transaksi_di_luar_create_tetap_membersihkan_foto_bukti_kiosk(): void
+    {
+        $this->seed(DemoAttendanceSeeder::class);
+        Storage::fake('local');
+
+        $student = Student::where('nis', '10240109')->firstOrFail();
+        $validPhoto = 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
+
+        Attendance::created(function (): void {
+            throw new \RuntimeException('Simulasi kegagalan sesudah insert sebelum commit');
+        });
+
+        try {
+            $service = app(KioskAttendanceService::class);
+            try {
+                $service->recordAttendance($student, $validPhoto, 'gerbang-kartu', false);
+                $this->fail('Seharusnya RuntimeException dilempar keluar dari transaksi.');
+            } catch (\RuntimeException $e) {
+                $this->assertSame('Simulasi kegagalan sesudah insert sebelum commit', $e->getMessage());
+            }
+
+            $this->assertCount(0, Storage::disk('local')->allFiles('attendance-photos'));
+        } finally {
+            Attendance::flushEventListeners();
+        }
     }
 }

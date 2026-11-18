@@ -83,7 +83,11 @@ class StudentRegistrationService
                 $photoPaths = [];
                 foreach ($photoItems as $slot => $item) {
                     $path = "face-photos/{$siswa->id}/face-{$siswa->id}-{$slot}-{$now->format('YmdHis')}.{$item['extension']}";
-                    Storage::disk('local')->put($path, $item['binary']);
+
+                    if (! Storage::disk('local')->put($path, $item['binary'])) {
+                        throw new \RuntimeException("Gagal menulis foto wajah ke penyimpanan: {$path}");
+                    }
+
                     $photoPaths[$slot] = $path;
                     $writtenPaths[] = $path;
                 }
@@ -105,16 +109,21 @@ class StudentRegistrationService
 
                 return $siswa;
             });
-
-            Cache::forget(FaceTemplateService::CACHE_KEY);
-
-            return $student;
         } catch (\Throwable $e) {
             foreach ($writtenPaths as $path) {
                 Storage::disk('local')->delete($path);
             }
 
             throw $e;
+        } finally {
+            try {
+                Cache::forget(FaceTemplateService::CACHE_KEY);
+                Cache::forget("pendaftaran_{$validated['nisn']}");
+            } catch (\Throwable) {
+                // Abaikan kegagalan cache agar tidak menghapus foto yang sudah berhasil di-commit.
+            }
         }
+
+        return $student;
     }
 }

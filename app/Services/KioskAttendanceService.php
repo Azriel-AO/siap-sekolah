@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * Layanan pemrosesan absensi siswa pada Kiosk Gerbang (Kartu RFID, Face ID, Sidik Jari).
@@ -259,7 +260,11 @@ class KioskAttendanceService
             $today,
             $currentTime
         ): JsonResponse {
-            return DB::transaction(function () use (
+            // SQLite (WAL) + transaksi DEFERRED pada PHP 8.3 dapat gagal instan dengan
+            // "database is locked" (BUSY_SNAPSHOT) saat banyak transaksi tulis paralel —
+            // busy timeout tidak berlaku untuk kasus ini. Retry dengan backoff memberi
+            // kesempatan snapshot segar; pembersihan foto per-attempt ditangani di dalam.
+            return retry(8, function () use (
                 $student,
                 $schoolClass,
                 $photo,
@@ -269,83 +274,119 @@ class KioskAttendanceService
                 $today,
                 $currentTime
             ): JsonResponse {
-                $attendance = Attendance::where('student_id', $student->id)
-                    ->where('date', $today)
-                    ->first();
+                $pendingPhotoPath = null;
 
-                if (! $bypassCooldown && $this->isInCooldown($attendance, $now)) {
-                    return $this->cooldownResponse($student->name);
-                }
+                try {
+                    return DB::transaction(function () use (
+                        $student,
+                        $schoolClass,
+                        $photo,
+                        $device,
+                        $bypassCooldown,
+                        $now,
+                        $today,
+                        $currentTime,
+                        &$pendingPhotoPath
+                    ): JsonResponse {
+                        $attendance = Attendance::where('student_id', $student->id)
+                            ->where('date', $today)
+                            ->first();
 
-                if (! $attendance) {
-                    $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
-                    $photoPath = $this->photoService->storeEvidencePhoto($photo, $student, 'masuk', $now);
-
-                    try {
-                        Attendance::create([
-                            'student_id' => $student->id,
-                            'school_class_id' => $schoolClass->id,
-                            'date' => $today,
-                            'check_in_at' => $currentTime,
-                            'status' => $status,
-                            'last_tap_at' => $now,
-                            'kiosk_device' => $device,
-                            'photo_in_path' => $photoPath,
-                        ]);
-                    } catch (QueryException $e) {
-                        if ($photoPath) {
-                            Storage::disk('local')->delete($photoPath);
+                        if (! $bypassCooldown && $this->isInCooldown($attendance, $now)) {
+                            return $this->cooldownResponse($student->name);
                         }
 
-                        if (! str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
-                            throw $e;
+                        if (! $attendance) {
+                            $status = ($currentTime <= $schoolClass->entry_time) ? 'HADIR' : 'TERLAMBAT';
+                            $photoPath = $this->photoService->storeEvidencePhoto($photo, $student, 'masuk', $now);
+                            $pendingPhotoPath = $photoPath;
+
+                            try {
+                                Attendance::create([
+                                    'student_id' => $student->id,
+                                    'school_class_id' => $schoolClass->id,
+                                    'date' => $today,
+                                    'check_in_at' => $currentTime,
+                                    'status' => $status,
+                                    'last_tap_at' => $now,
+                                    'kiosk_device' => $device,
+                                    'photo_in_path' => $photoPath,
+                                ]);
+                            } catch (QueryException $e) {
+                                if ($photoPath) {
+                                    Storage::disk('local')->delete($photoPath);
+                                    $pendingPhotoPath = null;
+                                }
+
+                                if (! str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
+                                    throw $e;
+                                }
+
+                                return $this->cooldownResponse($student->name);
+                            }
+
+                            return response()->json([
+                                'success' => true,
+                                'type' => 'check_in',
+                                'student_name' => $student->name,
+                                'nis' => $student->nis,
+                                'kelas' => $schoolClass->name,
+                                'status' => $status,
+                                'status_label' => ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat',
+                                'time' => $currentTime,
+                                'message' => "Selamat datang, {$student->name}!",
+                            ]);
                         }
 
-                        return $this->cooldownResponse($student->name);
+                        if (! $attendance->check_out_at) {
+                            $photoOutPath = $this->photoService->storeEvidencePhoto($photo, $student, 'pulang', $now);
+                            $pendingPhotoPath = $photoOutPath;
+
+                            try {
+                                $attendance->update([
+                                    'check_out_at' => $currentTime,
+                                    'last_tap_at' => $now,
+                                    'photo_out_path' => $photoOutPath ?? $attendance->photo_out_path,
+                                ]);
+                            } catch (QueryException $e) {
+                                if ($photoOutPath) {
+                                    Storage::disk('local')->delete($photoOutPath);
+                                    $pendingPhotoPath = null;
+                                }
+
+                                throw $e;
+                            }
+
+                            return response()->json([
+                                'success' => true,
+                                'type' => 'check_out',
+                                'student_name' => $student->name,
+                                'nis' => $student->nis,
+                                'kelas' => $schoolClass->name,
+                                'status' => $attendance->status,
+                                'status_label' => 'Absen Pulang Berhasil',
+                                'time' => $currentTime,
+                                'message' => "Selamat pulang, {$student->name}!",
+                            ]);
+                        }
+
+                        return response()->json([
+                            'success' => false,
+                            'type' => 'already_completed',
+                            'student_name' => $student->name,
+                            'kelas' => $schoolClass->name,
+                            'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
+                        ], 200);
+                    });
+                } catch (Throwable $e) {
+                    if ($pendingPhotoPath) {
+                        Storage::disk('local')->delete($pendingPhotoPath);
                     }
 
-                    return response()->json([
-                        'success' => true,
-                        'type' => 'check_in',
-                        'student_name' => $student->name,
-                        'nis' => $student->nis,
-                        'kelas' => $schoolClass->name,
-                        'status' => $status,
-                        'status_label' => ($status === 'HADIR') ? 'Hadir Tepat Waktu' : 'Terlambat',
-                        'time' => $currentTime,
-                        'message' => "Selamat datang, {$student->name}!",
-                    ]);
+                    throw $e;
                 }
-
-                if (! $attendance->check_out_at) {
-                    $photoOutPath = $this->photoService->storeEvidencePhoto($photo, $student, 'pulang', $now);
-
-                    $attendance->update([
-                        'check_out_at' => $currentTime,
-                        'last_tap_at' => $now,
-                        'photo_out_path' => $photoOutPath ?? $attendance->photo_out_path,
-                    ]);
-
-                    return response()->json([
-                        'success' => true,
-                        'type' => 'check_out',
-                        'student_name' => $student->name,
-                        'nis' => $student->nis,
-                        'kelas' => $schoolClass->name,
-                        'status' => $attendance->status,
-                        'status_label' => 'Absen Pulang Berhasil',
-                        'time' => $currentTime,
-                        'message' => "Selamat pulang, {$student->name}!",
-                    ]);
-                }
-
-                return response()->json([
-                    'success' => false,
-                    'type' => 'already_completed',
-                    'student_name' => $student->name,
-                    'kelas' => $schoolClass->name,
-                    'message' => "Siswa {$student->name} sudah menyelesaikan absen masuk dan pulang hari ini.",
-                ], 200);
+            }, 300, function (Throwable $e): bool {
+                return $e instanceof QueryException && str_contains($e->getMessage(), 'database is locked');
             });
         });
     }
