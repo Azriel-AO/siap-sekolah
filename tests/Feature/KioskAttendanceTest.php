@@ -8,6 +8,7 @@ use App\Models\RfidCard;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\FaceTemplateService;
 use Carbon\Carbon;
 use Database\Seeders\DemoAttendanceSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -561,9 +562,29 @@ class KioskAttendanceTest extends TestCase
     public function test_face_verify_dengan_match_score_valid_mencatat_absen(): void
     {
         Storage::fake('local');
+        Cache::flush();
         $this->seedDemo();
 
         $student = Student::where('nis', '10240109')->firstOrFail();
+        $paths = [
+            "face-photos/{$student->id}/1.jpg",
+            "face-photos/{$student->id}/2.jpg",
+            "face-photos/{$student->id}/3.jpg",
+        ];
+        foreach ($paths as $path) {
+            Storage::disk('local')->put($path, "\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
+        }
+        FaceEnrollment::create([
+            'student_id' => $student->id,
+            'photo_1_path' => $paths[0],
+            'photo_2_path' => $paths[1],
+            'photo_3_path' => $paths[2],
+            'consented_at' => now(),
+        ]);
+
+        $tapRes = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009'])->assertOk();
+        $verifyToken = (string) $tapRes->json('verify_token');
+        $this->assertNotSame('', $verifyToken);
 
         $fotoBukti = 'data:image/jpeg;base64,'.base64_encode(
             "\xFF\xD8\xFF\xE0".str_repeat('z', 250)."\xFF\xD9"
@@ -572,6 +593,7 @@ class KioskAttendanceTest extends TestCase
         $response = $this->postJson('/kiosk/face-verify', [
             'student_id' => $student->id,
             'match_score' => 0.92,
+            'verify_token' => $verifyToken,
             'photo' => $fotoBukti,
         ]);
 
@@ -595,13 +617,34 @@ class KioskAttendanceTest extends TestCase
 
     public function test_face_verify_dengan_match_score_rendah_ditolak_422(): void
     {
+        Storage::fake('local');
+        Cache::flush();
         $this->seedDemo();
 
         $student = Student::where('nis', '10240109')->firstOrFail();
+        $paths = [
+            "face-photos/{$student->id}/1.jpg",
+            "face-photos/{$student->id}/2.jpg",
+            "face-photos/{$student->id}/3.jpg",
+        ];
+        foreach ($paths as $path) {
+            Storage::disk('local')->put($path, "\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
+        }
+        FaceEnrollment::create([
+            'student_id' => $student->id,
+            'photo_1_path' => $paths[0],
+            'photo_2_path' => $paths[1],
+            'photo_3_path' => $paths[2],
+            'consented_at' => now(),
+        ]);
+
+        $tapRes = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009'])->assertOk();
+        $verifyToken = (string) $tapRes->json('verify_token');
 
         $response = $this->postJson('/kiosk/face-verify', [
             'student_id' => $student->id,
             'match_score' => 0.72,
+            'verify_token' => $verifyToken,
         ]);
 
         $response->assertStatus(422);
@@ -657,11 +700,15 @@ class KioskAttendanceTest extends TestCase
         $this->seedDemo();
 
         $student = Student::where('nis', '10240109')->firstOrFail();
+        $faceTemplates = app(FaceTemplateService::class);
+        $storedVector = $faceTemplates->generateDeterministicVector($student->id);
+        $faceTemplates->storeForStudent($student->id, $storedVector);
+
         $fotoBukti = 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat('a', 200)."\xFF\xD9");
 
         $response = $this->postJson('/kiosk/face-checkin', [
             'student_id' => $student->id,
-            'similarity' => 0.88,
+            'vector' => $storedVector,
             'photo' => $fotoBukti,
         ]);
 
@@ -670,7 +717,7 @@ class KioskAttendanceTest extends TestCase
             'success' => true,
             'type' => 'check_in',
             'method' => 'Wajah',
-            'similarity' => 0.88,
+            'similarity' => 1.0,
             'student_name' => 'Hendra Wijaya',
             'card_label' => 'X-TKJ-1-009',
         ]);
@@ -684,12 +731,18 @@ class KioskAttendanceTest extends TestCase
 
     public function test_kiosk_face_checkin_ditolak_422_jika_similarity_kurang_dari_threshold(): void
     {
+        Storage::fake('local');
         $this->seedDemo();
         $student = Student::where('nis', '10240109')->firstOrFail();
 
+        $faceTemplates = app(FaceTemplateService::class);
+        $storedVector = $faceTemplates->generateDeterministicVector($student->id);
+        $faceTemplates->storeForStudent($student->id, $storedVector);
+        $oppositeVector = array_map(static fn (float $v): float => -$v, $storedVector);
+
         $response = $this->postJson('/kiosk/face-checkin', [
             'student_id' => $student->id,
-            'similarity' => 0.74,
+            'vector' => $oppositeVector,
         ]);
 
         $response->assertStatus(422);
@@ -706,18 +759,23 @@ class KioskAttendanceTest extends TestCase
 
     public function test_kiosk_face_checkin_mengembalikan_429_jika_cooldown(): void
     {
+        Storage::fake('local');
         $this->seedDemo();
         $student = Student::where('nis', '10240109')->firstOrFail();
 
+        $faceTemplates = app(FaceTemplateService::class);
+        $storedVector = $faceTemplates->generateDeterministicVector($student->id);
+        $faceTemplates->storeForStudent($student->id, $storedVector);
+
         $first = $this->postJson('/kiosk/face-checkin', [
             'student_id' => $student->id,
-            'similarity' => 0.85,
+            'vector' => $storedVector,
         ]);
         $first->assertStatus(200);
 
         $second = $this->postJson('/kiosk/face-checkin', [
             'student_id' => $student->id,
-            'similarity' => 0.85,
+            'vector' => $storedVector,
         ]);
         $second->assertStatus(429);
         $second->assertJson([

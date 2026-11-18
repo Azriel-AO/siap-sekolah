@@ -1126,6 +1126,13 @@
                                 const bestSim = Number(match?.bestSimilarity ?? 0);
 
                                 if (match && match.matched && match.bestMatch && !this.tapInFlight && !this.verifyingFace && !this.result) {
+                                    const liveVector = typeof verifier.extractLastDetectedVector === 'function'
+                                        ? verifier.extractLastDetectedVector()
+                                        : null;
+                                    if (!Array.isArray(liveVector) || liveVector.length !== 1434) {
+                                        return;
+                                    }
+
                                     const matchedName = match.bestMatch.nama || match.bestMatch.student_name || 'Siswa';
                                     this.faceGuideState = 'matched';
                                     this.faceFeedbackMessage = 'Halo ' + matchedName + ', absen berhasil.';
@@ -1148,7 +1155,7 @@
                                             },
                                             body: JSON.stringify({
                                                 student_id: match.bestMatch.student_id,
-                                                similarity: match.bestMatch.similarity,
+                                                vector: liveVector,
                                                 photo: foto
                                             })
                                         });

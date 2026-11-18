@@ -87,7 +87,8 @@ class PendaftaranTest extends TestCase
         $this->assertSame('0099001122@knbi.sch.id', $user->email);
         $this->assertSame('siswa', $user->role);
         $this->assertSame($student->id, (int) $user->student_id);
-        $this->assertTrue(Hash::check('password', $user->password));
+        $this->assertNotEmpty($user->password);
+        $this->assertFalse(Hash::check('password', $user->password));
 
         $kartu = RfidCard::where('card_uid', 'CARD-BARU-001')->first();
         $this->assertNotNull($kartu);

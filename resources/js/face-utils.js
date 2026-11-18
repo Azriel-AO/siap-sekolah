@@ -38,6 +38,9 @@ let _scratchImgCanvas = null;
 let _scratchImgCtx = null;
 let _scratchFallbackCanvas = null;
 let _scratchFallbackCtx = null;
+let _lastLiveLandmarks = null;
+let _lastLiveWidth = 0;
+let _lastLiveHeight = 0;
 
 async function createFaceLandmarker(runningMode) {
     const fileset = await FilesetResolver.forVisionTasks(WASM_PATH);
@@ -151,6 +154,10 @@ export function closeVerifierFaceLandmarker() {
         _scratchFallbackCanvas = null;
         _scratchFallbackCtx = null;
     }
+
+    _lastLiveLandmarks = null;
+    _lastLiveWidth = 0;
+    _lastLiveHeight = 0;
 
     closeImageFaceLandmarker();
 }
@@ -766,7 +773,11 @@ export async function extractTemplateFromPhotoDataUrls(facePhotos, options = {})
             _scratchImgCtx = null;
         }
         if (options?.closeImageLandmarkerAfter) {
-            closeImageFaceLandmarker();
+            _lastLiveLandmarks = null;
+    _lastLiveWidth = 0;
+    _lastLiveHeight = 0;
+
+    closeImageFaceLandmarker();
         }
     }
 }
@@ -916,6 +927,9 @@ export function extractSignatureFromVideo(landmarker, video, timestampMs = perfo
         }
 
         stateCb?.({ faceDetected: true, insideGuide: true, yawRatio });
+        _lastLiveLandmarks = landmarks;
+        _lastLiveWidth = video.videoWidth;
+        _lastLiveHeight = video.videoHeight;
 
         return extractSignatureFromLandmarks(
             landmarks,
@@ -924,9 +938,28 @@ export function extractSignatureFromVideo(landmarker, video, timestampMs = perfo
             options?.outSignature || _liveSignatureBuffer
         );
     } catch {
+        _lastLiveLandmarks = null;
         stateCb?.({ faceDetected: false, insideGuide: false, yawRatio: 0 });
         return null;
     }
+}
+
+/**
+ * Ekstrak vektor wajah 1434-float dari deteksi kamera terakhir untuk pencocokan Cosine Similarity di server.
+ *
+ * @returns {Array<number>|null}
+ */
+export function extractLastDetectedVector() {
+    if (!_lastLiveLandmarks || !_lastLiveWidth || !_lastLiveHeight) {
+        return null;
+    }
+
+    const vector = flattenAndNormalizeLandmarks(_lastLiveLandmarks, _lastLiveWidth, _lastLiveHeight);
+    if (!vector) {
+        return null;
+    }
+
+    return Array.from(vector, (val) => Number(val.toFixed(6)));
 }
 
 /**
@@ -1013,7 +1046,11 @@ export async function verifyStudentFace1to1({
             ? extractSignatureFromTemplate(avgReferenceVector, _verifySignatureBuffer)
             : null;
     } finally {
-        closeImageFaceLandmarker();
+        _lastLiveLandmarks = null;
+    _lastLiveWidth = 0;
+    _lastLiveHeight = 0;
+
+    closeImageFaceLandmarker();
     }
 
     if (!refSignature) {

@@ -117,14 +117,14 @@ class Task49OptimizationSecurityTest extends TestCase
         for ($i = 0; $i < 10; $i++) {
             $response = $this->postJson('/kiosk/face-checkin', [
                 'student_id' => $student->id,
-                'similarity' => 0.4,
+                'vector' => array_fill(0, 1434, 0.01),
             ]);
             $response->assertUnprocessable();
         }
 
         $blocked = $this->postJson('/kiosk/face-checkin', [
             'student_id' => $student->id,
-            'similarity' => 0.4,
+            'vector' => array_fill(0, 1434, 0.01),
         ]);
 
         $blocked->assertTooManyRequests();

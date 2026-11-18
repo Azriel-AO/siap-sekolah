@@ -136,7 +136,7 @@ class PendaftaranController extends Controller
             'nisn' => ['required', 'regex:/^\d{6,20}$/', Rule::unique('students', 'nisn')],
             'setuju' => ['accepted'],
             'card_uid' => ['required', 'string', 'max:50'],
-            'fingerprint_id' => ['nullable', 'string', 'max:100'],
+            'fingerprint_id' => ['nullable', 'string', 'max:100', Rule::unique('students', 'fingerprint_id')],
             'photos' => ['required', 'array', 'size:3'],
             'photos.*' => ['required'],
             'face_template' => ['nullable', 'array', 'size:1434'],
@@ -153,6 +153,7 @@ class PendaftaranController extends Controller
             'nisn.unique' => 'NISN tersebut sudah terdaftar. Hubungi guru piket bila ini milik Anda.',
             'setuju.accepted' => 'Centang persetujuan biometrik sebelum mendaftar.',
             'card_uid.required' => 'Tempelkan kartu pelajar Anda ke scanner terlebih dahulu.',
+            'fingerprint_id.unique' => 'ID sidik jari tersebut sudah terdaftar pada siswa lain.',
             'photos.required' => 'Tiga foto wajah wajib diambil.',
             'photos.size' => 'Foto wajah wajib pas 3 foto.',
         ]);

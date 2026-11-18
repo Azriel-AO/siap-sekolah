@@ -306,6 +306,7 @@ class AdminStudentTest extends TestCase
         $this->assertNotNull($user);
         $this->assertSame('siswa', $user->role);
         $this->assertSame($student->id, (int) $user->student_id);
-        $this->assertTrue(Hash::check('password', $user->password));
+        $this->assertNotEmpty($user->password);
+        $this->assertFalse(Hash::check('password', $user->password));
     }
 }

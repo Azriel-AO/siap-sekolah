@@ -15,7 +15,7 @@ class KioskController extends Controller
     public const FACE_TEMPLATE_VERSION = FaceTemplateService::TEMPLATE_VERSION;
 
     public function __construct(
-        private readonly KioskAttendanceService $kioskService = new KioskAttendanceService(new PhotoUploadService),
+        private readonly KioskAttendanceService $kioskService = new KioskAttendanceService(new PhotoUploadService, new FaceTemplateService),
         private readonly FaceTemplateService $faceTemplates = new FaceTemplateService,
         private readonly PhotoUploadService $photoService = new PhotoUploadService
     ) {}
@@ -110,19 +110,20 @@ class KioskController extends Controller
     }
 
     /**
-     * Endpoint check-in mandiri via Face ID (1:N matching di browser).
+     * Endpoint check-in mandiri via Face ID (vektor 1434-float dicocokkan di server).
      */
     public function faceCheckin(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'student_id' => ['required', 'integer', 'exists:students,id'],
-            'similarity' => ['required', 'numeric', 'min:0', 'max:1'],
+            'vector' => ['required', 'array', 'size:'.FaceTemplateService::VECTOR_LENGTH],
+            'vector.*' => ['numeric'],
             'photo' => ['nullable', 'string', 'max:400000'],
         ]);
 
         return $this->kioskService->processFaceCheckin(
             (int) $validated['student_id'],
-            (float) $validated['similarity'],
+            array_map(static fn (mixed $v): float => (float) $v, $validated['vector']),
             $validated['photo'] ?? null
         );
     }
@@ -136,14 +137,14 @@ class KioskController extends Controller
             'student_id' => ['required', 'integer', 'exists:students,id'],
             'match_score' => ['required', 'numeric'],
             'photo' => ['nullable', 'string', 'max:400000'],
-            'verify_token' => ['nullable', 'string', 'max:100'],
+            'verify_token' => ['required', 'string', 'max:100'],
         ]);
 
         return $this->kioskService->processFaceVerify(
             (int) $validated['student_id'],
             (float) $validated['match_score'],
             $validated['photo'] ?? null,
-            $validated['verify_token'] ?? null
+            (string) $validated['verify_token']
         );
     }
 

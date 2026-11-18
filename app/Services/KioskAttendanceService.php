@@ -18,7 +18,10 @@ use Illuminate\Support\Str;
  */
 class KioskAttendanceService
 {
-    public function __construct(private readonly PhotoUploadService $photoService) {}
+    public function __construct(
+        private readonly PhotoUploadService $photoService,
+        private readonly FaceTemplateService $faceTemplates = new FaceTemplateService
+    ) {}
 
     /**
      * Proses tap kartu RFID dan tentukan apakah lanjut verifikasi wajah atau langsung catat absensi.
@@ -61,11 +64,39 @@ class KioskAttendanceService
     }
 
     /**
-     * Proses absensi check-in langsung lewat Face ID 1:N.
+     * Proses absensi check-in langsung lewat Face ID 1:N dengan perhitungan Cosine Similarity di server.
+     *
+     * @param  list<float|int>  $liveVector
      */
-    public function processFaceCheckin(int $studentId, float $similarity, ?string $photo): JsonResponse
+    public function processFaceCheckin(int $studentId, array $liveVector, ?string $photo): JsonResponse
     {
-        if (! is_finite($similarity) || $similarity < 0.75 || $similarity > 1.0) {
+        $cleanLive = $this->faceTemplates->sanitizeVector($liveVector);
+        $storedVector = $this->faceTemplates->readVector($studentId);
+
+        if ($cleanLive === null || $storedVector === null) {
+            return response()->json([
+                'success' => false,
+                'type' => 'face_mismatch',
+                'message' => 'Template wajah siswa belum tersedia atau vektor tidak valid. Silakan coba lagi atau gunakan kartu/sidik jari.',
+            ], 422);
+        }
+
+        $sum = 0.0;
+        $normA = 0.0;
+        $normB = 0.0;
+        $count = FaceTemplateService::VECTOR_LENGTH;
+
+        for ($i = 0; $i < $count; $i++) {
+            $a = (float) $cleanLive[$i];
+            $b = (float) $storedVector[$i];
+            $sum += $a * $b;
+            $normA += $a * $a;
+            $normB += $b * $b;
+        }
+
+        $similarity = $sum / max(sqrt($normA) * sqrt($normB), 1e-12);
+
+        if (! is_finite($similarity) || $similarity < 0.75) {
             return response()->json([
                 'success' => false,
                 'type' => 'face_mismatch',
@@ -77,38 +108,38 @@ class KioskAttendanceService
         $response = $this->recordAttendance($student, $photo, 'face');
 
         return $this->withStudentCardMetadata($response, $student, 'Wajah', [
-            'similarity' => round($similarity, 4),
+            'similarity' => round(min(1.0, max(-1.0, $similarity)), 4),
         ]);
     }
 
     /**
-     * Proses verifikasi wajah 1:1 setelah tap kartu dengan perlindungan anti-replay token.
+     * Proses verifikasi wajah 1:1 setelah tap kartu dengan token anti-replay wajib.
      */
     public function processFaceVerify(int $studentId, float $score, ?string $photo, ?string $verifyToken = null): JsonResponse
     {
+        if ($verifyToken === null || trim($verifyToken) === '') {
+            return response()->json([
+                'success' => false,
+                'type' => 'replay_detected',
+                'message' => 'Token verifikasi wajah wajib disertakan. Silakan tap ulang kartu.',
+            ], 422);
+        }
+
+        $consumed = Cache::pull("kiosk-verify-token:{$studentId}:{$verifyToken}");
+        Cache::forget("kiosk-verify-pending:{$studentId}");
+        if ($consumed !== true) {
+            return response()->json([
+                'success' => false,
+                'type' => 'replay_detected',
+                'message' => 'Sesi verifikasi wajah tidak valid atau sudah digunakan. Silakan tap ulang kartu.',
+            ], 422);
+        }
+
         if (! is_finite($score) || $score <= 0.85 || $score > 1.0) {
             return response()->json([
                 'success' => false,
                 'type' => 'face_mismatch',
                 'message' => 'Wajah tidak cocok. Silakan coba lagi atau gunakan sidik jari.',
-            ], 422);
-        }
-
-        if ($verifyToken !== null && $verifyToken !== '') {
-            $consumed = Cache::pull("kiosk-verify-token:{$studentId}:{$verifyToken}");
-            Cache::forget("kiosk-verify-pending:{$studentId}");
-            if ($consumed !== true) {
-                return response()->json([
-                    'success' => false,
-                    'type' => 'replay_detected',
-                    'message' => 'Sesi verifikasi wajah tidak valid atau sudah digunakan. Silakan tap ulang kartu.',
-                ], 422);
-            }
-        } elseif (Cache::has("kiosk-verify-pending:{$studentId}")) {
-            return response()->json([
-                'success' => false,
-                'type' => 'replay_detected',
-                'message' => 'Token verifikasi wajah diperlukan untuk melanjutkan.',
             ], 422);
         }
 
@@ -261,9 +292,13 @@ class KioskAttendanceService
                             'kiosk_device' => $device,
                             'photo_in_path' => $photoPath,
                         ]);
-                    } catch (QueryException) {
+                    } catch (QueryException $e) {
                         if ($photoPath) {
                             Storage::disk('local')->delete($photoPath);
+                        }
+
+                        if (! str_contains($e->getMessage(), 'UNIQUE constraint failed')) {
+                            throw $e;
                         }
 
                         return $this->cooldownResponse($student->name);

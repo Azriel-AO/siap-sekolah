@@ -129,7 +129,7 @@ class AdminStudentController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
-            'nis' => ['required', 'string', 'max:20', 'not_regex:/[<>]/', Rule::unique('students', 'nis')->ignore($student?->id)],
+            'nis' => ['required', 'regex:/^[A-Za-z0-9]{1,20}$/', Rule::unique('students', 'nis')->ignore($student?->id)],
             'induk' => ['nullable', 'string', 'max:20', 'not_regex:/[<>]/', Rule::unique('students', 'induk')->ignore($student?->id)],
             'gender' => ['required', Rule::in(['L', 'P'])],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
@@ -138,6 +138,7 @@ class AdminStudentController extends Controller
             'name.required' => 'Nama siswa wajib diisi.',
             'name.not_regex' => 'Nama siswa tidak boleh mengandung tag HTML atau karakter < dan >.',
             'nis.required' => 'NIS wajib diisi.',
+            'nis.regex' => 'NIS hanya boleh berisi huruf dan angka (maksimal 20 karakter).',
             'nis.unique' => 'NIS tersebut sudah dipakai siswa lain.',
             'induk.unique' => 'NIS Induk tersebut sudah dipakai siswa lain.',
             'gender.required' => 'Jenis kelamin wajib dipilih.',

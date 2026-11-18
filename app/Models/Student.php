@@ -139,15 +139,20 @@ class Student extends Model
     /**
      * Buat atau perbarui akun login siswa secara otomatis:
      * - email: {NIS}@knbi.sch.id
-     * - password: Hash::make('password') (saat akun baru dibuat)
+     * - password: 16 karakter acak yang di-hash (saat akun baru dibuat)
      * - role: 'siswa'
      * - student_id: ID siswa ini
-     * Juga menyinkronkan kolom user_id pada tabel students.
+     * Juga menyinkronkan kolom user_id pada tabel students dan mencegah tabrakan akun admin/guru.
      */
     public function syncUserAccount(): User
     {
         $email = $this->nis.'@knbi.sch.id';
         $hasStudentIdColumn = Schema::hasColumn('users', 'student_id');
+
+        $existingWithEmail = User::where('email', $email)->first();
+        if ($existingWithEmail && $existingWithEmail->role !== 'siswa') {
+            throw new \RuntimeException('Email sudah digunakan oleh akun non-siswa');
+        }
 
         $user = null;
         if ($this->user_id) {
@@ -170,7 +175,7 @@ class Student extends Model
         } else {
             $attributes = [
                 'name' => $this->name,
-                'password' => Hash::make('password'),
+                'password' => Hash::make(Str::random(16)),
                 'role' => 'siswa',
             ];
             if ($hasStudentIdColumn) {

@@ -256,11 +256,11 @@ class ProductionHardeningAuditTest extends TestCase
         $verifyToken = (string) $tapRes->json('verify_token');
         $this->assertNotSame('', $verifyToken);
 
-        // Permintaan tanpa token sementara token tertunda wajib ditolak
+        // Permintaan tanpa token wajib ditolak langsung di validasi request
         $this->postJson('/kiosk/face-verify', [
             'student_id' => $student->id,
             'match_score' => 0.92,
-        ])->assertStatus(422)->assertJson(['type' => 'replay_detected']);
+        ])->assertStatus(422)->assertJsonValidationErrors(['verify_token']);
 
         // Permintaan sah pertama berhasil
         $this->postJson('/kiosk/face-verify', [
