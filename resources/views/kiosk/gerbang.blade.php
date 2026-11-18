@@ -613,6 +613,19 @@
                     }
                 },
 
+                isThrottled(res, data) {
+                    return res?.status === 429 || data?.message === 'Too Many Attempts.';
+                },
+
+                hasilThrottle() {
+                    return {
+                        success: false,
+                        type: 'throttled',
+                        status_label: 'Sistem Sibuk',
+                        message: 'Sistem sedang sibuk melayani antrean. Tunggu sebentar, lalu tap ulang kartu Anda.'
+                    };
+                },
+
                 // Loop identify otomatis (bridge): panggil terus-menerus;
                 // satu panggilan boleh berjalan sampai ~25 detik (menunggu jari);
                 // jeda antar-panggilan >= 2 detik setelah response. Mock TIDAK memanggil ini.
@@ -635,11 +648,16 @@
                             body: JSON.stringify({ photo: foto, auto: 1 })
                         });
 
-                        const data = await res.json();
+                        const data = await res.json().catch(() => null);
+
+                        if (this.isThrottled(res, data)) {
+                            this.loopTimer = setTimeout(() => this.loopFingerprint(), 5000);
+                            return;
+                        }
 
                         // Bridge mati / sensor belum siap (503 / bridge_mati) -> tampil pesan,
                         // JANGAN di-poll cepat (cukup tiap ~15 detik)
-                        if (res.status === 503 || data.type === 'bridge_mati') {
+                        if (res.status === 503 || data?.type === 'bridge_mati') {
                             this.sensorBelumAktif = true;
                             this.sensorTimeoutInfo = false;
                             this.loopTimer = setTimeout(() => this.loopFingerprint(), 15000);
@@ -701,8 +719,14 @@
                             body: JSON.stringify({ photo: foto })
                         });
 
-                        const data = await res.json();
+                        const data = await res.json().catch(() => null);
                         this.fotoBukti = foto || '';
+
+                        if (this.isThrottled(res, data)) {
+                            this.showResult(this.hasilThrottle());
+                            return;
+                        }
+
                         this.showResult(data);
                     } catch (e) {
                         this.showResult({
@@ -763,8 +787,13 @@
                             })
                         });
 
-                        const data = await res.json();
+                        const data = await res.json().catch(() => null);
                         this.fotoBukti = foto || '';
+
+                        if (this.isThrottled(res, data)) {
+                            this.showResult(this.hasilThrottle());
+                            return;
+                        }
 
                         if (data && data.requires_face_verify && Array.isArray(data.face_photos) && data.face_photos.length === 3) {
                             await this.mulaiVerifikasiWajah(data, foto);
@@ -878,7 +907,11 @@
                             })
                         });
 
-                        const verifyData = await verifyRes.json();
+                        const verifyData = await verifyRes.json().catch(() => null);
+                        if (this.isThrottled(verifyRes, verifyData)) {
+                            this.showResult(this.hasilThrottle());
+                            return;
+                        }
                         this.showResult(verifyData);
                     } catch (err) {
                         this.showResult({
@@ -1160,9 +1193,13 @@
                                             })
                                         });
 
-                                        const data = await res.json();
+                                        const data = await res.json().catch(() => null);
                                         this.fotoBukti = foto || '';
-                                        this.showResult(data);
+                                        if (this.isThrottled(res, data)) {
+                                            this.showResult(this.hasilThrottle());
+                                        } else {
+                                            this.showResult(data);
+                                        }
                                     } catch {
                                         // Gagal checkin ditangani hening
                                     } finally {

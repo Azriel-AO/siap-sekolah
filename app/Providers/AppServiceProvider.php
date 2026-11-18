@@ -27,7 +27,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('kiosk-tap', function (Request $request): Limit {
-            return Limit::perMinute(10)->by($request->ip());
+            return Limit::perMinute(30)->by($request->ip());
         });
 
         RateLimiter::for('kiosk-face', function (Request $request): Limit {

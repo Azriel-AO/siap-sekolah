@@ -79,9 +79,17 @@ class PendaftaranController extends Controller
         } catch (ValidationException $e) {
             throw $e;
         } catch (\Throwable) {
+            $errors = [
+                'gagal' => 'Gagal menyimpan pendaftaran. Periksa isian dan coba lagi, atau hubungi guru piket.',
+            ];
+
+            if ($request->expectsJson()) {
+                throw ValidationException::withMessages($errors);
+            }
+
             return back()
                 ->withInput()
-                ->withErrors(['gagal' => 'Gagal menyimpan pendaftaran. Periksa isian dan coba lagi, atau hubungi guru piket.']);
+                ->withErrors($errors);
         }
 
         $kelas = SchoolClass::find($validated['school_class_id']);

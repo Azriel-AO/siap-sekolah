@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AdminStudentController extends Controller
@@ -61,21 +62,26 @@ class AdminStudentController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-
         $validated = $this->validasi($request);
 
-        DB::transaction(function () use ($validated) {
-            $student = Student::create([
-                'school_class_id' => $validated['school_class_id'],
-                'nis' => $validated['nis'],
-                'induk' => $validated['induk'] ?? null,
-                'name' => $validated['name'],
-                'gender' => $validated['gender'],
-            ]);
+        try {
+            DB::transaction(function () use ($validated) {
+                $student = Student::create([
+                    'school_class_id' => $validated['school_class_id'],
+                    'nis' => $validated['nis'],
+                    'induk' => $validated['induk'] ?? null,
+                    'name' => $validated['name'],
+                    'gender' => $validated['gender'],
+                ]);
 
-            $this->simpanKartu($student, $validated['card_uid'] ?? null);
-            $student->syncUserAccount();
-        });
+                $this->simpanKartu($student, $validated['card_uid'] ?? null);
+                $student->syncUserAccount();
+            });
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages([
+                'nis' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()
             ->route('admin.siswa.index', ['kelas' => SchoolClass::find($validated['school_class_id'])?->slug])
@@ -101,21 +107,26 @@ class AdminStudentController extends Controller
      */
     public function update(Request $request, Student $student): RedirectResponse
     {
-
         $validated = $this->validasi($request, $student);
 
-        DB::transaction(function () use ($validated, $student) {
-            $student->update([
-                'school_class_id' => $validated['school_class_id'],
-                'nis' => $validated['nis'],
-                'induk' => $validated['induk'] ?? null,
-                'name' => $validated['name'],
-                'gender' => $validated['gender'],
-            ]);
+        try {
+            DB::transaction(function () use ($validated, $student) {
+                $student->update([
+                    'school_class_id' => $validated['school_class_id'],
+                    'nis' => $validated['nis'],
+                    'induk' => $validated['induk'] ?? null,
+                    'name' => $validated['name'],
+                    'gender' => $validated['gender'],
+                ]);
 
-            $this->simpanKartu($student, $validated['card_uid'] ?? null);
-            $student->syncUserAccount();
-        });
+                $this->simpanKartu($student, $validated['card_uid'] ?? null);
+                $student->syncUserAccount();
+            });
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages([
+                'nis' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()
             ->route('admin.siswa.index', ['kelas' => SchoolClass::find($validated['school_class_id'])?->slug])
@@ -129,7 +140,16 @@ class AdminStudentController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
-            'nis' => ['required', 'regex:/^[A-Za-z0-9]{1,20}$/', Rule::unique('students', 'nis')->ignore($student?->id)],
+            'nis' => [
+                'required',
+                'regex:/^[A-Za-z0-9]{1,20}$/',
+                Rule::unique('students', 'nis')->ignore($student?->id),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (User::where('email', $value.'@knbi.sch.id')->where('role', '!=', 'siswa')->exists()) {
+                        $fail('NIS tersebut menghasilkan email akun yang sudah dipakai oleh akun non-siswa. Gunakan NIS lain.');
+                    }
+                },
+            ],
             'induk' => ['nullable', 'string', 'max:20', 'not_regex:/[<>]/', Rule::unique('students', 'induk')->ignore($student?->id)],
             'gender' => ['required', Rule::in(['L', 'P'])],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],

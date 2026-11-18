@@ -91,11 +91,11 @@ class Task49OptimizationSecurityTest extends TestCase
         $blocked->assertTooManyRequests();
     }
 
-    public function test_rate_limiter_kiosk_tap_membatasi_permintaan_ke_11_dengan_429(): void
+    public function test_rate_limiter_kiosk_tap_membatasi_permintaan_ke_31_dengan_429(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
 
-        for ($i = 0; $i < 10; $i++) {
+        for ($i = 0; $i < 30; $i++) {
             $response = $this->postJson('/kiosk/tap', [
                 'card_uid' => 'UNKNOWN-'.$i,
             ]);
@@ -103,7 +103,7 @@ class Task49OptimizationSecurityTest extends TestCase
         }
 
         $blocked = $this->postJson('/kiosk/tap', [
-            'card_uid' => 'UNKNOWN-11',
+            'card_uid' => 'UNKNOWN-31',
         ]);
 
         $blocked->assertTooManyRequests();
