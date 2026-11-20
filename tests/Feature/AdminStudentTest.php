@@ -36,7 +36,7 @@ class AdminStudentTest extends TestCase
         // Buat siswa baru tanpa absensi tapi punya kartu dan akun user
         $user = User::create([
             'name' => 'Siswa Bersih',
-            'email' => '99999999@knbi.sch.id',
+            'email' => '0099999999@knbi.sch.id',
             'password' => bcrypt('password'),
             'role' => 'siswa',
         ]);
@@ -44,7 +44,6 @@ class AdminStudentTest extends TestCase
         $student = Student::create([
             'school_class_id' => $class->id,
             'user_id' => $user->id,
-            'nis' => '99999999',
             'nisn' => '0099999999',
             'name' => 'Siswa Bersih',
             'gender' => 'L',
@@ -75,7 +74,7 @@ class AdminStudentTest extends TestCase
 
         $student = Student::create([
             'school_class_id' => $class->id,
-            'nis' => '88888888',
+            'nisn' => '0088888888',
             'name' => 'Siswa Berabsensi',
             'gender' => 'L',
         ]);
@@ -140,7 +139,7 @@ class AdminStudentTest extends TestCase
 
         $student = Student::create([
             'school_class_id' => $class->id,
-            'nis' => '77777777',
+            'nisn' => '0077777777',
             'name' => 'Siswa Berfoto',
             'gender' => 'P',
         ]);
@@ -190,7 +189,6 @@ class AdminStudentTest extends TestCase
         $nisn = '0088112233';
         $student = Student::create([
             'school_class_id' => $class->id,
-            'nis' => '66666666',
             'nisn' => $nisn,
             'name' => 'Siswa Dihapus',
             'gender' => 'L',
@@ -240,9 +238,9 @@ class AdminStudentTest extends TestCase
             'exit_time' => '15:00:00',
         ]);
 
-        $s1 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109901', 'name' => 'Siswa Satu', 'gender' => 'L']);
-        $s2 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109902', 'name' => 'Siswa Dua', 'gender' => 'P']);
-        $s3 = Student::create(['school_class_id' => $kelas->id, 'nis' => '109903', 'name' => 'Siswa Tiga', 'gender' => 'L']);
+        $s1 = Student::create(['school_class_id' => $kelas->id, 'nisn' => '0010990101', 'name' => 'Siswa Satu', 'gender' => 'L']);
+        $s2 = Student::create(['school_class_id' => $kelas->id, 'nisn' => '0010990102', 'name' => 'Siswa Dua', 'gender' => 'P']);
+        $s3 = Student::create(['school_class_id' => $kelas->id, 'nisn' => '0010990103', 'name' => 'Siswa Tiga', 'gender' => 'L']);
 
         // Belum punya kartu -> card_label null
         $this->assertNull($s3->card_label);
@@ -288,10 +286,10 @@ class AdminStudentTest extends TestCase
         $createPage->assertOk();
         $createPage->assertDontSee('Buatkan akun login siswa');
 
-        // Simpan siswa baru tanpa mengirim buat_akun -> akun user otomatis dibuat
+        // Simpan siswa baru tanpa mengirim buat_akun -> akun user otomatis dibuat memakai {nisn}@knbi.sch.id
         $storeRes = $this->actingAs($admin)->post(route('admin.siswa.store'), [
             'name' => 'Siswa Otomatis Akun',
-            'nis' => '10248881',
+            'nisn' => '0010248881',
             'induk' => '0881',
             'gender' => 'L',
             'school_class_id' => $class->id,
@@ -299,10 +297,10 @@ class AdminStudentTest extends TestCase
         ]);
         $storeRes->assertRedirect(route('admin.siswa.index', ['kelas' => $class->slug]));
 
-        $student = Student::where('nis', '10248881')->firstOrFail();
+        $student = Student::where('nisn', '0010248881')->firstOrFail();
         $this->assertNotNull($student->user_id);
 
-        $user = User::where('email', '10248881@knbi.sch.id')->first();
+        $user = User::where('email', '0010248881@knbi.sch.id')->first();
         $this->assertNotNull($user);
         $this->assertSame('siswa', $user->role);
         $this->assertSame($student->id, (int) $user->student_id);

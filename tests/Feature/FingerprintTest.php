@@ -75,7 +75,7 @@ class FingerprintTest extends TestCase
     {
         $this->seedDemo();
 
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-999']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'MOCK-FINGER-999']);
 
         $response = $this->postJson('/kiosk/fingerprint/identificar', []);
 
@@ -96,7 +96,7 @@ class FingerprintTest extends TestCase
             default => Http::response(['message' => 'not found'], 404),
         });
 
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);
 
         $response = $this->withDriver('bridge', fn () => $this->postJson('/kiosk/fingerprint/identificar', []));
 
@@ -108,7 +108,7 @@ class FingerprintTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('attendances', [
-            'student_id' => Student::where('nis', '10240109')->value('id'),
+            'student_id' => Student::where('nisn', '0010240109')->value('id'),
             'kiosk_device' => 'gerbang-fingerprint',
         ]);
     }

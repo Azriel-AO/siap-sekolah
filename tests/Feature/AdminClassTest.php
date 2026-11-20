@@ -103,7 +103,6 @@ class AdminClassTest extends TestCase
         // Hapus kelas yang masih memiliki siswa -> DITOLAK dengan pesan "Kelas masih memiliki siswa"
         Student::create([
             'school_class_id' => $kelasTkr->id,
-            'nis' => '10260001',
             'nisn' => '0010260001',
             'name' => 'Siswa Aktif TKR',
             'gender' => 'L',

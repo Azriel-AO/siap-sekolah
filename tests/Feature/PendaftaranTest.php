@@ -106,13 +106,32 @@ class PendaftaranTest extends TestCase
         $this->seedDemo();
         Storage::fake('local');
 
-        Student::where('nis', '10240101')->update(['nisn' => '0099001122']);
+        Student::where('nisn', '0010240101')->update(['nisn' => '0099001122']);
 
         $response = $this->postJson('/pendaftaran', $this->dataValid());
 
         $response->assertStatus(422);
         $response->assertJsonValidationErrors(['nisn']);
         $this->assertDatabaseMissing('rfid_cards', ['card_uid' => 'CARD-BARU-001']);
+    }
+
+    public function test_nisn_bukan_10_digit_angka_ditolak_di_pendaftaran(): void
+    {
+        $this->seedDemo();
+        Storage::fake('local');
+
+        foreach (['12345678', '12345678901', '00990011AB', '0099-00112'] as $invalidNisn) {
+            $response = $this->postJson('/pendaftaran', $this->dataValid([
+                'nisn' => $invalidNisn,
+            ]));
+
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['nisn']);
+            $this->assertSame(
+                'NISN harus terdiri dari tepat 10 digit angka.',
+                (string) $response->json('errors.nisn.0')
+            );
+        }
     }
 
     public function test_kartu_yang_dipakai_siswa_lain_ditolak(): void

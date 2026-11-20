@@ -48,14 +48,12 @@ class DashboardPendaftaranTest extends TestCase
 
         $siswa1 = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '880011',
             'nisn' => '0088001100',
             'name' => 'Siswa Grafik 1',
             'gender' => 'L',
         ]);
         $siswa2 = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '880012',
             'nisn' => '0088001200',
             'name' => 'Siswa Grafik 2',
             'gender' => 'P',

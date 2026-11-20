@@ -58,7 +58,7 @@ class RekapPeriodeTest extends TestCase
         $this->seedDemo();
 
         // Hendra hadir pada Senin 2026-11-09 (dalam rentang minggu) — belum absen hari ini
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
         $this->hadir($hendra, '2026-11-09', 'HADIR', '06:45:00');
 
         $response = $this->actingAs($this->admin())
@@ -79,7 +79,7 @@ class RekapPeriodeTest extends TestCase
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
         $siswaBaru = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10249877',
+            'nisn' => '0010249877',
             'name' => 'Siswa Baru Periode',
             'gender' => 'P',
         ]);
@@ -102,7 +102,7 @@ class RekapPeriodeTest extends TestCase
         Carbon::setTestNow('2026-11-10 10:00:00');
         $this->seedDemo();
 
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
         $this->hadir($hendra, '2026-10-31', 'HADIR', '06:45:00'); // bulan SEBELUMNYA — harus diabaikan
         $this->hadir($hendra, '2026-11-09', 'HADIR', '06:45:00');
 
@@ -132,7 +132,7 @@ class RekapPeriodeTest extends TestCase
         ]);
         $siswaLain = Student::create([
             'school_class_id' => $kelasLain->id,
-            'nis' => '10249999',
+            'nisn' => '0010249999',
             'name' => 'Siswa RPL Unik XYZ',
             'gender' => 'L',
         ]);
@@ -153,7 +153,7 @@ class RekapPeriodeTest extends TestCase
         Carbon::setTestNow('2026-11-10 10:00:00');
         $this->seedDemo();
 
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
         $this->hadir($hendra, '2026-11-09', 'HADIR', '06:45:00');
 
         $data = (new RekapExportData)->build('2026-11-10', 'X-TKJ-1', 'minggu');
@@ -219,7 +219,7 @@ class RekapPeriodeTest extends TestCase
             'server_time',
             'summary' => ['total', 'hadir', 'terlambat', 'alpa', 'rata_persen'],
             'students' => [
-                '*' => ['id', 'nis', 'nisn', 'name', 'gender', 'hadir', 'terlambat', 'izin', 'sakit', 'alpa', 'persentase', 'face'],
+                '*' => ['id', 'nisn', 'name', 'gender', 'hadir', 'terlambat', 'izin', 'sakit', 'alpa', 'persentase', 'face'],
             ],
         ]);
         $this->assertSame('minggu', $response->json('periode'));
@@ -233,7 +233,7 @@ class RekapPeriodeTest extends TestCase
         $this->seedDemo();
 
         // Tambah 1 HADIR pada Senin 2026-11-09 → total hadir minggu ini = 5+1 = 6
-        $raka = Student::where('nis', '10240101')->firstOrFail();
+        $raka = Student::where('nisn', '0010240101')->firstOrFail();
         $this->hadir($raka, '2026-11-09', 'HADIR', '06:45:00');
 
         $response = $this->actingAs($this->admin())->getJson('/admin/rekap-grafik?periode=minggu');

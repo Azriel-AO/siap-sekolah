@@ -70,7 +70,6 @@ class ProductionHardeningAuditTest extends TestCase
         ]);
         $student = Student::create([
             'name' => 'Siswa TTT Lama',
-            'nis' => '10249901',
             'nisn' => '0099990001',
             'gender' => 'L',
             'school_class_id' => $ttt11->id,
@@ -163,7 +162,7 @@ class ProductionHardeningAuditTest extends TestCase
         // Guest / tap non-admin tidak boleh menerima 3 foto wajah base64 mentah
         $this->app['auth']->forgetGuards();
         $this->seed(DemoAttendanceSeeder::class);
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $paths = [
             "face-photos/{$student->id}/1.jpg",
             "face-photos/{$student->id}/2.jpg",
@@ -238,7 +237,7 @@ class ProductionHardeningAuditTest extends TestCase
 
         // Anti-replay pada alur tap kartu -> verifikasi wajah
         Cache::flush();
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $paths = [
             "face-photos/{$student->id}/1.jpg",
             "face-photos/{$student->id}/2.jpg",
@@ -332,7 +331,7 @@ class ProductionHardeningAuditTest extends TestCase
         $this->seed(DemoAttendanceSeeder::class);
         Storage::fake('local');
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $kioskService = app(KioskAttendanceService::class);
 
         $results = [];
@@ -368,7 +367,6 @@ class ProductionHardeningAuditTest extends TestCase
         for ($i = 1; $i <= 15; $i++) {
             $extraStudent = Student::create([
                 'name' => "Siswa Bebas NPlus1 {$i}",
-                'nis' => sprintf('10248%03d', $i),
                 'nisn' => sprintf('0088800%03d', $i),
                 'gender' => 'L',
                 'school_class_id' => $kelas->id,

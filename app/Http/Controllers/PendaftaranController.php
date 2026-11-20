@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
+use App\Models\User;
 use App\Services\FingerprintService;
 use App\Services\PhotoUploadService;
 use App\Services\StudentRegistrationService;
@@ -141,7 +142,16 @@ class PendaftaranController extends Controller
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
             'school_class_id' => ['required', Rule::exists('school_classes', 'id')],
             'gender' => ['required', Rule::in(['L', 'P'])],
-            'nisn' => ['required', 'regex:/^\d{6,20}$/', Rule::unique('students', 'nisn')],
+            'nisn' => [
+                'required',
+                'regex:/^\d{10}$/',
+                Rule::unique('students', 'nisn'),
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (User::where('email', $value.'@knbi.sch.id')->where('role', '!=', 'siswa')->exists()) {
+                        $fail('NISN tersebut menghasilkan email akun yang sudah dipakai oleh akun non-siswa. Hubungi guru piket.');
+                    }
+                },
+            ],
             'setuju' => ['accepted'],
             'card_uid' => ['required', 'string', 'max:50'],
             'fingerprint_id' => ['nullable', 'string', 'max:100', Rule::unique('students', 'fingerprint_id')],
@@ -157,7 +167,7 @@ class PendaftaranController extends Controller
             'gender.required' => 'Jenis kelamin wajib dipilih.',
             'gender.in' => 'Jenis kelamin tidak valid.',
             'nisn.required' => 'NISN wajib diisi.',
-            'nisn.regex' => 'NISN hanya boleh berisi angka (6–20 digit).',
+            'nisn.regex' => 'NISN harus terdiri dari tepat 10 digit angka.',
             'nisn.unique' => 'NISN tersebut sudah terdaftar. Hubungi guru piket bila ini milik Anda.',
             'setuju.accepted' => 'Centang persetujuan biometrik sebelum mendaftar.',
             'card_uid.required' => 'Tempelkan kartu pelajar Anda ke scanner terlebih dahulu.',

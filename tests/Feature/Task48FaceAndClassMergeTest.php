@@ -141,7 +141,7 @@ class Task48FaceAndClassMergeTest extends TestCase
         Storage::fake('local');
         Cache::flush();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $jpgBinary = "\xFF\xD8".str_repeat('z', 200)."\xFF\xD9";
         $paths = [
             "face-photos/{$student->id}/face-1.jpg",
@@ -228,21 +228,18 @@ class Task48FaceAndClassMergeTest extends TestCase
 
         $stuA = Student::create([
             'school_class_id' => $ps11->id,
-            'nis' => '11001',
             'nisn' => '0011001101',
             'name' => 'Siswa PS 11 A',
             'gender' => 'L',
         ]);
         $stuB = Student::create([
             'school_class_id' => $psy11->id,
-            'nis' => '11002',
             'nisn' => '0011001102',
             'name' => 'Siswa PSY 11 B',
             'gender' => 'P',
         ]);
         $stu10 = Student::create([
             'school_class_id' => $ps10->id,
-            'nis' => '10001',
             'nisn' => '0010001101',
             'name' => 'Siswa PS 10',
             'gender' => 'P',

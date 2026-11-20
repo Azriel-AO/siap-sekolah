@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-slate-100 tracking-tight">Ubah Siswa</h1>
-        <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">Perbarui NIS, nama, jenis kelamin, kelas, dan kartu RFID milik {{ $student->name }}.</p>
+        <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">Perbarui NISN, nama, jenis kelamin, kelas, dan kartu RFID milik {{ $student->name }}.</p>
     </x-slot>
 
     <div class="py-8">
@@ -28,17 +28,17 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NIS Induk</label>
+                    <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">No. Induk</label>
                     <input type="text" name="induk" value="{{ old('induk', $student->induk) }}" maxlength="20"
-                           class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0075384110">
+                           class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 240001">
                     <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">Diperlukan untuk laporan "Daftar Hadir" (opsional).</p>
                 </div>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NIS <span class="text-rose-500">*</span></label>
-                        <input type="text" name="nis" value="{{ old('nis', $student->nis) }}" required maxlength="20"
-                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NISN <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nisn" value="{{ old('nisn', $student->nisn) }}" required inputmode="numeric" maxlength="10"
+                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0010240111">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>

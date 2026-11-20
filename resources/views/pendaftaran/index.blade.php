@@ -124,9 +124,9 @@
                         </div>
                         <div>
                             <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NISN <span class="text-rose-500">*</span></label>
-                            <input type="text" x-model="form.nisn" required inputmode="numeric" maxlength="20" placeholder="Masukkan 10 digit angka NISN"
+                            <input type="text" x-model="form.nisn" required inputmode="numeric" maxlength="10" placeholder="Masukkan 10 digit angka NISN"
                                    class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500">
-                            <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">Nomor Induk Siswa Nasional Anda (hanya angka).</p>
+                            <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">Nomor Induk Siswa Nasional Anda (tepat 10 digit angka).</p>
                         </div>
 
                         <label class="flex items-start space-x-3 p-4 rounded-xl border cursor-pointer transition"
@@ -367,7 +367,7 @@
                     fingerprint_id: '',
                     siapSimpan() {
                         return this.name.trim() !== '' && this.gender !== '' && this.school_class_id !== ''
-                            && /^\d{6,20}$/.test(this.nisn) && this.setuju
+                            && /^\d{10}$/.test(this.nisn) && this.setuju
                             && this.card_uid.trim() !== '';
                     },
                 },
@@ -670,7 +670,7 @@
                             this.form.school_class_id = String(firstClassId);
                         }
                     }
-                    if (!/^\d{6,20}$/.test(this.form.nisn)) {
+                    if (!/^\d{10}$/.test(this.form.nisn)) {
                         this.form.nisn = '00' + String(Math.floor(10000000 + Math.random() * 89999999));
                     }
                     if (!this.form.setuju) {

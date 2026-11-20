@@ -28,10 +28,10 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NIS <span class="text-rose-500">*</span></label>
-                        <input type="text" name="nis" value="{{ old('nis') }}" required maxlength="20"
-                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 10240111">
-                        <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">NIS harus unik untuk setiap siswa.</p>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NISN <span class="text-rose-500">*</span></label>
+                        <input type="text" name="nisn" value="{{ old('nisn') }}" required inputmode="numeric" maxlength="10"
+                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0010240111">
+                        <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">NISN harus tepat 10 digit angka dan unik untuk setiap siswa.</p>
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">Jenis Kelamin <span class="text-rose-500">*</span></label>
@@ -44,10 +44,10 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">NIS Induk</label>
+                        <label class="block text-xs font-semibold text-gray-600 dark:text-slate-300 mb-1.5">No. Induk</label>
                         <input type="text" name="induk" value="{{ old('induk') }}" maxlength="20"
-                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 0075384110">
-                        <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">NIS Induk sekolah (opsional), jangan tertukar dengan NISN dari pendaftaran.</p>
+                               class="w-full rounded-lg border-gray-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder-slate-500 text-sm shadow-sm font-mono focus:border-indigo-500 focus:ring-indigo-500" placeholder="Contoh: 240001">
+                        <p class="text-[11px] text-gray-400 dark:text-slate-400 mt-1">Nomor Induk sekolah (opsional), berbeda dari NISN.</p>
                     </div>
                 </div>
 

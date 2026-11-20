@@ -49,7 +49,7 @@ class SecurityBatch1Test extends TestCase
         Storage::fake('local');
         $this->seed(DemoAttendanceSeeder::class);
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $faceTemplates = app(FaceTemplateService::class);
         $stored = $faceTemplates->generateDeterministicVector($student->id);
         $faceTemplates->storeForStudent($student->id, $stored);
@@ -94,7 +94,7 @@ class SecurityBatch1Test extends TestCase
     public function test_face_verify_menolak_token_null_atau_kosong_secara_langsung(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         $this->postJson('/kiosk/face-verify', [
             'student_id' => $student->id,
@@ -131,7 +131,7 @@ class SecurityBatch1Test extends TestCase
 
         $admin = User::factory()->create([
             'name' => 'Admin Utama',
-            'email' => 'admin@knbi.sch.id',
+            'email' => '0011223399@knbi.sch.id',
             'password' => Hash::make('rahasia-admin'),
             'role' => 'admin',
         ]);
@@ -139,7 +139,6 @@ class SecurityBatch1Test extends TestCase
         // Tabrakan dengan akun admin -> wajib melempar RuntimeException & tidak menimpa akun admin
         $collidingStudent = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => 'admin',
             'nisn' => '0011223399',
             'name' => 'Penyerang Admin',
             'gender' => 'L',
@@ -156,45 +155,46 @@ class SecurityBatch1Test extends TestCase
         $this->assertSame('admin', $adminFresh->role);
         $this->assertTrue(Hash::check('rahasia-admin', $adminFresh->password));
 
-        // Siswa normal mendapat password acak aman (bukan literal 'password')
+        // Siswa normal mendapat email {nisn}@knbi.sch.id dan password acak aman (bukan literal 'password')
         $normalStudent = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10269991',
             'nisn' => '0026999100',
             'name' => 'Siswa Password Acak',
             'gender' => 'P',
         ]);
         $createdUser = $normalStudent->syncUserAccount();
 
+        $this->assertSame('0026999100@knbi.sch.id', $createdUser->email);
         $this->assertSame('siswa', $createdUser->role);
         $this->assertNotEmpty($createdUser->password);
         $this->assertFalse(Hash::check('password', $createdUser->password));
     }
 
-    public function test_validasi_nis_admin_student_menolak_karakter_non_alfanumerik(): void
+    public function test_validasi_nisn_admin_student_wajib_10_digit_angka(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
         $admin = User::factory()->create(['role' => 'admin']);
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
 
-        foreach (['1024@evil', '1024 99', '1024-01', '1024<script>', str_repeat('A', 21)] as $badNis) {
+        foreach (['1024@evil', '1024 99', '1024-01', '1024<script>', '123456789', '12345678901', 'TKJ2026A01'] as $badNisn) {
             $res = $this->actingAs($admin)->post(route('admin.siswa.store'), [
-                'name' => 'Siswa Uji NIS',
-                'nis' => $badNis,
+                'name' => 'Siswa Uji NISN',
+                'nisn' => $badNisn,
                 'gender' => 'L',
                 'school_class_id' => $kelas->id,
             ]);
-            $res->assertSessionHasErrors('nis');
+            $res->assertSessionHasErrors('nisn');
         }
 
         $validRes = $this->actingAs($admin)->post(route('admin.siswa.store'), [
-            'name' => 'Siswa Alfanumerik Valid',
-            'nis' => 'TKJ2026A01',
+            'name' => 'Siswa NISN 10 Digit Valid',
+            'nisn' => '0020260001',
             'gender' => 'L',
             'school_class_id' => $kelas->id,
         ]);
         $validRes->assertSessionHasNoErrors();
-        $this->assertDatabaseHas('students', ['nis' => 'TKJ2026A01']);
+        $this->assertDatabaseHas('students', ['nisn' => '0020260001']);
+        $this->assertDatabaseHas('users', ['email' => '0020260001@knbi.sch.id', 'role' => 'siswa']);
     }
 
     public function test_fingerprint_id_unik_di_skema_database_dan_validasi_pendaftaran(): void
@@ -206,21 +206,21 @@ class SecurityBatch1Test extends TestCase
         // Nilai NULL ganda tetap diperbolehkan oleh SQL UNIQUE constraint
         Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => 'FPNULL1',
+            'nisn' => '0077000001',
             'name' => 'Tanpa Jari 1',
             'gender' => 'L',
             'fingerprint_id' => null,
         ]);
         Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => 'FPNULL2',
+            'nisn' => '0077000002',
             'name' => 'Tanpa Jari 2',
             'gender' => 'P',
             'fingerprint_id' => null,
         ]);
 
         // Nilai fingerprint_id yang sama persis wajib ditolak di level DB maupun PendaftaranController
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'UNIK-FP-001']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'UNIK-FP-001']);
 
         $res = $this->postJson('/pendaftaran', [
             'name' => 'Duplikat Jari',
@@ -242,7 +242,7 @@ class SecurityBatch1Test extends TestCase
         $this->expectException(QueryException::class);
         Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => 'FPDUPL',
+            'nisn' => '0077000003',
             'name' => 'Paksa Duplikat DB',
             'gender' => 'L',
             'fingerprint_id' => 'UNIK-FP-001',
@@ -254,7 +254,7 @@ class SecurityBatch1Test extends TestCase
         $this->seed(DemoAttendanceSeeder::class);
         Storage::fake('local');
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $service = app(KioskAttendanceService::class);
         $validPhoto = 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
 

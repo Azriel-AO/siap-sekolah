@@ -34,16 +34,16 @@ class DemoAttendanceSeeder extends Seeder
 
         // 2. Daftar 10 Siswa
         $studentsData = [
-            ['nis' => '10240101', 'name' => 'Raka Pratama', 'gender' => 'L', 'card' => 'CARD-TKJ-001', 'user_id' => $userSiswa?->id],
-            ['nis' => '10240102', 'name' => 'Adinda Rahma', 'gender' => 'P', 'card' => 'CARD-TKJ-002', 'user_id' => null],
-            ['nis' => '10240103', 'name' => 'Budi Santoso', 'gender' => 'L', 'card' => 'CARD-TKJ-003', 'user_id' => null],
-            ['nis' => '10240104', 'name' => 'Citra Lestari', 'gender' => 'P', 'card' => 'CARD-TKJ-004', 'user_id' => null],
-            ['nis' => '10240105', 'name' => 'Dimas Wahyu', 'gender' => 'L', 'card' => 'CARD-TKJ-005', 'user_id' => null],
-            ['nis' => '10240106', 'name' => 'Eka Saputra', 'gender' => 'L', 'card' => 'CARD-TKJ-006', 'user_id' => null],
-            ['nis' => '10240107', 'name' => 'Farhan Maulana', 'gender' => 'L', 'card' => 'CARD-TKJ-007', 'user_id' => null],
-            ['nis' => '10240108', 'name' => 'Gita Maharani', 'gender' => 'P', 'card' => 'CARD-TKJ-008', 'user_id' => null],
-            ['nis' => '10240109', 'name' => 'Hendra Wijaya', 'gender' => 'L', 'card' => 'CARD-TKJ-009', 'user_id' => null], // Belum absen
-            ['nis' => '10240110', 'name' => 'Intan Permata', 'gender' => 'P', 'card' => 'CARD-TKJ-010', 'user_id' => $userIntan?->id], // Belum absen
+            ['nisn' => '0010240101', 'name' => 'Raka Pratama', 'gender' => 'L', 'card' => 'CARD-TKJ-001', 'user_id' => $userSiswa?->id],
+            ['nisn' => '0010240102', 'name' => 'Adinda Rahma', 'gender' => 'P', 'card' => 'CARD-TKJ-002', 'user_id' => null],
+            ['nisn' => '0010240103', 'name' => 'Budi Santoso', 'gender' => 'L', 'card' => 'CARD-TKJ-003', 'user_id' => null],
+            ['nisn' => '0010240104', 'name' => 'Citra Lestari', 'gender' => 'P', 'card' => 'CARD-TKJ-004', 'user_id' => null],
+            ['nisn' => '0010240105', 'name' => 'Dimas Wahyu', 'gender' => 'L', 'card' => 'CARD-TKJ-005', 'user_id' => null],
+            ['nisn' => '0010240106', 'name' => 'Eka Saputra', 'gender' => 'L', 'card' => 'CARD-TKJ-006', 'user_id' => null],
+            ['nisn' => '0010240107', 'name' => 'Farhan Maulana', 'gender' => 'L', 'card' => 'CARD-TKJ-007', 'user_id' => null],
+            ['nisn' => '0010240108', 'name' => 'Gita Maharani', 'gender' => 'P', 'card' => 'CARD-TKJ-008', 'user_id' => null],
+            ['nisn' => '0010240109', 'name' => 'Hendra Wijaya', 'gender' => 'L', 'card' => 'CARD-TKJ-009', 'user_id' => null], // Belum absen
+            ['nisn' => '0010240110', 'name' => 'Intan Permata', 'gender' => 'P', 'card' => 'CARD-TKJ-010', 'user_id' => $userIntan?->id], // Belum absen
         ];
 
         $today = Carbon::now('Asia/Jakarta')->toDateString();
@@ -51,7 +51,7 @@ class DemoAttendanceSeeder extends Seeder
 
         foreach ($studentsData as $idx => $s) {
             $student = Student::updateOrCreate(
-                ['nis' => $s['nis']],
+                ['nisn' => $s['nisn']],
                 [
                     'school_class_id' => $class->id,
                     'user_id' => $s['user_id'],

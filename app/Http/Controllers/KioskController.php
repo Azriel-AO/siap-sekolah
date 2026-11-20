@@ -28,7 +28,7 @@ class KioskController extends Controller
         $debugStudents = isDebugMode()
             ? Student::with('schoolClass:id,name')
                 ->orderBy('name')
-                ->get(['id', 'name', 'nis', 'school_class_id'])
+                ->get(['id', 'name', 'nisn', 'school_class_id'])
             : collect();
 
         return view('kiosk.gerbang', [

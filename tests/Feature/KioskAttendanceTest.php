@@ -85,12 +85,12 @@ class KioskAttendanceTest extends TestCase
         $response->assertJson([
             'success' => true,
             'type' => 'check_in',
-            'nis' => '10240109',
+            'nisn' => '0010240109',
         ]);
 
         // Record kehadiran dibuat dengan tanggal hari ini dari server
         $attendance = Attendance::where('date', Carbon::now('Asia/Jakarta')->toDateString())
-            ->whereHas('student', fn ($q) => $q->where('nis', '10240109'))
+            ->whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))
             ->first();
 
         $this->assertNotNull($attendance, 'Record kehadiran hari ini harus tercatat.');
@@ -126,7 +126,7 @@ class KioskAttendanceTest extends TestCase
         $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
         // Mundurkan waktu tap terakhir 2 menit agar lolos cooldown
-        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
+        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))->first();
         $attendance->update([
             'last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2),
         ]);
@@ -148,11 +148,11 @@ class KioskAttendanceTest extends TestCase
         $this->seedDemo();
 
         $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
-        Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))
+        Attendance::whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))
             ->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
         $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
-        Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))
+        Attendance::whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))
             ->update(['last_tap_at' => Carbon::now('Asia/Jakarta')->subMinutes(2)]);
         $response = $this->postJson('/kiosk/tap', ['card_uid' => 'CARD-TKJ-009']);
 
@@ -179,7 +179,7 @@ class KioskAttendanceTest extends TestCase
 
         $siswaLain = Student::create([
             'school_class_id' => $kelasLain->id,
-            'nis' => '10249999',
+            'nisn' => '0010249999',
             'name' => 'Siswa Kelas Lain',
             'gender' => 'L',
         ]);
@@ -221,7 +221,7 @@ class KioskAttendanceTest extends TestCase
         $response->assertJsonStructure([
             'success',
             'summary' => ['total', 'hadir', 'terlambat', 'belum_absen'],
-            'students' => [['id', 'nis', 'name', 'status']],
+            'students' => [['id', 'nisn', 'name', 'status']],
         ]);
 
         $this->assertSame(10, $response->json('summary.total'));
@@ -288,7 +288,7 @@ class KioskAttendanceTest extends TestCase
             'photo' => $fotoPalsu,
         ])->assertStatus(200);
 
-        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
+        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))->first();
         $this->assertNotNull($attendance->photo_in_path, 'Foto bukti masuk harus tersimpan.');
         Storage::disk('local')->assertExists($attendance->photo_in_path);
 
@@ -318,7 +318,7 @@ class KioskAttendanceTest extends TestCase
         $response->assertStatus(200);
         $this->assertTrue($response->json('success'));
 
-        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nis', '10240109'))->first();
+        $attendance = Attendance::whereHas('student', fn ($q) => $q->where('nisn', '0010240109'))->first();
         $this->assertNull($attendance->photo_in_path, 'Foto tidak valid tidak boleh tersimpan.');
     }
 
@@ -326,8 +326,8 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        // Daftarkan sidik jari mock ke Hendra (NIS 10240109)
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+        // Daftarkan sidik jari mock ke Hendra (NISN 0010240109)
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
 
         // Mock driver: identify mengembalikan fingerprint_id siswa terdaftar
         $response = $this->postJson('/kiosk/fingerprint/identificar', []);
@@ -340,7 +340,7 @@ class KioskAttendanceTest extends TestCase
         ]);
 
         $this->assertDatabaseHas('attendances', [
-            'student_id' => Student::where('nis', '10240109')->value('id'),
+            'student_id' => Student::where('nisn', '0010240109')->value('id'),
             'kiosk_device' => 'gerbang-fingerprint',
         ]);
     }
@@ -375,7 +375,7 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
 
         // auto=1 (loop otomatis kiosk): mock TIDAK BOLEH mengembalikan siswa
         $response = $this->postJson('/kiosk/fingerprint/identificar', ['auto' => 1]);
@@ -392,7 +392,7 @@ class KioskAttendanceTest extends TestCase
     {
         $this->seedDemo();
 
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'MOCK-FINGER-001']);
 
         $response = $this->postJson('/kiosk/fingerprint/identificar', []);
 
@@ -412,7 +412,7 @@ class KioskAttendanceTest extends TestCase
             default => Http::response(['message' => 'not found'], 404),
         });
 
-        Student::where('nis', '10240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);
+        Student::where('nisn', '0010240109')->update(['fingerprint_id' => 'BRIDGE-HUELLA-1']);
 
         config(['fingerprint.driver' => 'bridge']);
         try {
@@ -510,7 +510,7 @@ class KioskAttendanceTest extends TestCase
         Storage::fake('local');
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         $path1 = "face-photos/{$student->id}/1.jpg";
         $path2 = "face-photos/{$student->id}/2.jpg";
@@ -541,7 +541,7 @@ class KioskAttendanceTest extends TestCase
             'type' => 'face_verification_required',
             'student_id' => $student->id,
             'student_name' => $student->name,
-            'nis' => '10240109',
+            'nisn' => '0010240109',
             'card_label' => 'X-TKJ-1-009',
         ]);
 
@@ -565,7 +565,7 @@ class KioskAttendanceTest extends TestCase
         Cache::flush();
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $paths = [
             "face-photos/{$student->id}/1.jpg",
             "face-photos/{$student->id}/2.jpg",
@@ -603,7 +603,7 @@ class KioskAttendanceTest extends TestCase
             'type' => 'check_in',
             'face_verified' => true,
             'student_name' => 'Hendra Wijaya',
-            'nis' => '10240109',
+            'nisn' => '0010240109',
             'card_label' => 'X-TKJ-1-009',
             'message' => 'Halo, Hendra Wijaya (X-TKJ-1-009)',
         ]);
@@ -621,7 +621,7 @@ class KioskAttendanceTest extends TestCase
         Cache::flush();
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $paths = [
             "face-photos/{$student->id}/1.jpg",
             "face-photos/{$student->id}/2.jpg",
@@ -665,7 +665,7 @@ class KioskAttendanceTest extends TestCase
         Cache::flush();
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         FaceEnrollment::create([
             'student_id' => $student->id,
@@ -699,7 +699,7 @@ class KioskAttendanceTest extends TestCase
         Storage::fake('local');
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $faceTemplates = app(FaceTemplateService::class);
         $storedVector = $faceTemplates->generateDeterministicVector($student->id);
         $faceTemplates->storeForStudent($student->id, $storedVector);
@@ -733,7 +733,7 @@ class KioskAttendanceTest extends TestCase
     {
         Storage::fake('local');
         $this->seedDemo();
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         $faceTemplates = app(FaceTemplateService::class);
         $storedVector = $faceTemplates->generateDeterministicVector($student->id);
@@ -761,7 +761,7 @@ class KioskAttendanceTest extends TestCase
     {
         Storage::fake('local');
         $this->seedDemo();
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         $faceTemplates = app(FaceTemplateService::class);
         $storedVector = $faceTemplates->generateDeterministicVector($student->id);
@@ -789,7 +789,7 @@ class KioskAttendanceTest extends TestCase
         Storage::fake('local');
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
 
         FaceEnrollment::create([
             'student_id' => $student->id,

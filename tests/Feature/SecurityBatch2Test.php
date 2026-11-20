@@ -95,7 +95,7 @@ class SecurityBatch2Test extends TestCase
         $this->seed(DemoAttendanceSeeder::class);
         Storage::fake('local');
 
-        $existingOwner = Student::where('nis', '10240101')->with('schoolClass')->firstOrFail();
+        $existingOwner = Student::where('nisn', '0010240101')->with('schoolClass')->firstOrFail();
 
         $res = $this->postJson(route('pendaftaran.simpan'), [
             'name' => 'Calon Siswa Uji',

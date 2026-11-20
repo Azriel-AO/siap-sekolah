@@ -78,11 +78,11 @@ class DaftarHadirTest extends TestCase
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
 
         // NISN & induk dengan leading zero
-        Student::where('nis', '10240101')->update(['nisn' => '0075384110', 'induk' => '0001']); // Raka
-        $raka = Student::where('nis', '10240101')->firstOrFail();
-        $adinda = Student::where('nis', '10240102')->firstOrFail();
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
-        $intan = Student::where('nis', '10240110')->firstOrFail();
+        $raka = Student::where('nisn', '0010240101')->firstOrFail();
+        $raka->update(['nisn' => '0075384110', 'induk' => '0001']); // Raka
+        $adinda = Student::where('nisn', '0010240102')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
+        $intan = Student::where('nisn', '0010240110')->firstOrFail();
 
         // Kehadiran nyata: Raka Senin 9 Nov HADIR, Adinda izin, Hendra tidak hadir sama sekali
         Attendance::create([
@@ -131,7 +131,7 @@ class DaftarHadirTest extends TestCase
         // Uji aturan Task 38: Hari sekolah lampau SEBELUM siswa terdaftar (created_at) bernilai '-' bukan 'A'
         $siswaBaru = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10249876',
+            'nisn' => '0010249876',
             'name' => 'Siswa Baru Terdaftar',
             'gender' => 'L',
         ]);
@@ -220,7 +220,6 @@ class DaftarHadirTest extends TestCase
         ]);
         Student::create([
             'school_class_id' => $kelasLain->id,
-            'nis' => '10249999',
             'nisn' => '0099887766',
             'induk' => '0002',
             'name' => 'Siswa RPL XYZ',
@@ -308,7 +307,7 @@ class DaftarHadirTest extends TestCase
         Carbon::setTestNow('2026-12-31 10:00:00');
         $this->seedDemo();
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
-        Student::where('nis', '10240101')->update(['nisn' => '0012345678', 'induk' => '0007']);
+        Student::where('nisn', '0010240101')->update(['nisn' => '0012345678', 'induk' => '0007']);
 
         foreach ([[2, 2026], [2, 2028], [4, 2026], [1, 2026]] as [$bulan, $tahun]) {
             $rows = (new DaftarHadirBulanan)->buildRows($kelas, $bulan, $tahun, DaftarHadirBulanan::defaultPengaturan())['rows'];
@@ -336,9 +335,9 @@ class DaftarHadirTest extends TestCase
         $this->seedDemo();
 
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
-        $raka = Student::where('nis', '10240101')->firstOrFail();
-        $adinda = Student::where('nis', '10240102')->firstOrFail();
-        $bima = Student::where('nis', '10240103')->firstOrFail();
+        $raka = Student::where('nisn', '0010240101')->firstOrFail();
+        $adinda = Student::where('nisn', '0010240102')->firstOrFail();
+        $bima = Student::where('nisn', '0010240103')->firstOrFail();
 
         Attendance::create([
             'student_id' => $raka->id,

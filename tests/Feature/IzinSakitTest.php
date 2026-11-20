@@ -58,7 +58,7 @@ class IzinSakitTest extends TestCase
         Carbon::setTestNow('2026-11-10 10:00:00'); // Selasa
         $this->seedDemo();
 
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
 
         $response = $this->actingAs($this->admin())->post('/admin/kehadiran-manual', [
             'student_id' => $hendra->id,
@@ -102,7 +102,7 @@ class IzinSakitTest extends TestCase
         Carbon::setTestNow('2026-11-10 10:00:00');
         $this->seedDemo();
 
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
 
         // Catat izin dulu, lalu timpa dengan sakit pada tanggal yang sama
         $this->actingAs($this->admin())->post('/admin/kehadiran-manual', [
@@ -129,7 +129,7 @@ class IzinSakitTest extends TestCase
     {
         $this->seedDemo();
 
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
 
         $response = $this->actingAs($this->admin())->post('/admin/kehadiran-manual', [
             'student_id' => $hendra->id,
@@ -147,7 +147,7 @@ class IzinSakitTest extends TestCase
         $this->seedDemo();
 
         // Catat izin Senin 09-11 → alpa HANYA menghitung hari lewat yang tidak tap & tidak izin/sakit
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
         IzinSakit::create([
             'student_id' => $hendra->id,
             'tanggal' => '2026-11-09',
@@ -171,7 +171,7 @@ class IzinSakitTest extends TestCase
         $this->seedDemo();
 
         // Hendra izin SEMUA hari sekolah rentang → pembagi = 5 − 5 = 0 → persentase null (—)
-        $hendra = Student::where('nis', '10240109')->firstOrFail();
+        $hendra = Student::where('nisn', '0010240109')->firstOrFail();
         foreach (['2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13'] as $tgl) {
             IzinSakit::create([
                 'student_id' => $hendra->id,
@@ -212,11 +212,11 @@ class IzinSakitTest extends TestCase
     {
         $this->seedDemo();
 
-        $student = Student::where('nis', '10240101')->firstOrFail();
+        $student = Student::where('nisn', '0010240101')->firstOrFail();
 
         $response = $this->actingAs($this->admin())->put('/admin/data-siswa/'.$student->id, [
             'name' => $student->name,
-            'nis' => $student->nis,
+            'nisn' => $student->nisn,
             'induk' => '0075384110',
             'gender' => $student->gender,
             'school_class_id' => $student->school_class_id,

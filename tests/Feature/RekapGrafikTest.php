@@ -78,7 +78,6 @@ class RekapGrafikTest extends TestCase
             'exit_time' => '15:00:00',
         ]);
         $siswa2 = Student::create([
-            'nis' => '11240101',
             'nisn' => '0099887766',
             'name' => 'Siswa Kelas Sebelas',
             'gender' => 'L',

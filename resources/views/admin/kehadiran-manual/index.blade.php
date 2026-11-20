@@ -51,7 +51,7 @@
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-slate-900/70 border-b border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
                                     <th class="py-3.5 px-4 text-center w-12">No</th>
-                                    <th class="py-3.5 px-4">NIS Induk</th>
+                                    <th class="py-3.5 px-4">No. Induk</th>
                                     <th class="py-3.5 px-4">NISN</th>
                                     <th class="py-3.5 px-4">Nama Siswa</th>
                                     <th class="py-3.5 px-4 text-center">Status Hari Ini</th>

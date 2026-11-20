@@ -98,7 +98,6 @@ class DebugModeAndDeviceStatusTest extends TestCase
         $kelas = SchoolClass::firstOrFail();
         $student = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '99887766',
             'nisn' => '0099887766',
             'name' => 'Siswa Debug Simulasi',
             'gender' => 'L',

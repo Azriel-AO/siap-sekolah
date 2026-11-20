@@ -45,7 +45,6 @@ class BugHunterTest extends TestCase
         $kelas = SchoolClass::firstOrFail();
         $student = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10990001',
             'nisn' => '0010990001',
             'name' => 'Siswa Rapid Tap',
             'gender' => 'L',
@@ -78,7 +77,6 @@ class BugHunterTest extends TestCase
         $kelas = SchoolClass::firstOrFail();
         $student = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10990002',
             'nisn' => '0010990002',
             'name' => 'Siswa Tanpa Kelas',
             'gender' => 'L',
@@ -115,7 +113,6 @@ class BugHunterTest extends TestCase
         $kelas = SchoolClass::firstOrFail();
         $student = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10990003',
             'nisn' => '0010990003',
             'name' => 'Siswa Masa Depan',
             'gender' => 'P',
@@ -163,7 +160,6 @@ class BugHunterTest extends TestCase
         $kelas = SchoolClass::firstOrFail();
         Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '0011223344',
             'nisn' => '0011223344',
             'name' => 'Siswa Eksisting',
             'gender' => 'L',
@@ -240,7 +236,6 @@ class BugHunterTest extends TestCase
         // 2. Rentang tanggal terbalik (end < start) pada RekapRingkasanPeriode
         $student = Student::create([
             'school_class_id' => $kelasKosong->id,
-            'nis' => '10990009',
             'nisn' => '0010990009',
             'name' => 'Siswa Rentang Terbalik',
             'gender' => 'L',
@@ -342,14 +337,12 @@ class BugHunterTest extends TestCase
         $kelas = SchoolClass::orderBy('name')->firstOrFail();
         $siswaManualDate = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10990061',
             'nisn' => '0010990061',
             'name' => 'Siswa Tanggal Manual',
             'gender' => 'L',
         ]);
         $siswaHariIni = Student::create([
             'school_class_id' => $kelas->id,
-            'nis' => '10990062',
             'nisn' => '0010990062',
             'name' => 'Siswa Hari Ini',
             'gender' => 'P',

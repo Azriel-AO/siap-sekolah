@@ -29,7 +29,7 @@
                     <div>
                         <h2 class="text-xl font-bold text-gray-900 dark:text-slate-100">{{ $student->name }}</h2>
                         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-slate-400 mt-1">
-                            <span>NIS: <strong class="text-gray-700 dark:text-slate-200 font-mono">{{ $student->nis }}</strong></span>
+                            <span>NISN: <strong class="text-gray-700 dark:text-slate-200 font-mono">{{ $student->nisn }}</strong></span>
                             <span>•</span>
                             <span>Kelas: <strong class="text-indigo-600 dark:text-indigo-400 font-semibold">{{ $student->schoolClass->name }}</strong></span>
                             <span>•</span>

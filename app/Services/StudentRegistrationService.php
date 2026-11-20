@@ -64,8 +64,6 @@ class StudentRegistrationService
             ): Student {
                 $siswa = Student::create([
                     'school_class_id' => $validated['school_class_id'],
-                    // Siswa baru belum punya NIS dari sekolah; pakai NISN sementara.
-                    'nis' => $validated['nisn'],
                     'nisn' => $validated['nisn'],
                     'name' => $validated['name'],
                     'gender' => $validated['gender'],

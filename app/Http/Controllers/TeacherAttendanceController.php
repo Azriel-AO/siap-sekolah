@@ -136,7 +136,6 @@ class TeacherAttendanceController extends Controller
 
             return [
                 'id' => $student->id,
-                'nis' => $student->nis,
                 'nisn' => $student->nisn ?? '-',
                 'name' => $student->name,
                 'gender' => $student->gender,
@@ -176,7 +175,6 @@ class TeacherAttendanceController extends Controller
 
         return [
             'id' => $student->id,
-            'nis' => $student->nis,
             'nisn' => $student->nisn ?? '-',
             'name' => $student->name,
             'gender' => $student->gender,

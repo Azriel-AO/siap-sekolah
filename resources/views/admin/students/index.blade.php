@@ -6,7 +6,7 @@
                     Data Siswa
                 </h1>
                 <p class="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mt-0.5">
-                    Kelola nama, NIS, jenis kelamin, dan kartu RFID siswa per kelas.
+                    Kelola nama, NISN, jenis kelamin, dan kartu RFID siswa per kelas.
                 </p>
             </div>
             <div class="flex items-center space-x-3">
@@ -56,7 +56,7 @@
                             <thead>
                                 <tr class="bg-gray-50 dark:bg-slate-900/70 border-b border-gray-200 dark:border-slate-700 text-xs font-semibold text-gray-600 dark:text-slate-300 uppercase tracking-wider">
                                     <th class="py-3.5 px-4 text-center w-12">No</th>
-                                    <th class="py-3.5 px-4">NIS</th>
+                                    <th class="py-3.5 px-4">NISN</th>
                                     <th class="py-3.5 px-4">Nama Siswa</th>
                                     <th class="py-3.5 px-4 text-center">L/P</th>
                                     <th class="py-3.5 px-4">Kartu</th>
@@ -67,7 +67,7 @@
                                 @forelse($students as $index => $siswa)
                                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/40 transition">
                                         <td class="py-3 px-4 text-center text-xs text-gray-400 dark:text-slate-500 font-mono">{{ $index + 1 }}</td>
-                                        <td class="py-3 px-4 font-mono font-medium text-gray-700 dark:text-slate-300">{{ $siswa->nis }}</td>
+                                        <td class="py-3 px-4 font-mono font-medium text-gray-700 dark:text-slate-300">{{ $siswa->nisn }}</td>
                                         <td class="py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">{{ $siswa->name }}</td>
                                         <td class="py-3 px-4 text-center text-gray-600 dark:text-slate-300">{{ $siswa->gender }}</td>
                                         <td class="py-3 px-4 font-mono text-xs text-gray-600 dark:text-slate-300">
@@ -88,7 +88,7 @@
                                                         @click="targetSiswa = {{ json_encode([
                                                             'id' => $siswa->id,
                                                             'name' => $siswa->name,
-                                                            'nis' => $siswa->nis,
+                                                            'nisn' => $siswa->nisn,
                                                             'attendances_count' => $siswa->attendances_count ?? 0,
                                                             'has_card' => (bool)$siswa->rfidCard,
                                                             'card_uid' => $siswa->rfidCard?->card_uid,
@@ -146,7 +146,7 @@
                                 Hapus Data Siswa: <span x-text="targetSiswa?.name"></span>
                             </h3>
                             <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
-                                NIS: <span class="font-mono font-medium text-gray-700 dark:text-slate-300" x-text="targetSiswa?.nis"></span>
+                                NISN: <span class="font-mono font-medium text-gray-700 dark:text-slate-300" x-text="targetSiswa?.nisn"></span>
                             </p>
                         </div>
                     </div>

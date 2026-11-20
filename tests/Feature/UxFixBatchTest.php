@@ -73,46 +73,46 @@ class UxFixBatchTest extends TestCase
         $webRes->assertSessionHasErrors(['gagal']);
     }
 
-    public function test_admin_student_store_dan_update_mencegah_500_saat_nis_bentrok_dengan_akun_non_siswa(): void
+    public function test_admin_student_store_dan_update_mencegah_500_saat_nisn_bentrok_dengan_akun_non_siswa(): void
     {
         $this->seed(DemoAttendanceSeeder::class);
 
         $admin = User::factory()->create([
-            'email' => 'admin@knbi.sch.id',
+            'email' => '0099000001@knbi.sch.id',
             'password' => Hash::make('admin-secret'),
             'role' => 'admin',
         ]);
         $guru = User::factory()->create([
-            'email' => 'guru@knbi.sch.id',
+            'email' => '0099000002@knbi.sch.id',
             'password' => Hash::make('guru-secret'),
             'role' => 'guru',
         ]);
 
         $kelas = SchoolClass::where('slug', 'X-TKJ-1')->firstOrFail();
 
-        // Store dengan NIS="admin" harus gagal rapi sebagai validation error (bukan HTTP 500)
+        // Store dengan NISN yang emailnya dipakai akun admin harus gagal rapi sebagai validation error (bukan HTTP 500)
         $storeRes = $this->actingAs($admin)->post(route('admin.siswa.store'), [
             'name' => 'Penyerang Store',
-            'nis' => 'admin',
+            'nisn' => '0099000001',
             'gender' => 'L',
             'school_class_id' => $kelas->id,
         ]);
         $storeRes->assertRedirect();
-        $storeRes->assertSessionHasErrors(['nis']);
-        $this->assertDatabaseMissing('students', ['nis' => 'admin']);
+        $storeRes->assertSessionHasErrors(['nisn']);
+        $this->assertDatabaseMissing('students', ['nisn' => '0099000001']);
         $this->assertSame('admin', $admin->fresh()->role);
 
-        // Update ke NIS="guru" juga harus gagal rapi sebagai validation error (bukan HTTP 500)
-        $existingStudent = Student::where('nis', '10240101')->firstOrFail();
+        // Update ke NISN yang emailnya dipakai akun guru juga harus gagal rapi sebagai validation error (bukan HTTP 500)
+        $existingStudent = Student::where('nisn', '0010240101')->firstOrFail();
         $updateRes = $this->actingAs($admin)->put(route('admin.siswa.update', $existingStudent), [
             'name' => $existingStudent->name,
-            'nis' => 'guru',
+            'nisn' => '0099000002',
             'gender' => $existingStudent->gender,
             'school_class_id' => $kelas->id,
         ]);
         $updateRes->assertRedirect();
-        $updateRes->assertSessionHasErrors(['nis']);
-        $this->assertSame('10240101', $existingStudent->fresh()->nis);
+        $updateRes->assertSessionHasErrors(['nisn']);
+        $this->assertSame('0010240101', $existingStudent->fresh()->nisn);
         $this->assertSame('guru', $guru->fresh()->role);
     }
 
@@ -174,7 +174,7 @@ class UxFixBatchTest extends TestCase
         $this->seed(DemoAttendanceSeeder::class);
         Storage::fake('local');
 
-        $student = Student::where('nis', '10240109')->firstOrFail();
+        $student = Student::where('nisn', '0010240109')->firstOrFail();
         $validPhoto = 'data:image/jpeg;base64,'.base64_encode("\xFF\xD8".str_repeat('a', 150)."\xFF\xD9");
 
         Attendance::created(function (): void {

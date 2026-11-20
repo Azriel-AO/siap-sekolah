@@ -99,7 +99,6 @@ class DummyStudentSeeder extends Seeder
                 ['nisn' => $nisn],
                 [
                     'school_class_id' => $targetClass->id,
-                    'nis' => $nisn,
                     'induk' => $induk,
                     'name' => $fullName,
                     'gender' => $gender,

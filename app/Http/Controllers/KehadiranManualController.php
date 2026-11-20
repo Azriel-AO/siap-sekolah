@@ -72,7 +72,6 @@ class KehadiranManualController extends Controller
 
             return [
                 'id' => $student->id,
-                'nis' => $student->nis,
                 'induk' => $student->induk,
                 'nisn' => $student->nisn,
                 'name' => $student->name,

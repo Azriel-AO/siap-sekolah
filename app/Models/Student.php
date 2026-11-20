@@ -21,11 +21,10 @@ class Student extends Model
     protected $fillable = [
         'school_class_id',
         'user_id',
-        'nis',
-        'name',
-        'gender',
         'nisn',
         'induk',
+        'name',
+        'gender',
         'fingerprint_id',
     ];
 
@@ -138,7 +137,7 @@ class Student extends Model
 
     /**
      * Buat atau perbarui akun login siswa secara otomatis:
-     * - email: {NIS}@knbi.sch.id
+     * - email: {NISN}@knbi.sch.id
      * - password: 16 karakter acak yang di-hash (saat akun baru dibuat)
      * - role: 'siswa'
      * - student_id: ID siswa ini
@@ -146,7 +145,12 @@ class Student extends Model
      */
     public function syncUserAccount(): User
     {
-        $email = $this->nis.'@knbi.sch.id';
+        $nisn = trim((string) $this->nisn);
+        if ($nisn === '') {
+            throw new \RuntimeException('NISN siswa wajib diisi sebelum menyinkronkan akun login.');
+        }
+
+        $email = $nisn.'@knbi.sch.id';
         $hasStudentIdColumn = Schema::hasColumn('users', 'student_id');
 
         $existingWithEmail = User::where('email', $email)->first();

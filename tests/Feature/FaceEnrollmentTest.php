@@ -237,8 +237,8 @@ class FaceEnrollmentTest extends TestCase
         $response->assertStatus(200);
         $students = collect($response->json('students'));
 
-        $raka = $students->firstWhere('nis', '10240101');
-        $hendra = $students->firstWhere('nis', '10240109');
+        $raka = $students->firstWhere('nisn', '0010240101');
+        $hendra = $students->firstWhere('nisn', '0010240109');
 
         $this->assertSame('TERDAFTAR', $raka['face']);
         $this->assertSame('BELUM', $hendra['face']);
@@ -265,7 +265,7 @@ class FaceEnrollmentTest extends TestCase
         $response = $this->actingAs($this->admin())->getJson('/guru/rekap-harian/data');
 
         $response->assertStatus(200);
-        $raka = collect($response->json('students'))->firstWhere('nis', '10240101');
+        $raka = collect($response->json('students'))->firstWhere('nisn', '0010240101');
         $this->assertSame('BELUM', $raka['face']);
     }
 

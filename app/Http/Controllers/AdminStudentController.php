@@ -68,7 +68,7 @@ class AdminStudentController extends Controller
             DB::transaction(function () use ($validated) {
                 $student = Student::create([
                     'school_class_id' => $validated['school_class_id'],
-                    'nis' => $validated['nis'],
+                    'nisn' => $validated['nisn'],
                     'induk' => $validated['induk'] ?? null,
                     'name' => $validated['name'],
                     'gender' => $validated['gender'],
@@ -79,7 +79,7 @@ class AdminStudentController extends Controller
             });
         } catch (\RuntimeException $e) {
             throw ValidationException::withMessages([
-                'nis' => $e->getMessage(),
+                'nisn' => $e->getMessage(),
             ]);
         }
 
@@ -113,7 +113,7 @@ class AdminStudentController extends Controller
             DB::transaction(function () use ($validated, $student) {
                 $student->update([
                     'school_class_id' => $validated['school_class_id'],
-                    'nis' => $validated['nis'],
+                    'nisn' => $validated['nisn'],
                     'induk' => $validated['induk'] ?? null,
                     'name' => $validated['name'],
                     'gender' => $validated['gender'],
@@ -124,7 +124,7 @@ class AdminStudentController extends Controller
             });
         } catch (\RuntimeException $e) {
             throw ValidationException::withMessages([
-                'nis' => $e->getMessage(),
+                'nisn' => $e->getMessage(),
             ]);
         }
 
@@ -140,13 +140,13 @@ class AdminStudentController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:100', 'not_regex:/[<>]/'],
-            'nis' => [
+            'nisn' => [
                 'required',
-                'regex:/^[A-Za-z0-9]{1,20}$/',
-                Rule::unique('students', 'nis')->ignore($student?->id),
+                'regex:/^\d{10}$/',
+                Rule::unique('students', 'nisn')->ignore($student?->id),
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if (User::where('email', $value.'@knbi.sch.id')->where('role', '!=', 'siswa')->exists()) {
-                        $fail('NIS tersebut menghasilkan email akun yang sudah dipakai oleh akun non-siswa. Gunakan NIS lain.');
+                        $fail('NISN tersebut menghasilkan email akun yang sudah dipakai oleh akun non-siswa. Gunakan NISN lain.');
                     }
                 },
             ],
@@ -157,10 +157,10 @@ class AdminStudentController extends Controller
         ], [
             'name.required' => 'Nama siswa wajib diisi.',
             'name.not_regex' => 'Nama siswa tidak boleh mengandung tag HTML atau karakter < dan >.',
-            'nis.required' => 'NIS wajib diisi.',
-            'nis.regex' => 'NIS hanya boleh berisi huruf dan angka (maksimal 20 karakter).',
-            'nis.unique' => 'NIS tersebut sudah dipakai siswa lain.',
-            'induk.unique' => 'NIS Induk tersebut sudah dipakai siswa lain.',
+            'nisn.required' => 'NISN wajib diisi.',
+            'nisn.regex' => 'NISN harus terdiri dari tepat 10 digit angka.',
+            'nisn.unique' => 'NISN tersebut sudah dipakai siswa lain.',
+            'induk.unique' => 'No. Induk tersebut sudah dipakai siswa lain.',
             'gender.required' => 'Jenis kelamin wajib dipilih.',
             'gender.in' => 'Jenis kelamin tidak valid.',
             'school_class_id.required' => 'Kelas wajib dipilih.',

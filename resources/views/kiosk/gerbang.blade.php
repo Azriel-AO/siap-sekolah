@@ -257,7 +257,7 @@
                     <!-- Judul Status -->
                     <div class="text-xs uppercase tracking-widest font-extrabold opacity-80" x-text="result?.status_label || (result?.success ? 'Berhasil' : 'Peringatan')"></div>
                     <h3 class="text-3xl sm:text-4xl font-black mt-2" x-text="result?.student_name || 'Tidak Dikenali'"></h3>
-                    <p class="text-sm mt-1 opacity-75 font-mono" x-show="result?.nis" x-text="'NIS: ' + result?.nis + (result?.kelas ? '  •  ' + result?.kelas : '') + (result?.card_label ? '  •  ' + result?.card_label : '')"></p>
+                    <p class="text-sm mt-1 opacity-75 font-mono" x-show="result?.nisn" x-text="'NISN: ' + result?.nisn + (result?.kelas ? '  •  ' + result?.kelas : '') + (result?.card_label ? '  •  ' + result?.card_label : '')"></p>
 
                     <!-- Metode Absen Badge -->
                     <div x-show="result?.method || result?.kiosk_device" class="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold tracking-wide">
@@ -319,7 +319,7 @@
                     <option value="">- Pilih siswa -</option>
                     @foreach($debugStudents as $debugStudent)
                         <option value="{{ $debugStudent->id }}">
-                            {{ $debugStudent->name }} ({{ $debugStudent->schoolClass?->name ?? '-' }} - {{ $debugStudent->nis }})
+                            {{ $debugStudent->name }} ({{ $debugStudent->schoolClass?->name ?? '-' }} - {{ $debugStudent->nisn }})
                         </option>
                     @endforeach
                 </select>
@@ -829,7 +829,7 @@
                                 type: 'face_mismatch',
                                 status_label: 'Kamera Belum Siap',
                                 student_name: tapData.student_name,
-                                nis: tapData.nis,
+                                nisn: tapData.nisn,
                                 kelas: tapData.kelas,
                                 card_label: tapData.card_label,
                                 message: 'Kamera belum aktif untuk verifikasi wajah. Silakan gunakan sidik jari atau izinkan kamera.'
@@ -849,7 +849,7 @@
                                 type: 'face_mismatch',
                                 status_label: 'Verifikasi Wajah Gagal',
                                 student_name: tapData.student_name,
-                                nis: tapData.nis,
+                                nisn: tapData.nisn,
                                 kelas: tapData.kelas,
                                 card_label: tapData.card_label,
                                 message: 'Modul verifikasi wajah belum siap. Silakan tap ulang atau gunakan sidik jari.'
@@ -881,7 +881,7 @@
                                 type: 'face_mismatch',
                                 status_label: 'Wajah Tidak Cocok',
                                 student_name: tapData.student_name,
-                                nis: tapData.nis,
+                                nisn: tapData.nisn,
                                 kelas: tapData.kelas,
                                 card_label: tapData.card_label,
                                 message: 'Wajah tidak cocok. Pastikan wajah terkena cahaya, lalu tap ulang kartu atau gunakan sidik jari.'
@@ -919,7 +919,7 @@
                             type: 'face_mismatch',
                             status_label: 'Verifikasi Wajah Gagal',
                             student_name: tapData.student_name,
-                            nis: tapData.nis,
+                            nisn: tapData.nisn,
                             kelas: tapData.kelas,
                             card_label: tapData.card_label,
                             message: 'Wajah tidak cocok atau gagal diverifikasi. Silakan tap ulang atau gunakan sidik jari.'
